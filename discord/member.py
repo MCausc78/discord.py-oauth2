@@ -894,7 +894,7 @@ class Member(discord.abc.Messageable, _UserTag):
             if me:
                 await http.edit_me(guild_id, nick=nick)
             else:
-                payload['nick'] = nick    
+                payload['nick'] = nick
 
         if deafen is not MISSING:
             payload['deaf'] = deafen
