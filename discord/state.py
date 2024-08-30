@@ -77,6 +77,7 @@ from .threads import Thread, ThreadMember
 from .sticker import GuildSticker
 from .automod import AutoModRule, AutoModAction
 from .audit_logs import AuditLogEntry
+from .subscription import Subscription
 from ._types import ClientT
 
 if TYPE_CHECKING:
@@ -1668,6 +1669,18 @@ class ConnectionState(Generic[ClientT]):
             poll = self._update_poll_counts(message, raw.answer_id, False, raw.user_id == self.self_id)
             if poll:
                 self.dispatch('poll_vote_remove', user, poll.get_answer(raw.answer_id))
+
+    def parse_subscription_create(self, data: gw.SubscriptionCreateEvent) -> None:
+        subscription = Subscription(data=data, state=self)
+        self.dispatch('subscription_create', subscription)
+
+    def parse_subscription_update(self, data: gw.SubscriptionUpdateEvent) -> None:
+        subscription = Subscription(data=data, state=self)
+        self.dispatch('subscription_update', subscription)
+
+    def parse_subscription_delete(self, data: gw.SubscriptionDeleteEvent) -> None:
+        subscription = Subscription(data=data, state=self)
+        self.dispatch('subscription_delete', subscription)
 
     def _get_reaction_user(self, channel: MessageableChannel, user_id: int) -> Optional[Union[User, Member]]:
         if isinstance(channel, (TextChannel, Thread, VoiceChannel)):
