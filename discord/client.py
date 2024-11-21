@@ -59,7 +59,7 @@ from .channel import _threaded_channel_factory, PartialMessageable
 from .enums import ChannelType, EntitlementOwnerType
 from .mentions import AllowedMentions
 from .errors import *
-from .enums import Status
+from .enums import Status, Platform
 from .flags import ApplicationFlags, Intents
 from .gateway import *
 from .activity import ActivityTypes, BaseActivity, create_activity
@@ -256,6 +256,10 @@ class Client:
         behavior, such as setting a dns resolver or sslcontext.
 
         .. versionadded:: 2.5
+    platform: Optional[:class:`.Platform`]
+        A platform to start your presence with upon logging on to Discord.
+
+        .. versionadded:: 2.5
 
     Attributes
     -----------
@@ -296,6 +300,7 @@ class Client:
         }
 
         self._enable_debug_events: bool = options.pop('enable_debug_events', False)
+        self._platform: Optional[Platform] = options.pop('platform', None)
         self._connection: ConnectionState[Self] = self._get_state(intents=intents, **options)
         self._connection.shard_count = self.shard_count
         self._closing_task: Optional[asyncio.Task[None]] = None

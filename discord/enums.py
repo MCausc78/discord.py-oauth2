@@ -77,6 +77,7 @@ __all__ = (
     'VoiceChannelEffectAnimationType',
     'SubscriptionStatus',
     'MessageReferenceType',
+    'Platform',
 )
 
 
@@ -860,6 +861,28 @@ class SubscriptionStatus(Enum):
     active = 0
     ending = 1
     inactive = 2
+
+
+class Platform(Enum):
+    desktop = 'Discord Client'
+    android_native = 'Discord Android'
+    ios = 'Discord iOS'
+    embedded = 'Discord Embedded'
+    android_chrome = 'Android Chrome'
+    android_browser = 'Android Mobile'
+    blackberry = 'BlackBerry'
+    chrome = 'Chrome'
+    ios_chrome = 'Chrome iOS'
+    edge = 'Edge'
+    facebook_mobile = 'Facebook Mobile'
+    firefox = 'Firefox'
+    internet_explorer = 'Internet Explorer'
+    konqueror = 'Konqueror'
+    safari_mobile = 'Mobile Safari'
+    mozilla = 'Mozilla'
+    opera = 'Opera'
+    opera_mini = 'Opera Mini'
+    safari = 'Safari'
 
 
 def create_unknown_value(cls: Type[E], val: Any) -> E:

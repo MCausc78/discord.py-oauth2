@@ -41,7 +41,7 @@ import yarl
 
 from . import utils
 from .activity import BaseActivity
-from .enums import SpeakingState
+from .enums import SpeakingState, Platform
 from .errors import ConnectionClosed
 
 _log = logging.getLogger(__name__)
@@ -292,6 +292,7 @@ class DiscordWebSocket:
         shard_count: Optional[int]
         gateway: yarl.URL
         _max_heartbeat_timeout: float
+        platform: Optional[Platform]
 
     # fmt: off
     DEFAULT_GATEWAY    = yarl.URL('wss://gateway.discord.gg/')
@@ -386,6 +387,7 @@ class DiscordWebSocket:
         ws.shard_id = shard_id
         ws._rate_limiter.shard_id = shard_id
         ws.shard_count = client._connection.shard_count
+        ws.platform = client.platform
         ws.session_id = session
         ws.sequence = sequence
         ws._max_heartbeat_timeout = client._connection.heartbeat_timeout
@@ -446,7 +448,7 @@ class DiscordWebSocket:
                 'token': self.token,
                 'properties': {
                     'os': sys.platform,
-                    'browser': 'discord.py',
+                    'browser': 'discord.py' if self.platform is None else self.platform.value,
                     'device': 'discord.py',
                 },
                 'compress': True,
@@ -461,7 +463,7 @@ class DiscordWebSocket:
         if state._activity is not None or state._status is not None:
             payload['d']['presence'] = {
                 'status': state._status,
-                'game': state._activity,
+                'activities': () if state._activity is None else (state._activity,),
                 'since': 0,
                 'afk': False,
             }
