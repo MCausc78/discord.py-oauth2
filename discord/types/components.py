@@ -30,10 +30,11 @@ from typing_extensions import NotRequired
 from .emoji import PartialEmoji
 from .channel import ChannelType
 
-ComponentType = Literal[1, 2, 3, 4]
+ComponentType = Literal[1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 16, 17]
 ButtonStyle = Literal[1, 2, 3, 4, 5, 6]
 TextStyle = Literal[1, 2]
 DefaultValueType = Literal['user', 'role', 'channel']
+SeparatorSpacingSize = Literal[1, 2]
 
 
 class ActionRow(TypedDict):
@@ -118,5 +119,68 @@ class SelectMenu(SelectComponent):
     default_values: NotRequired[List[SelectDefaultValues]]
 
 
+class Section(TypedDict):
+    type: Literal[9]
+    components: List[TextDisplay]
+    accessory: Union[ThumbnailComponent, ButtonComponent]
+
+
+class TextDisplay(TypedDict):
+    type: Literal[10]
+    content: str
+
+
+class ThumbnailComponent(TypedDict):
+    type: Literal[11]
+    media: UnfurledMediaItem
+    description: NotRequired[str]
+    spoiler: NotRequired[bool]
+
+
+class MediaGalleryItem(TypedDict):
+    media: UnfurledMediaItem
+    description: NotRequired[str]
+    spoiler: NotRequired[bool]
+
+
+class MediaGalleryComponent(TypedDict):
+    type: Literal[12]
+    items: List[MediaGalleryItem]
+
+
+class FileComponent(TypedDict):
+    type: Literal[13]
+    file: UnfurledMediaItem
+    spoiler: NotRequired[bool]
+
+
+class SeparatorComponent(TypedDict):
+    type: Literal[14]
+    divider: NotRequired[bool]
+    spacing: NotRequired[SeparatorSpacingSize]
+
+
+class ContainerComponent(TypedDict):
+    type: Literal[17]
+    accent_color: NotRequired[int]
+    spoiler: NotRequired[bool]
+    components: List[
+        Union[ActionRow, Section, TextDisplay, MediaGalleryComponent, FileComponent, SeparatorComponent, ContainerComponent]
+    ]
+
+
+class UnfurledMediaItem(TypedDict):
+    url: str
+
+
 ActionRowChildComponent = Union[ButtonComponent, SelectMenu, TextInput]
-Component = Union[ActionRow, ActionRowChildComponent]
+Component = Union[
+    ActionRow,
+    ActionRowChildComponent,
+    Section,
+    TextDisplay,
+    MediaGalleryComponent,
+    FileComponent,
+    SeparatorComponent,
+    ContainerComponent,
+]

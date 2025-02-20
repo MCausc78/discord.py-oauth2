@@ -41,6 +41,12 @@ from ..components import (
     Button as ButtonComponent,
     SelectMenu as SelectComponent,
 )
+from .section import Section
+from .text_display import TextDisplay
+from .media_gallery import MediaGallery
+from .file import FileComponent
+from .separator import Separator
+from .container import Container
 
 # fmt: off
 __all__ = (
@@ -230,12 +236,32 @@ class View:
             if not children:
                 continue
 
-            components.append(
-                {
-                    'type': 1,
-                    'components': children,
-                }
-            )
+            v2_components = []
+            for child in children:
+                if isinstance(
+                    child,
+                    (
+                        Section,
+                        TextDisplay,
+                        MediaGallery,
+                        FileComponent,
+                        Separator,
+                        Container,
+                    ),
+                ):
+                    v2_components.append(child)
+
+            children = [component for component in components if component in v2_components]
+            if v2_components:
+                children.extend(v2_components)
+
+            if children:
+                components.append(
+                    {
+                        'type': 1,
+                        'components': children,
+                    }
+                )
 
         return components
 

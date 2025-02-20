@@ -1477,6 +1477,7 @@ class Messageable:
         suppress_embeds: bool = False,
         silent: bool = False,
         poll: Optional[Poll] = None,
+        has_components_v2: bool = False,
     ) -> Message:
         """|coro|
 
@@ -1568,8 +1569,11 @@ class Messageable:
 
             .. versionadded:: 2.4
         has_components_v2: :class:`bool`
-            Whether to use components V2.
-            
+            Whether to use components v2. This disables ability to send ``content``, ``embed``, ``embeds``.
+            You can send ``file`` or ``files`` only for referring from components.
+
+            .. versionadded:: 2.5
+
         Raises
         --------
         ~discord.HTTPException
@@ -1611,12 +1615,13 @@ class Messageable:
         if view and not hasattr(view, '__discord_ui_view__'):
             raise TypeError(f'view parameter must be View not {view.__class__.__name__}')
 
-        if suppress_embeds or silent:
+        if suppress_embeds or silent or has_components_v2:
             from .message import MessageFlags  # circular import
 
             flags = MessageFlags._from_value(0)
             flags.suppress_embeds = suppress_embeds
             flags.suppress_notifications = silent
+            flags.has_components_v2 = has_components_v2
         else:
             flags = MISSING
 

@@ -39,6 +39,8 @@ if TYPE_CHECKING:
         SelectOption as SelectOptionPayload,
         ActionRow as ActionRowPayload,
         TextInput as TextInputPayload,
+        Section as SectionPayload,
+        TextDisplay as TextDisplayPayload,
         ActionRowChildComponent as ActionRowChildComponentPayload,
         SelectDefaultValues as SelectDefaultValuesPayload,
     )
@@ -642,6 +644,82 @@ class SelectDefaultValue:
         )
 
 
+class Section(Component):
+    """Represents a Discord Bot UI Kit Section.
+
+    This is a component that holds up to 5 children components in a row.
+
+    This inherits from :class:`Component`.
+
+    .. versionadded:: 2.5
+
+    Attributes
+    ----------
+    children: List[:class:`Component`]
+        The children components that this holds, if any.
+    """
+
+    __slots__: Tuple[str, ...] = ('children',)
+
+    __repr_info__: ClassVar[Tuple[str, ...]] = __slots__
+
+    def __init__(self, data: ActionRowPayload, /) -> None:
+        self.children: List[ActionRowChildComponentType] = []
+
+        for component_data in data.get('components', []):
+            component = _component_factory(component_data)
+
+            if component is not None:
+                self.children.append(component)
+
+    @property
+    def type(self) -> Literal[ComponentType.action_row]:
+        """:class:`ComponentType`: The type of component."""
+        return ComponentType.action_row
+
+    def to_dict(self) -> ActionRowPayload:
+        return {
+            'type': self.type.value,
+            'components': [child.to_dict() for child in self.children],
+        }
+
+
+class TextDisplay(Component):
+    """Represents a text display from the Discord Bot UI Kit.
+
+    .. note::
+        The user constructible and usable type to create a text input is
+        :class:`discord.ui.TextDisplay` not this one.
+
+    .. versionadded:: 2.5
+
+    Attributes
+    ----------
+    content: :class:`str`
+        The content to display.
+    """
+
+    __slots__: Tuple[str, ...] = ('content',)
+
+    __repr_info__: ClassVar[Tuple[str, ...]] = __slots__
+
+    def __init__(self, data: TextDisplayPayload, /) -> None:
+        self.content: str = data['content']
+
+    @property
+    def type(self) -> Literal[ComponentType.text_display]:
+        """:class:`ComponentType`: The type of component."""
+        return ComponentType.text_display
+
+    def to_dict(self) -> TextDispalyPayload:
+        payload: TextDispalyPayload = {
+            'type': self.type.value,
+            'content': self.content,
+        }
+
+        return payload
+
+
 @overload
 def _component_factory(data: ActionRowChildComponentPayload) -> Optional[ActionRowChildComponentType]:
     ...
@@ -661,3 +739,7 @@ def _component_factory(data: ComponentPayload) -> Optional[Union[ActionRow, Acti
         return TextInput(data)
     elif data['type'] in (3, 5, 6, 7, 8):
         return SelectMenu(data)
+    elif data['type'] == 9:
+        return Section(data)
+    elif data['type'] == 10:
+        return TextDisplay(data)

@@ -499,6 +499,14 @@ class MessageFlags(BaseFlags):
         """
         return 16384
 
+    @flag_value
+    def has_components_v2(self):
+        """:class:`bool`: Returns ``True`` if the message has components v2.
+
+        .. versionadded:: 2.5
+        """
+        return 32768
+
 
 @fill_with_flags()
 class PublicUserFlags(BaseFlags):

@@ -25,9 +25,9 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import os
-from typing import List, Optional, TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import List, Literal, Optional, TYPE_CHECKING, Tuple, TypeVar
 
-from ..components import Section as SectionComponent
+from ..components import TextDisplay as TextDisplayComponent
 from ..enums import ComponentType, TextStyle
 from ..utils import MISSING
 from .item import Item
@@ -42,30 +42,22 @@ if TYPE_CHECKING:
 
 # fmt: off
 __all__ = (
-    'Section',
+    'TextDisplay',
 )
 # fmt: on
 
 V = TypeVar('V', bound='View', covariant=True)
 
-# message.components.max_length = 10
-# message.components.total_nested_components_in_tree = 30
-# section.components.max_length = 3
-# media_gallery.items.max_length = 10
-# container.components.max_length = 10
 
-
-class Section(Item[V]):
-    """Represents a UI section.
+class TextDisplay(Item[V]):
+    """Represents a UI text display component.
 
     .. versionadded:: 2.5
 
     Parameters
     ----------
-    children: List[:class:`discord.ui.TextDisplay`]
-        The children components that this holds. Can be only up to 3 components.
-    accessory: Union[:class:`discord.ui.Thumbnail`, :class:`discord.ui.Button`]
-        The section accessory.
+    content: :class:`str`
+        The content of text display component.
     row: Optional[:class:`int`]
         The relative row this button belongs to. A Discord component can only have 5
         rows. By default, items are arranged automatically into those 5 rows. If you'd
@@ -98,38 +90,43 @@ class Section(Item[V]):
         return self.value
 
     @property
+    def custom_id(self) -> str:
+        """:class:`str`: The ID of the text input that gets received during an interaction."""
+        return self._underlying.custom_id
+
+    @custom_id.setter
+    def custom_id(self, value: str) -> None:
+        if not isinstance(value, str):
+            raise TypeError('custom_id must be a str')
+
+        self._underlying.custom_id = value
+        self._provided_custom_id = True
+
+    @property
     def width(self) -> int:
         return 5
 
     @property
-    def children(self) -> List[TextDisplay]:
-        """List[:class:`discord.ui.TextDisplay`]: The children."""
-        return self._underlying.style
-
-    @style.setter
-    def style(self, value: TextStyle) -> None:
-        self._underlying.style = value
-
-    @property
-    def default(self) -> Optional[str]:
-        """:class:`str`: The default value of the text input."""
+    def content(self) -> Optional[str]:
+        """:class:`str`: The content."""
         return self._underlying.value
 
     @default.setter
     def default(self, value: Optional[str]) -> None:
         self._underlying.value = value
 
-    def to_component_dict(self) -> TextInputPayload:
+    def to_component_dict(self) -> TextDisplayPayload:
         return self._underlying.to_dict()
 
     @classmethod
-    def from_component(cls, component: SectionComponent) -> Self:
+    def from_component(cls, component: TextDisplayComponent) -> Self:
         return cls(
+            content=component.content,
             row=None,
         )
 
     @property
-    def type(self) -> Literal[ComponentType.text_input]:
+    def type(self) -> Literal[ComponentType.text_display]:
         return self._underlying.type
 
     def is_dispatchable(self) -> bool:

@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import os
-from typing import List, Optional, TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import List, Optional, TYPE_CHECKING, Tuple
 
 from ..components import Section as SectionComponent
 from ..enums import ComponentType, TextStyle
@@ -99,11 +99,61 @@ class Section(Item[V]):
 
     @property
     def width(self) -> int:
-        return 5
+        return 1
 
     @property
-    def children(self) -> List[TextDisplay]:
-        """List[:class:`discord.ui.TextDisplay`]: The children."""
+    def value(self) -> str:
+        """:class:`str`: The value of the text input."""
+        return self._value or ''
+
+    @property
+    def label(self) -> str:
+        """:class:`str`: The label of the text input."""
+        return self._underlying.label
+
+    @label.setter
+    def label(self, value: str) -> None:
+        self._underlying.label = value
+
+    @property
+    def placeholder(self) -> Optional[str]:
+        """:class:`str`: The placeholder text to display when the text input is empty."""
+        return self._underlying.placeholder
+
+    @placeholder.setter
+    def placeholder(self, value: Optional[str]) -> None:
+        self._underlying.placeholder = value
+
+    @property
+    def required(self) -> bool:
+        """:class:`bool`: Whether the text input is required."""
+        return self._underlying.required
+
+    @required.setter
+    def required(self, value: bool) -> None:
+        self._underlying.required = value
+
+    @property
+    def min_length(self) -> Optional[int]:
+        """:class:`int`: The minimum length of the text input."""
+        return self._underlying.min_length
+
+    @min_length.setter
+    def min_length(self, value: Optional[int]) -> None:
+        self._underlying.min_length = value
+
+    @property
+    def max_length(self) -> Optional[int]:
+        """:class:`int`: The maximum length of the text input."""
+        return self._underlying.max_length
+
+    @max_length.setter
+    def max_length(self, value: Optional[int]) -> None:
+        self._underlying.max_length = value
+
+    @property
+    def style(self) -> TextStyle:
+        """:class:`discord.TextStyle`: The style of the text input."""
         return self._underlying.style
 
     @style.setter
@@ -123,8 +173,16 @@ class Section(Item[V]):
         return self._underlying.to_dict()
 
     @classmethod
-    def from_component(cls, component: SectionComponent) -> Self:
+    def from_component(cls, component: TextInputComponent) -> Self:
         return cls(
+            label=component.label,
+            style=component.style,
+            custom_id=component.custom_id,
+            placeholder=component.placeholder,
+            default=component.value,
+            required=component.required,
+            min_length=component.min_length,
+            max_length=component.max_length,
             row=None,
         )
 
