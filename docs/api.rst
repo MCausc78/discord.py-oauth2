@@ -3828,6 +3828,47 @@ of :class:`enum.Enum`.
 
         An alias for :attr:`.reply`.
 
+
+.. class:: Platform
+
+
+class Platform(Enum):
+    desktop = 'Discord Client'
+    android = 'Discord Android'
+    ios = 'Discord iOS'
+    embedded = 'Discord Embedded'
+    android_chrome = 'Android Chrome'
+    android_mobile = 'Android Mobile'
+    blackberry = 'BlackBerry'
+    chrome = 'Chrome'
+    ios_chrome = 'Chrome iOS'
+    edge = 'Edge'
+    facebook_mobile = 'Facebook Mobile'
+    firefox = 'Firefox'
+    internet_explorer = 'Internet Explorer'
+    konqueror = 'Konqueror'
+    safari_mobile = 'Mobile Safari'
+    mozilla = 'Mozilla'
+    opera = 'Opera'
+    opera_mini = 'Opera Mini'
+    safari = 'Safari'
+
+    Represents the type of platform the client is on.
+
+    .. versionadded:: 2.5
+
+    .. attribute:: desktop
+
+        A Discord Desktop client.
+
+    .. attribute:: android
+
+        A Discord Android client.
+
+    .. attribute:: default
+
+        An alias for :attr:`.reply`.
+
 .. _discord-api-audit-logs:
 
 Audit Log Data
