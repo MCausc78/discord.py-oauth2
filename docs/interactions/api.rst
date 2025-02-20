@@ -328,6 +328,42 @@ Enumerations
     .. attribute:: mentionable_select
 
         Represents a select in which both users and roles can be selected.
+    
+    .. attribute:: section
+
+        Represents a section.
+
+        .. versionadded:: 2.5
+    
+    .. attribute:: text_display
+
+        Represents a text component.
+
+        .. versionadded:: 2.5
+    
+    .. attribute:: media_gallery
+
+        Represents a image or GIF video.
+
+        .. versionadded:: 2.5
+    
+    .. attribute:: file
+
+        Represents a file component.
+
+        .. versionadded:: 2.5
+    
+    .. attribute:: separator
+
+        Represents a separator.
+
+        .. versionadded:: 2.5
+    
+    .. attribute:: container
+
+        Represents an embed with components inside.
+
+        .. versionadded:: 2.5
 
 .. class:: ButtonStyle
 

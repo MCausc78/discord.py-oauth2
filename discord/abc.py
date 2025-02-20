@@ -1567,7 +1567,9 @@ class Messageable:
             The poll to send with this message.
 
             .. versionadded:: 2.4
-
+        has_components_v2: :class:`bool`
+            Whether to use components V2.
+            
         Raises
         --------
         ~discord.HTTPException
