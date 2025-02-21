@@ -24,18 +24,17 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-import os
 from typing import List, Optional, TYPE_CHECKING, Tuple, TypeVar, Union
 
 from ..components import Section as SectionComponent
-from ..enums import ComponentType, TextStyle
+from ..enums import ComponentType
 from ..utils import MISSING
 from .item import Item
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from ..types.components import TextInput as TextInputPayload
+    from ..types.components import Section as SectionPayload
     from .text_display import TextDisplay
     from .thumbnail import Thumbnail
     from .button import Button
@@ -94,9 +93,6 @@ class Section(Item[V]):
         )
         self.row = row
 
-    def __str__(self) -> str:
-        return self.value
-
     @property
     def width(self) -> int:
         return 5
@@ -104,22 +100,13 @@ class Section(Item[V]):
     @property
     def children(self) -> List[TextDisplay]:
         """List[:class:`discord.ui.TextDisplay`]: The children."""
-        return self._underlying.style
+        return self._underlying.children
 
-    @style.setter
-    def style(self, value: TextStyle) -> None:
-        self._underlying.style = value
+    @children.setter
+    def children(self, value: List[Component]) -> None:
+        self._underlying.children = value
 
-    @property
-    def default(self) -> Optional[str]:
-        """:class:`str`: The default value of the text input."""
-        return self._underlying.value
-
-    @default.setter
-    def default(self, value: Optional[str]) -> None:
-        self._underlying.value = value
-
-    def to_component_dict(self) -> TextInputPayload:
+    def to_component_dict(self) -> SectionPayload:
         return self._underlying.to_dict()
 
     @classmethod

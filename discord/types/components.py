@@ -179,6 +179,7 @@ Component = Union[
     ActionRowChildComponent,
     Section,
     TextDisplay,
+    ThumbnailComponent,
     MediaGalleryComponent,
     FileComponent,
     SeparatorComponent,

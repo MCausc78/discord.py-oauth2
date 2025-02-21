@@ -365,6 +365,18 @@ Enumerations
 
         .. versionadded:: 2.5
 
+.. class:: SeparatorSpacingSize
+
+    Represents the spacing size of separator.
+
+    .. versionadded:: 2.5
+
+    .. attribute:: small
+        Represents a small separator.
+
+    .. attribute:: large
+        Represents a large separator.
+
 .. class:: ButtonStyle
 
     Represents the style of the button component.

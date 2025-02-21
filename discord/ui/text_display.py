@@ -24,21 +24,17 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-import os
-from typing import List, Literal, Optional, TYPE_CHECKING, Tuple, TypeVar
+from typing import Literal, Optional, TYPE_CHECKING, Tuple, TypeVar
 
 from ..components import TextDisplay as TextDisplayComponent
-from ..enums import ComponentType, TextStyle
-from ..utils import MISSING
+from ..enums import ComponentType
 from .item import Item
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from ..types.components import TextInput as TextInputPayload
-    from .text_display import TextDisplay
-    from .thumbnail import Thumbnail
-    from .button import Button
+    from ..types.components import TextDisplay as TextDisplayPayload
+    from .view import View
 
 # fmt: off
 __all__ = (
@@ -73,47 +69,32 @@ class TextDisplay(Item[V]):
 
     def __init__(
         self,
+        content: str,
         *,
-        children: List[TextDisplay],
-        accessory: Union[Thumbnail, Button],
         row: Optional[int] = None,
     ) -> None:
         super().__init__()
 
-        self._underlying = SectionComponent._raw_construct(
-            children=children,
-            accessory=accessory,
+        self._underlying = TextDisplayComponent._raw_construct(
+            content=content,
         )
         self.row = row
 
     def __str__(self) -> str:
-        return self.value
-
-    @property
-    def custom_id(self) -> str:
-        """:class:`str`: The ID of the text input that gets received during an interaction."""
-        return self._underlying.custom_id
-
-    @custom_id.setter
-    def custom_id(self, value: str) -> None:
-        if not isinstance(value, str):
-            raise TypeError('custom_id must be a str')
-
-        self._underlying.custom_id = value
-        self._provided_custom_id = True
+        return self.content
 
     @property
     def width(self) -> int:
         return 5
 
     @property
-    def content(self) -> Optional[str]:
-        """:class:`str`: The content."""
-        return self._underlying.value
+    def content(self) -> str:
+        """:class:`str`: The content of text display component."""
+        return self._underlying.content
 
-    @default.setter
-    def default(self, value: Optional[str]) -> None:
-        self._underlying.value = value
+    @content.setter
+    def content(self, value: str) -> None:
+        self._underlying.content = value
 
     def to_component_dict(self) -> TextDisplayPayload:
         return self._underlying.to_dict()

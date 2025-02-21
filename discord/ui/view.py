@@ -236,25 +236,6 @@ class View:
             if not children:
                 continue
 
-            v2_components = []
-            for child in children:
-                if isinstance(
-                    child,
-                    (
-                        Section,
-                        TextDisplay,
-                        MediaGallery,
-                        FileComponent,
-                        Separator,
-                        Container,
-                    ),
-                ):
-                    v2_components.append(child)
-
-            children = [component for component in components if component in v2_components]
-            if v2_components:
-                children.extend(v2_components)
-
             if children:
                 components.append(
                     {

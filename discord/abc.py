@@ -95,6 +95,7 @@ if TYPE_CHECKING:
     )
     from .poll import Poll
     from .threads import Thread
+    from .ui.item import Item
     from .ui.view import View
     from .types.channel import (
         PermissionOverwrite as PermissionOverwritePayload,
@@ -1478,6 +1479,7 @@ class Messageable:
         silent: bool = False,
         poll: Optional[Poll] = None,
         has_components_v2: bool = False,
+        components: Optional[List[Item[Any]]] = None,
     ) -> Message:
         """|coro|
 
@@ -1573,6 +1575,10 @@ class Messageable:
             You can send ``file`` or ``files`` only for referring from components.
 
             .. versionadded:: 2.5
+        components: List[:class:`discord.ui.Item`]
+            The components to send with this message. Must be a maximum of 10 if ``has_components_v2`` is set to ``True``, or 5 otherwise.
+
+            .. versionadded:: 2.5
 
         Raises
         --------
@@ -1644,6 +1650,7 @@ class Messageable:
             view=view,
             flags=flags,
             poll=poll,
+            components=components,
         ) as params:
             data = await state.http.send_message(channel.id, params=params)
 

@@ -53,6 +53,7 @@ __all__ = (
     'ComponentType',
     'ButtonStyle',
     'TextStyle',
+    'SeparatorSpacingSize',
     'PrivacyLevel',
     'InteractionType',
     'InteractionResponseType',
@@ -682,6 +683,11 @@ class TextStyle(Enum):
 
     def __int__(self) -> int:
         return self.value
+
+
+class SeparatorSpacingSize(Enum):
+    small = 1
+    large = 2
 
 
 class PrivacyLevel(Enum):

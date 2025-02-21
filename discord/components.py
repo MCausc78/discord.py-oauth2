@@ -41,6 +41,11 @@ if TYPE_CHECKING:
         TextInput as TextInputPayload,
         Section as SectionPayload,
         TextDisplay as TextDisplayPayload,
+        ThumbnailComponent as ThumbnailComponentPayload,
+        MediaGalleryComponent as MediaGalleryComponentPayload,
+        SeparatorComponent as SeparatorComponentPayload,
+        FileComponent as FileComponentPayload,
+        ContainerComponent as ContainerComponentPayload,
         ActionRowChildComponent as ActionRowChildComponentPayload,
         SelectDefaultValues as SelectDefaultValuesPayload,
     )
@@ -655,32 +660,43 @@ class Section(Component):
 
     Attributes
     ----------
-    children: List[:class:`Component`]
-        The children components that this holds, if any.
+    children: List[:class:`TextDisplay`]
+        The children components that this holds.
+    accessory: :class:`Component`
+        The section accessory.
     """
 
-    __slots__: Tuple[str, ...] = ('children',)
+    __slots__: Tuple[str, ...] = ('children', 'accessory')
 
     __repr_info__: ClassVar[Tuple[str, ...]] = __slots__
 
-    def __init__(self, data: ActionRowPayload, /) -> None:
-        self.children: List[ActionRowChildComponentType] = []
+    def __init__(self, data: SectionPayload, /) -> None:
+        self.children: List[TextDisplay] = []
 
         for component_data in data.get('components', []):
             component = _component_factory(component_data)
 
-            if component is not None:
+            if component is not None and isinstance(component, TextDisplay):
                 self.children.append(component)
 
-    @property
-    def type(self) -> Literal[ComponentType.action_row]:
-        """:class:`ComponentType`: The type of component."""
-        return ComponentType.action_row
+        self.accessory: Union[Button, Thumbnail]
 
-    def to_dict(self) -> ActionRowPayload:
+        accessory = _component_factory(data['accessory'])
+        if accessory is None or not isinstance(accessory, (Button, Thumbnail)):
+            self.accessory = MISSING
+        else:
+            self.accessory = accessory
+
+    @property
+    def type(self) -> Literal[ComponentType.section]:
+        """:class:`ComponentType`: The type of component."""
+        return ComponentType.section
+
+    def to_dict(self) -> SectionPayload:
         return {
             'type': self.type.value,
             'components': [child.to_dict() for child in self.children],
+            'accessory': self.accessory.to_dict(),
         }
 
 
@@ -688,7 +704,7 @@ class TextDisplay(Component):
     """Represents a text display from the Discord Bot UI Kit.
 
     .. note::
-        The user constructible and usable type to create a text input is
+        The user constructible and usable type to create a text display is
         :class:`discord.ui.TextDisplay` not this one.
 
     .. versionadded:: 2.5
@@ -711,8 +727,50 @@ class TextDisplay(Component):
         """:class:`ComponentType`: The type of component."""
         return ComponentType.text_display
 
-    def to_dict(self) -> TextDispalyPayload:
-        payload: TextDispalyPayload = {
+    def to_dict(self) -> TextDisplayPayload:
+        payload: TextDisplayPayload = {
+            'type': self.type.value,
+            'content': self.content,
+        }
+
+        return payload
+
+
+class Thumbnail(Component):
+    """Represents a thumbnail from the Discord Bot UI Kit.
+
+    .. note::
+        The user constructible and usable type to create a thumbnail is
+        :class:`discord.ui.Thumbnail` not this one.
+
+    .. versionadded:: 2.5
+
+    Attributes
+    ----------
+    content: :class:`str`
+        The content to display.
+    """
+
+    __slots__: Tuple[str, ...] = (
+        'media',
+        'description',
+        'spoiler',
+    )
+
+    __repr_info__: ClassVar[Tuple[str, ...]] = __slots__
+
+    def __init__(self, data: ThumbnailComponentPayload, /) -> None:
+        self.media: UnfurledMediaItem = UnfurledMediaItem(data=data['media'])
+        self.description: Optional[str] = data.get('description')
+        self.spoiler: bool = data.get('spoiler', False)
+
+    @property
+    def type(self) -> Literal[ComponentType.thumbnail]:
+        """:class:`ComponentType`: The type of component."""
+        return ComponentType.thumbnail
+
+    def to_dict(self) -> ThumbnailComponentPayload:
+        payload: TextDisplayPayload = {
             'type': self.type.value,
             'content': self.content,
         }
@@ -743,3 +801,13 @@ def _component_factory(data: ComponentPayload) -> Optional[Union[ActionRow, Acti
         return Section(data)
     elif data['type'] == 10:
         return TextDisplay(data)
+    elif data['type'] == 11:
+        return Thumbnail(data)
+    elif data['type'] == 12:
+        return MediaGallery(data)
+    elif data['type'] == 13:
+        return FileComponent(data)
+    elif data['type'] == 14:
+        return Separator(data)
+    elif data['type'] == 17:
+        return Container(data)
