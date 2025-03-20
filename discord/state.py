@@ -492,9 +492,6 @@ class ConnectionState(Generic[ClientT]):
             cached.poll._update_results_from_message(from_)
 
     def parse_ready(self, data: gw.ReadyEvent) -> None:
-        if self._ready_task is not None:
-            self._ready_task.cancel()
-
         self.clear(views=False)
         self.user = user = ClientUser(state=self, data=data['user'])
         self._users[user.id] = user  # type: ignore
