@@ -30,7 +30,7 @@ import logging
 import aiohttp
 import yarl
 
-from .state import AutoShardedConnectionState
+from .state import ConnectionState
 from .client import Client
 from .backoff import ExponentialBackoff
 from .gateway import *
@@ -363,7 +363,7 @@ class AutoShardedClient(Client):
     """
 
     if TYPE_CHECKING:
-        _connection: AutoShardedConnectionState
+        _connection: ConnectionState
 
     def __init__(self, *args: Any, intents: Intents, **kwargs: Any) -> None:
         kwargs.pop('shard_id', None)
@@ -390,8 +390,8 @@ class AutoShardedClient(Client):
             shard_id = (guild_id >> 22) % self.shard_count  # type: ignore
         return self.__shards[shard_id].ws
 
-    def _get_state(self, **options: Any) -> AutoShardedConnectionState:
-        return AutoShardedConnectionState(
+    def _get_state(self, **options: Any) -> ConnectionState:
+        return ConnectionState(
             dispatch=self.dispatch,
             handlers=self._handlers,
             hooks=self._hooks,
