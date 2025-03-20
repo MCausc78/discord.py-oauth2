@@ -246,7 +246,7 @@ class DiscordWebSocket:
     """Implements a WebSocket for Discord's gateway v10.
 
     Attributes
-    -----------
+    ----------
     DISPATCH
         Receive only. Denotes an event to be sent to Discord, such as READY.
     HEARTBEAT
@@ -443,10 +443,11 @@ class DiscordWebSocket:
         payload = {
             'op': self.IDENTIFY,
             'd': {
-                'token': self.token,
+                'token': 'Bearer ' + self.token,
+                'capabilities': 65536,
                 'properties': {
                     'os': sys.platform,
-                    'browser': 'discord.py',
+                    'browser': 'Discord Embedded',
                     'device': 'discord.py',
                 },
                 'compress': True,
@@ -454,24 +455,12 @@ class DiscordWebSocket:
             },
         }
 
-        if self.shard_id is not None and self.shard_count is not None:
-            payload['d']['shard'] = [self.shard_id, self.shard_count]
-
-        state = self._connection
-        if state._activity is not None or state._status is not None:
-            payload['d']['presence'] = {
-                'status': state._status,
-                'game': state._activity,
-                'since': 0,
-                'afk': False,
-            }
-
         if state._intents is not None:
             payload['d']['intents'] = state._intents.value
 
         await self.call_hooks('before_identify', self.shard_id, initial=self._initial_identify)
         await self.send_as_json(payload)
-        _log.debug('Shard ID %s has sent the IDENTIFY payload.', self.shard_id)
+        _log.debug('Gateway has sent the IDENTIFY payload.', self.shard_id)
 
     async def resume(self) -> None:
         """Sends the RESUME packet."""
@@ -485,7 +474,7 @@ class DiscordWebSocket:
         }
 
         await self.send_as_json(payload)
-        _log.debug('Shard ID %s has sent the RESUME payload.', self.shard_id)
+        _log.debug('Gateway has sent the RESUME payload.', self.shard_id)
 
     async def received_message(self, msg: Any, /) -> None:
         if type(msg) is bytes:
@@ -499,13 +488,15 @@ class DiscordWebSocket:
         msg = utils._from_json(msg)
 
         _log.debug('For Shard ID %s: WebSocket Event: %s', self.shard_id, msg)
+        
         event = msg.get('t')
-        if event:
-            self._dispatch('socket_event_type', event)
-
         op = msg.get('op')
         data = msg.get('d')
         seq = msg.get('s')
+
+        if event:
+            self._dispatch('raw_dispatch_event', event, data, seq)
+        
         if seq is not None:
             self.sequence = seq
 
@@ -770,7 +761,7 @@ class DiscordVoiceWebSocket:
     """Implements the websocket protocol for handling voice connections.
 
     Attributes
-    -----------
+    ----------
     IDENTIFY
         Send only. Starts a new voice session.
     SELECT_PROTOCOL
