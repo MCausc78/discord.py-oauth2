@@ -111,56 +111,6 @@ if TYPE_CHECKING:
     Channel = Union[GuildChannel, PrivateChannel, PartialMessageable]
 
 
-class ChunkRequest:
-    def __init__(
-        self,
-        guild_id: int,
-        shard_id: int,
-        loop: asyncio.AbstractEventLoop,
-        resolver: Callable[[int], Any],
-        *,
-        cache: bool = True,
-    ) -> None:
-        self.guild_id: int = guild_id
-        self.shard_id: int = shard_id
-        self.resolver: Callable[[int], Any] = resolver
-        self.loop: asyncio.AbstractEventLoop = loop
-        self.cache: bool = cache
-        self.nonce: str = os.urandom(16).hex()
-        self.buffer: List[Member] = []
-        self.waiters: List[asyncio.Future[List[Member]]] = []
-
-    def add_members(self, members: List[Member]) -> None:
-        self.buffer.extend(members)
-        if self.cache:
-            guild = self.resolver(self.guild_id)
-            if guild is None:
-                return
-
-            for member in members:
-                existing = guild.get_member(member.id)
-                if existing is None or existing.joined_at is None:
-                    guild._add_member(member)
-
-    async def wait(self) -> List[Member]:
-        future = self.loop.create_future()
-        self.waiters.append(future)
-        try:
-            return await future
-        finally:
-            self.waiters.remove(future)
-
-    def get_future(self) -> asyncio.Future[List[Member]]:
-        future = self.loop.create_future()
-        self.waiters.append(future)
-        return future
-
-    def done(self) -> None:
-        for future in self.waiters:
-            if not future.done():
-                future.set_result(self.buffer)
-
-
 _log = logging.getLogger(__name__)
 
 
@@ -196,14 +146,10 @@ class ConnectionState(Generic[ClientT]):
         self.dispatch: Callable[..., Any] = dispatch
         self.handlers: Dict[str, Callable[..., Any]] = handlers
         self.hooks: Dict[str, Callable[..., Coroutine[Any, Any, Any]]] = hooks
-        self.shard_count: Optional[int] = None
-        self._ready_task: Optional[asyncio.Task] = None
         self.application_id: Optional[int] = utils._get_as_snowflake(options, 'application_id')
+        self.application_name: str = utils.MISSING
         self.application_flags: ApplicationFlags = utils.MISSING
         self.heartbeat_timeout: float = options.get('heartbeat_timeout', 60.0)
-        self.guild_ready_timeout: float = options.get('guild_ready_timeout', 2.0)
-        if self.guild_ready_timeout < 0:
-            raise ValueError('guild_ready_timeout cannot be negative')
 
         allowed_mentions = options.get('allowed_mentions')
 
@@ -211,7 +157,6 @@ class ConnectionState(Generic[ClientT]):
             raise TypeError('allowed_mentions parameter must be AllowedMentions')
 
         self.allowed_mentions: Optional[AllowedMentions] = allowed_mentions
-        self._chunk_requests: Dict[Union[int, str], ChunkRequest] = {}
 
         activity = options.get('activity', None)
         if activity:
@@ -236,12 +181,6 @@ class ConnectionState(Generic[ClientT]):
 
         if not intents.guilds:
             _log.warning('Guilds intent seems to be disabled. This may cause state related issues.')
-
-        self._chunk_guilds: bool = options.get('chunk_guilds_at_startup', intents.members)
-
-        # Ensure these two are set properly
-        if not intents.members and self._chunk_guilds:
-            raise ValueError('Intents.members must be enabled to chunk guilds at startup.')
 
         cache_flags = options.get('member_cache_flags', None)
         if cache_flags is None:
@@ -313,28 +252,6 @@ class ConnectionState(Generic[ClientT]):
             self._messages: Optional[Deque[Message]] = deque(maxlen=self.max_messages)
         else:
             self._messages: Optional[Deque[Message]] = None
-
-    def process_chunk_requests(self, guild_id: int, nonce: Optional[str], members: List[Member], complete: bool) -> None:
-        removed = []
-        for key, request in self._chunk_requests.items():
-            if request.guild_id == guild_id and request.nonce == nonce:
-                request.add_members(members)
-                if complete:
-                    request.done()
-                    removed.append(key)
-
-        for key in removed:
-            del self._chunk_requests[key]
-
-    def clear_chunk_requests(self, shard_id: int | None) -> None:
-        removed = []
-        for key, request in self._chunk_requests.items():
-            if shard_id is None or request.shard_id == shard_id:
-                request.done()
-                removed.append(key)
-
-        for key in removed:
-            del self._chunk_requests[key]
 
     def call_handlers(self, key: str, *args: Any, **kwargs: Any) -> None:
         try:
@@ -574,39 +491,11 @@ class ConnectionState(Generic[ClientT]):
         if cached is not None and cached.poll:
             cached.poll._update_results_from_message(from_)
 
-    async def chunker(
-        self, guild_id: int, query: str = '', limit: int = 0, presences: bool = False, *, nonce: Optional[str] = None
-    ) -> None:
-        ws = self._get_websocket(guild_id)  # This is ignored upstream
-        await ws.request_chunks(guild_id, query=query, limit=limit, presences=presences, nonce=nonce)
-
-    async def query_members(
-        self, guild: Guild, query: Optional[str], limit: int, user_ids: Optional[List[int]], cache: bool, presences: bool
-    ) -> List[Member]:
-        guild_id = guild.id
-        ws = self._get_websocket(guild_id)
-        if ws is None:
-            raise RuntimeError('Somehow do not have a websocket for this guild_id')
-
-        request = ChunkRequest(guild.id, guild.shard_id, self.loop, self._get_guild, cache=cache)
-        self._chunk_requests[request.nonce] = request
-
-        try:
-            # start the query operation
-            await ws.request_chunks(
-                guild_id, query=query, limit=limit, user_ids=user_ids, presences=presences, nonce=request.nonce
-            )
-            return await asyncio.wait_for(request.wait(), timeout=30.0)
-        except asyncio.TimeoutError:
-            _log.warning('Timed out waiting for chunks with query %r and limit %d for guild_id %d', query, limit, guild_id)
-            raise
-
     def parse_ready(self, data: gw.ReadyEvent) -> None:
         if self._ready_task is not None:
             self._ready_task.cancel()
 
         self.clear(views=False)
-        self.clear_chunk_requests(None)
         self.user = user = ClientUser(state=self, data=data['user'])
         self._users[user.id] = user  # type: ignore
 
@@ -1208,64 +1097,26 @@ class ConnectionState(Generic[ClientT]):
 
         return self._add_guild_from_data(data)
 
-    def is_guild_evicted(self, guild: Guild) -> bool:
-        return guild.id not in self._guilds
-
-    @overload
-    async def chunk_guild(self, guild: Guild, *, wait: Literal[True] = ..., cache: Optional[bool] = ...) -> List[Member]:
-        ...
-
-    @overload
-    async def chunk_guild(
-        self, guild: Guild, *, wait: Literal[False] = ..., cache: Optional[bool] = ...
-    ) -> asyncio.Future[List[Member]]:
-        ...
-
-    async def chunk_guild(
-        self, guild: Guild, *, wait: bool = True, cache: Optional[bool] = None
-    ) -> Union[List[Member], asyncio.Future[List[Member]]]:
-        cache = cache or self.member_cache_flags.joined
-        request = self._chunk_requests.get(guild.id)
-        if request is None:
-            self._chunk_requests[guild.id] = request = ChunkRequest(
-                guild.id, guild.shard_id, self.loop, self._get_guild, cache=cache
-            )
-            await self.chunker(guild.id, nonce=request.nonce)
-
-        if wait:
-            return await request.wait()
-        return request.get_future()
-
-    def _chunk_timeout(self, guild: Guild) -> float:
-        return max(5.0, (guild.member_count or 0) / 10000)
-
-    async def _chunk_and_dispatch(self, guild, unavailable):
-        timeout = self._chunk_timeout(guild)
-
-        try:
-            await asyncio.wait_for(self.chunk_guild(guild), timeout=timeout)
-        except asyncio.TimeoutError:
-            _log.warning('Somehow timed out waiting for chunks for guild ID %s.', guild.id)
-
-        if unavailable is False:
-            self.dispatch('guild_available', guild)
-        else:
-            self.dispatch('guild_join', guild)
-
-
     def parse_guild_create(self, data: gw.GuildCreateEvent) -> None:
-        unavailable = data.get('unavailable')
-        if unavailable is True:
-            # joined a guild with unavailable == True so..
+        guild_id = int(data['guild_id'])
+        guild = self._get_guild(guild_id)
+        
+        if data.get('unavailable'):
+            if guild is None:
+                guild = self._get_create_guild(data)
+                self.dispatch('guild_join', guild)
+            else:
+                guild.unavailable = True
+                self.dispatch('guild_unavailable', guild)
             return
 
+        joined = guild is None
         guild = self._get_create_guild(data)
-
-        # Dispatch available if newly available
-        if unavailable is False:
-            self.dispatch('guild_available', guild)
-        else:
+        
+        if joined:
             self.dispatch('guild_join', guild)
+        else:
+            self.dispatch('guild_available', guild)
 
     def parse_guild_update(self, data: gw.GuildUpdateEvent) -> None:
         guild = self._get_guild(int(data['id']))
@@ -1356,31 +1207,6 @@ class ConnectionState(Generic[ClientT]):
                 self.dispatch('guild_role_update', old_role, role)
         else:
             _log.debug('GUILD_ROLE_UPDATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
-
-    def parse_guild_members_chunk(self, data: gw.GuildMembersChunkEvent) -> None:
-        guild_id = int(data['guild_id'])
-        guild = self._get_guild(guild_id)
-        presences = data.get('presences', [])
-
-        if guild is None:
-            return
-
-        members = [Member(guild=guild, data=member, state=self) for member in data.get('members', [])]
-        _log.debug('Processed a chunk for %s members in guild ID %s.', len(members), guild_id)
-
-        if presences:
-            member_dict: Dict[Snowflake, Member] = {str(member.id): member for member in members}
-            for presence in presences:
-                user = presence['user']
-                member_id = user['id']
-                member = member_dict.get(member_id)
-
-                if member is not None:
-                    raw_presence = RawPresenceUpdateEvent(data=presence, state=self)
-                    member._presence_update(raw_presence, user)
-
-        complete = data.get('chunk_index', 0) + 1 == data.get('chunk_count')
-        self.process_chunk_requests(guild_id, data.get('nonce'), members, complete)
 
     def parse_guild_integrations_update(self, data: gw.GuildIntegrationsUpdateEvent) -> None:
         guild = self._get_guild(int(data['guild_id']))
