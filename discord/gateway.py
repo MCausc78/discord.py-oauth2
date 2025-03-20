@@ -461,7 +461,7 @@ class DiscordWebSocket:
 
         await self.call_hooks('before_identify', self.shard_id, initial=self._initial_identify)
         await self.send_as_json(payload)
-        _log.debug('Gateway has sent the IDENTIFY payload.', self.shard_id)
+        _log.debug('Gateway has sent the IDENTIFY payload.')
 
     async def resume(self) -> None:
         """Sends the RESUME packet."""
@@ -475,7 +475,7 @@ class DiscordWebSocket:
         }
 
         await self.send_as_json(payload)
-        _log.debug('Gateway has sent the RESUME payload.', self.shard_id)
+        _log.debug('Gateway has sent the RESUME payload.')
 
     async def received_message(self, msg: Any, /) -> None:
         if type(msg) is bytes:
@@ -488,7 +488,7 @@ class DiscordWebSocket:
         self.log_receive(msg)
         msg = utils._from_json(msg)
 
-        _log.debug('WebSocket Event: %s', self.shard_id, msg)
+        _log.debug('WebSocket Event: %s', msg)
         
         event = msg.get('t')
         op = msg.get('op')
@@ -554,8 +554,6 @@ class DiscordWebSocket:
             _log.info('Connected to Gateway (Session ID: %s).', self.session_id)
 
         elif event == 'RESUMED':
-            # pass back the shard ID to the resumed handler
-            data['__shard_id__'] = self.shard_id
             _log.info('Gateway has successfully RESUMED session %s.', self.session_id)
 
         try:
