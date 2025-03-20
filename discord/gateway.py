@@ -455,6 +455,7 @@ class DiscordWebSocket:
             },
         }
 
+        state = self._connection
         if state._intents is not None:
             payload['d']['intents'] = state._intents.value
 
@@ -487,7 +488,7 @@ class DiscordWebSocket:
         self.log_receive(msg)
         msg = utils._from_json(msg)
 
-        _log.debug('For Shard ID %s: WebSocket Event: %s', self.shard_id, msg)
+        _log.debug('WebSocket Event: %s', self.shard_id, msg)
         
         event = msg.get('t')
         op = msg.get('op')
@@ -539,7 +540,7 @@ class DiscordWebSocket:
                 self.sequence = None
                 self.session_id = None
                 self.gateway = self.DEFAULT_GATEWAY
-                _log.info('Shard ID %s session has been invalidated.', self.shard_id)
+                _log.info('Gateway session has been invalidated.', self.shard_id)
                 await self.close(code=1000)
                 raise ReconnectWebSocket(self.shard_id, resume=False)
 
@@ -550,12 +551,12 @@ class DiscordWebSocket:
             self.sequence = msg['s']
             self.session_id = data['session_id']
             self.gateway = yarl.URL(data['resume_gateway_url'])
-            _log.info('Shard ID %s has connected to Gateway (Session ID: %s).', self.shard_id, self.session_id)
+            _log.info('Connected to Gateway (Session ID: %s).', self.shard_id, self.session_id)
 
         elif event == 'RESUMED':
             # pass back the shard ID to the resumed handler
             data['__shard_id__'] = self.shard_id
-            _log.info('Shard ID %s has successfully RESUMED session %s.', self.shard_id, self.session_id)
+            _log.info('Gateway has successfully RESUMED session %s.', self.shard_id, self.session_id)
 
         try:
             func = self._discord_parsers[event]
