@@ -531,10 +531,6 @@ class ConnectionState(Generic[ClientT]):
         self._add_guild(guild)
         return guild
 
-    def _guild_needs_chunking(self, guild: Guild) -> bool:
-        # If presences are enabled then we get back the old guild.large behaviour
-        return self._chunk_guilds and not guild.chunked and not (self._intents.presences and not guild.large)
-
     def _get_guild_channel(
         self, data: PartialMessagePayload, guild_id: Optional[int] = None
     ) -> Tuple[Union[Channel, Thread], Optional[Guild]]:
@@ -605,59 +601,10 @@ class ConnectionState(Generic[ClientT]):
             _log.warning('Timed out waiting for chunks with query %r and limit %d for guild_id %d', query, limit, guild_id)
             raise
 
-    async def _delay_ready(self) -> None:
-        try:
-            states = []
-            while True:
-                # this snippet of code is basically waiting N seconds
-                # until the last GUILD_CREATE was sent
-                try:
-                    guild = await asyncio.wait_for(self._ready_state.get(), timeout=self.guild_ready_timeout)
-                except asyncio.TimeoutError:
-                    break
-                else:
-                    if self._guild_needs_chunking(guild):
-                        future = await self.chunk_guild(guild, wait=False)
-                        states.append((guild, future))
-                    else:
-                        if guild.unavailable is False:
-                            self.dispatch('guild_available', guild)
-                        else:
-                            self.dispatch('guild_join', guild)
-
-            for guild, future in states:
-                timeout = self._chunk_timeout(guild)
-
-                try:
-                    await asyncio.wait_for(future, timeout=timeout)
-                except asyncio.TimeoutError:
-                    _log.warning('Shard ID %s timed out waiting for chunks for guild_id %s.', guild.shard_id, guild.id)
-
-                if guild.unavailable is False:
-                    self.dispatch('guild_available', guild)
-                else:
-                    self.dispatch('guild_join', guild)
-
-            # remove the state
-            try:
-                del self._ready_state
-            except AttributeError:
-                pass  # already been deleted somehow
-
-        except asyncio.CancelledError:
-            pass
-        else:
-            # dispatch the event
-            self.call_handlers('ready')
-            self.dispatch('ready')
-        finally:
-            self._ready_task = None
-
     def parse_ready(self, data: gw.ReadyEvent) -> None:
         if self._ready_task is not None:
             self._ready_task.cancel()
 
-        self._ready_state: asyncio.Queue[Guild] = asyncio.Queue()
         self.clear(views=False)
         self.clear_chunk_requests(None)
         self.user = user = ClientUser(state=self, data=data['user'])
@@ -670,13 +617,19 @@ class ConnectionState(Generic[ClientT]):
                 pass
             else:
                 self.application_id = utils._get_as_snowflake(application, 'id')
+                self.application_name: str = application['name']
                 self.application_flags: ApplicationFlags = ApplicationFlags._from_value(application['flags'])
-
-        for guild_data in data['guilds']:
-            self._add_guild_from_data(guild_data)  # type: ignore
+        
+        for guild_data in data.get('guilds', []):
+            guild = self._add_guild_from_data(guild_data)  # type: ignore # _add_guild_from_data requires a complete Guild payload
+            if guild.unavailable:
+                self.dispatch('guild_unavailable', guild)
+            else:
+                self.dispatch('guild_available', guild)
 
         self.dispatch('connect')
-        self._ready_task = asyncio.create_task(self._delay_ready())
+        self.call_handlers('ready')
+        self.dispatch('ready')
 
     def parse_resumed(self, data: gw.ResumedEvent) -> None:
         self.dispatch('resumed')
@@ -1299,14 +1252,6 @@ class ConnectionState(Generic[ClientT]):
         else:
             self.dispatch('guild_join', guild)
 
-    def _add_ready_state(self, guild: Guild) -> bool:
-        try:
-            # Notify the on_ready state, if any, that this guild is complete.
-            self._ready_state.put_nowait(guild)
-        except AttributeError:
-            return False
-        else:
-            return True
 
     def parse_guild_create(self, data: gw.GuildCreateEvent) -> None:
         unavailable = data.get('unavailable')
@@ -1315,14 +1260,6 @@ class ConnectionState(Generic[ClientT]):
             return
 
         guild = self._get_create_guild(data)
-
-        if self._add_ready_state(guild):
-            return  # We're waiting for the ready event, put the rest on hold
-
-        # check if it requires chunking
-        if self._guild_needs_chunking(guild):
-            asyncio.create_task(self._chunk_and_dispatch(guild, unavailable))
-            return
 
         # Dispatch available if newly available
         if unavailable is False:
@@ -1833,151 +1770,3 @@ class ConnectionState(Generic[ClientT]):
             sound = guild._resolve_soundboard_sound(id)
             if sound is not None:
                 return sound
-
-
-class AutoShardedConnectionState(ConnectionState[ClientT]):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.shard_ids: Union[List[int], range] = []
-
-        self._ready_tasks: Dict[int, asyncio.Task[None]] = {}
-        self._ready_states: Dict[int, asyncio.Queue[Guild]] = {}
-
-    def _update_message_references(self) -> None:
-        # self._messages won't be None when this is called
-        for msg in self._messages:  # type: ignore
-            if not msg.guild:
-                continue
-
-            new_guild = self._get_guild(msg.guild.id)
-            if new_guild is not None and new_guild is not msg.guild:
-                channel_id = msg.channel.id
-                channel = new_guild._resolve_channel(channel_id) or PartialMessageable(
-                    state=self, id=channel_id, guild_id=new_guild.id
-                )
-                msg._rebind_cached_references(new_guild, channel)
-
-    async def chunker(
-        self,
-        guild_id: int,
-        query: str = '',
-        limit: int = 0,
-        presences: bool = False,
-        *,
-        shard_id: Optional[int] = None,
-        nonce: Optional[str] = None,
-    ) -> None:
-        ws = self._get_websocket(guild_id, shard_id=shard_id)
-        await ws.request_chunks(guild_id, query=query, limit=limit, presences=presences, nonce=nonce)
-
-    def _add_ready_state(self, guild: Guild) -> bool:
-        try:
-            # Notify the on_ready state, if any, that this guild is complete.
-            self._ready_states[guild.shard_id].put_nowait(guild)
-        except KeyError:
-            return False
-        else:
-            return True
-
-    async def _delay_ready(self) -> None:
-        await asyncio.gather(*self._ready_tasks.values())
-
-        # clear the current tasks
-        self._ready_task = None
-        self._ready_tasks = {}
-
-        # dispatch the event
-        self.call_handlers('ready')
-        self.dispatch('ready')
-
-    async def _delay_shard_ready(self, shard_id: int) -> None:
-        try:
-            states = []
-            while True:
-                # this snippet of code is basically waiting N seconds
-                # until the last GUILD_CREATE was sent
-                try:
-                    guild = await asyncio.wait_for(self._ready_states[shard_id].get(), timeout=self.guild_ready_timeout)
-                except asyncio.TimeoutError:
-                    break
-                else:
-                    if self._guild_needs_chunking(guild):
-                        future = await self.chunk_guild(guild, wait=False)
-                        states.append((guild, future))
-                    else:
-                        if guild.unavailable is False:
-                            self.dispatch('guild_available', guild)
-                        else:
-                            self.dispatch('guild_join', guild)
-
-            for guild, future in states:
-                timeout = self._chunk_timeout(guild)
-
-                try:
-                    await asyncio.wait_for(future, timeout=timeout)
-                except asyncio.TimeoutError:
-                    _log.warning('Shard ID %s timed out waiting for chunks for guild_id %s.', guild.shard_id, guild.id)
-
-                if guild.unavailable is False:
-                    self.dispatch('guild_available', guild)
-                else:
-                    self.dispatch('guild_join', guild)
-
-            # remove the state
-            try:
-                del self._ready_states[shard_id]
-            except KeyError:
-                pass  # already been deleted somehow
-
-        except asyncio.CancelledError:
-            pass
-        else:
-            # dispatch the event
-            self.dispatch('shard_ready', shard_id)
-
-    def parse_ready(self, data: gw.ReadyEvent) -> None:
-        if self._ready_task is not None:
-            self._ready_task.cancel()
-
-        shard_id = data['shard'][0]  # shard_id, num_shards
-
-        if shard_id in self._ready_tasks:
-            self._ready_tasks[shard_id].cancel()
-            self.clear_chunk_requests(shard_id)
-
-        if shard_id not in self._ready_states:
-            self._ready_states[shard_id] = asyncio.Queue()
-
-        self.user: Optional[ClientUser]
-        self.user = user = ClientUser(state=self, data=data['user'])
-        # self._users is a list of Users, we're setting a ClientUser
-        self._users[user.id] = user  # type: ignore
-
-        if self.application_id is None:
-            try:
-                application = data['application']
-            except KeyError:
-                pass
-            else:
-                self.application_id: Optional[int] = utils._get_as_snowflake(application, 'id')
-                self.application_flags: ApplicationFlags = ApplicationFlags._from_value(application['flags'])
-
-        for guild_data in data['guilds']:
-            self._add_guild_from_data(guild_data)  # type: ignore # _add_guild_from_data requires a complete Guild payload
-
-        if self._messages:
-            self._update_message_references()
-
-        self.dispatch('connect')
-        self.dispatch('shard_connect', shard_id)
-
-        self._ready_tasks[shard_id] = asyncio.create_task(self._delay_shard_ready(shard_id))
-
-        # The delay task for every shard has been started
-        if len(self._ready_tasks) == len(self.shard_ids):
-            self._ready_task = asyncio.create_task(self._delay_ready())
-
-    def parse_resumed(self, data: gw.ResumedEvent) -> None:
-        self.dispatch('resumed')
-        self.dispatch('shard_resumed', data['__shard_id__'])  # type: ignore # This is an internal discord.py key
