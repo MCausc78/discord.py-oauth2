@@ -852,11 +852,7 @@ class HTTPClient:
     # Message management
 
     def start_private_message(self, user_id: Snowflake) -> Response[channel.DMChannel]:
-        payload = {
-            'recipient_id': user_id,
-        }
-
-        return self.request(Route('POST', '/users/@me/channels'), json=payload)
+        return self.request(Route('GET', '/users/@me/dms/{user_id}', user_id=user_id))
 
     def send_message(
         self,

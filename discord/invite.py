@@ -545,27 +545,3 @@ class Invite(Hashable):
             self.scheduled_event = None
 
         return self
-
-    async def delete(self, *, reason: Optional[str] = None) -> None:
-        """|coro|
-
-        Revokes the instant invite.
-
-        You must have :attr:`~Permissions.manage_channels` to do this.
-
-        Parameters
-        -----------
-        reason: Optional[:class:`str`]
-            The reason for deleting this invite. Shows up on the audit log.
-
-        Raises
-        -------
-        Forbidden
-            You do not have permissions to revoke invites.
-        NotFound
-            The invite is invalid or expired.
-        HTTPException
-            Revoking the invite failed.
-        """
-
-        await self._state.http.delete_invite(self.code, reason=reason)

@@ -54,6 +54,11 @@ class GuildVoiceState(_VoiceState):
     channel_id: Snowflake
 
 
+class LobbyVoiceState(_VoiceState):
+    channel_id: Snowflake
+    lobby_id: Snowflake
+
+
 class VoiceState(_VoiceState, total=False):
     channel_id: Optional[Snowflake]
     guild_id: Snowflake

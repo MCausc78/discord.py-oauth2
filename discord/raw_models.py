@@ -103,10 +103,7 @@ class RawMessageDeleteEvent(_RawReprMixin):
         self.message_id: int = int(data['id'])
         self.channel_id: int = int(data['channel_id'])
         self.cached_message: Optional[Message] = None
-        try:
-            self.guild_id: Optional[int] = int(data['guild_id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            self.guild_id: Optional[int] = None
+        self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
 
 
 class RawBulkMessageDeleteEvent(_RawReprMixin):
@@ -127,14 +124,10 @@ class RawBulkMessageDeleteEvent(_RawReprMixin):
     __slots__ = ('message_ids', 'channel_id', 'guild_id', 'cached_messages')
 
     def __init__(self, data: BulkMessageDeleteEvent) -> None:
-        self.message_ids: Set[int] = {int(x) for x in data.get('ids', [])}
+        self.message_ids: Set[int] = set(map(int, data.get('ids', ())))
         self.channel_id: int = int(data['channel_id'])
         self.cached_messages: List[Message] = []
-
-        try:
-            self.guild_id: Optional[int] = int(data['guild_id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            self.guild_id: Optional[int] = None
+        self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
 
 
 class RawMessageUpdateEvent(_RawReprMixin):
@@ -244,13 +237,9 @@ class RawReactionActionEvent(_RawReprMixin):
         self.member: Optional[Member] = None
         self.message_author_id: Optional[int] = _get_as_snowflake(data, 'message_author_id')
         self.burst: bool = data.get('burst', False)
-        self.burst_colours: List[Colour] = [Colour.from_str(c) for c in data.get('burst_colours', [])]
+        self.burst_colours: List[Colour] = [Colour.from_str(c) for c in data.get('burst_colours', ())]
         self.type: ReactionType = try_enum(ReactionType, data['type'])
-
-        try:
-            self.guild_id: Optional[int] = int(data['guild_id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            self.guild_id: Optional[int] = None
+        self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
 
     @property
     def burst_colors(self) -> List[Colour]:
@@ -336,13 +325,7 @@ class RawIntegrationDeleteEvent(_RawReprMixin):
     def __init__(self, data: IntegrationDeleteEvent) -> None:
         self.integration_id: int = int(data['id'])
         self.guild_id: int = int(data['guild_id'])
-
-        try:
-            self.application_id: Optional[int] = int(
-                data['application_id']  # pyright: ignore[reportTypedDictNotRequiredAccess]
-            )
-        except KeyError:
-            self.application_id: Optional[int] = None
+        self.application_id: Optional[int] = _get_as_snowflake(data, 'application_id')
 
 
 class RawThreadUpdateEvent(_RawReprMixin):

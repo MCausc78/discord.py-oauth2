@@ -23,14 +23,12 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
-from typing import Any, Collection, Iterator, List, Optional, TYPE_CHECKING, Tuple
+from typing import Any, Iterator, List, Optional, TYPE_CHECKING, Tuple
 
 from .asset import Asset, AssetMixin
-from .utils import SnowflakeList, snowflake_time, MISSING
+from .utils import SnowflakeList, snowflake_time
 from .partial_emoji import _EmojiTag, PartialEmoji
 from .user import User
-from .errors import MissingApplicationID
-from .object import Object
 
 # fmt: off
 __all__ = (
@@ -126,7 +124,7 @@ class Emoji(_EmojiTag, AssetMixin):
         self.name: str = emoji['name']  # type: ignore # This won't be None for full emoji objects.
         self.animated: bool = emoji.get('animated', False)
         self.available: bool = emoji.get('available', True)
-        self._roles: SnowflakeList = SnowflakeList(map(int, emoji.get('roles', [])))
+        self._roles: SnowflakeList = SnowflakeList(map(int, emoji.get('roles', ())))
         user = emoji.get('user')
         self.user: Optional[User] = User(state=self._state, data=user) if user else None
 
@@ -196,103 +194,6 @@ class Emoji(_EmojiTag, AssetMixin):
             return True
         emoji_roles, my_roles = self._roles, self.guild.me._roles
         return any(my_roles.has(role_id) for role_id in emoji_roles)
-
-    async def delete(self, *, reason: Optional[str] = None) -> None:
-        """|coro|
-
-        Deletes the custom emoji.
-
-        You must have :attr:`~Permissions.manage_emojis` to do this if
-        :meth:`.is_application_owned` is ``False``.
-
-        Parameters
-        -----------
-        reason: Optional[:class:`str`]
-            The reason for deleting this emoji. Shows up on the audit log.
-
-            This does not apply if :meth:`.is_application_owned` is ``True``.
-
-        Raises
-        -------
-        Forbidden
-            You are not allowed to delete emojis.
-        HTTPException
-            An error occurred deleting the emoji.
-        MissingApplicationID
-            The emoji is owned by an application but the application ID is missing.
-        """
-        if self.is_application_owned():
-            application_id = self._state.application_id
-            if application_id is None:
-                raise MissingApplicationID
-
-            await self._state.http.delete_application_emoji(application_id, self.id)
-            return
-
-        await self._state.http.delete_custom_emoji(self.guild_id, self.id, reason=reason)
-
-    async def edit(
-        self, *, name: str = MISSING, roles: Collection[Snowflake] = MISSING, reason: Optional[str] = None
-    ) -> Emoji:
-        r"""|coro|
-
-        Edits the custom emoji.
-
-        You must have :attr:`~Permissions.manage_emojis` to do this.
-
-        .. versionchanged:: 2.0
-            The newly updated emoji is returned.
-
-        Parameters
-        -----------
-        name: :class:`str`
-            The new emoji name.
-        roles: List[:class:`~discord.abc.Snowflake`]
-            A list of roles that can use this emoji. An empty list can be passed to make it available to everyone.
-
-            This does not apply if :meth:`.is_application_owned` is ``True``.
-
-        reason: Optional[:class:`str`]
-            The reason for editing this emoji. Shows up on the audit log.
-
-            This does not apply if :meth:`.is_application_owned` is ``True``.
-
-        Raises
-        -------
-        Forbidden
-            You are not allowed to edit emojis.
-        HTTPException
-            An error occurred editing the emoji.
-        MissingApplicationID
-            The emoji is owned by an application but the application ID is missing
-
-        Returns
-        --------
-        :class:`Emoji`
-            The newly updated emoji.
-        """
-
-        payload = {}
-        if name is not MISSING:
-            payload['name'] = name
-        if roles is not MISSING:
-            payload['roles'] = [role.id for role in roles]
-
-        if self.is_application_owned():
-            application_id = self._state.application_id
-            if application_id is None:
-                raise MissingApplicationID
-
-            payload.pop('roles', None)
-            data = await self._state.http.edit_application_emoji(
-                application_id,
-                self.id,
-                payload=payload,
-            )
-            return Emoji(guild=Object(0), data=data, state=self._state)
-
-        data = await self._state.http.edit_custom_emoji(self.guild_id, self.id, payload=payload, reason=reason)
-        return Emoji(guild=self.guild, data=data, state=self._state)  # type: ignore # if guild is None, the http request would have failed
 
     def is_application_owned(self) -> bool:
         """:class:`bool`: Whether the emoji is owned by an application.

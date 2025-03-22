@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from typing import List, Optional, TYPE_CHECKING, Union
-from .utils import _get_as_snowflake, get, MISSING
+from .utils import _get_as_snowflake, get
 from .partial_emoji import _EmojiTag
 
 __all__ = (
@@ -36,7 +36,6 @@ __all__ = (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
     from .types.welcome_screen import (
         WelcomeScreen as WelcomeScreenPayload,
         WelcomeScreenChannel as WelcomeScreenChannelPayload,
@@ -129,7 +128,7 @@ class WelcomeScreen:
 
     def _store(self, data: WelcomeScreenPayload) -> None:
         self.description: str = data['description']
-        welcome_channels = data.get('welcome_channels', [])
+        welcome_channels = data.get('welcome_channels', ())
         self.welcome_channels: List[WelcomeChannel] = [
             WelcomeChannel._from_dict(data=wc, guild=self._guild) for wc in welcome_channels
         ]
@@ -145,73 +144,3 @@ class WelcomeScreen:
         is present in :attr:`Guild.features`.
         """
         return 'WELCOME_SCREEN_ENABLED' in self._guild.features
-
-    async def edit(
-        self,
-        *,
-        description: str = MISSING,
-        welcome_channels: List[WelcomeChannel] = MISSING,
-        enabled: bool = MISSING,
-        reason: Optional[str] = None,
-    ) -> Self:
-        """|coro|
-
-        Edit the welcome screen.
-
-        Welcome channels can only accept custom emojis if :attr:`Guild.premium_tier` is level 2 or above.
-
-        You must have :attr:`~Permissions.manage_guild` in the guild to do this.
-
-        Usage: ::
-
-            rules_channel = guild.get_channel(12345678)
-            announcements_channel = guild.get_channel(87654321)
-
-            custom_emoji = utils.get(guild.emojis, name='loudspeaker')
-
-            await welcome_screen.edit(
-                description='This is a very cool community server!',
-                welcome_channels=[
-                    WelcomeChannel(channel=rules_channel, description='Read the rules!', emoji='👨‍🏫'),
-                    WelcomeChannel(channel=announcements_channel, description='Watch out for announcements!', emoji=custom_emoji),
-                ]
-            )
-
-        Parameters
-        ------------
-        description: Optional[:class:`str`]
-            The welcome screen's description.
-        welcome_channels: Optional[List[:class:`WelcomeChannel`]]
-            The welcome channels, in their respective order.
-        enabled: Optional[:class:`bool`]
-            Whether the welcome screen should be displayed.
-        reason: Optional[:class:`str`]
-            The reason for editing the welcome screen. Shows up on the audit log.
-
-        Raises
-        -------
-        HTTPException
-            Editing the welcome screen failed.
-        Forbidden
-            You don't have permissions to edit the welcome screen.
-        NotFound
-            This welcome screen does not exist.
-        """
-        fields = {}
-
-        if welcome_channels is not MISSING:
-            welcome_channels_serialised = []
-            for wc in welcome_channels:
-                if not isinstance(wc, WelcomeChannel):
-                    raise TypeError('welcome_channels parameter must be a list of WelcomeChannel')
-                welcome_channels_serialised.append(wc.to_dict())
-            fields['welcome_channels'] = welcome_channels_serialised
-
-        if description is not MISSING:
-            fields['description'] = description
-
-        if enabled is not MISSING:
-            fields['enabled'] = enabled
-
-        data = await self._state.http.edit_welcome_screen(self._guild.id, reason=reason, **fields)
-        return self.__class__(data=data, guild=self._guild)

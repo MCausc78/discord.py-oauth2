@@ -25,12 +25,12 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 import datetime
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, List, Set, Union, Sequence, overload, Literal
+from typing import TYPE_CHECKING, Any, Dict, Optional, List, Set, Union, overload, Literal
 
 from .enums import AutoModRuleTriggerType, AutoModRuleActionType, AutoModRuleEventType, try_enum
 from .flags import AutoModPresets
 from . import utils
-from .utils import MISSING, cached_slot_property
+from .utils import cached_slot_property
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -313,7 +313,7 @@ class AutoModTrigger:
             )
         elif type_ is AutoModRuleTriggerType.keyword_preset:
             return cls(
-                type=type_, presets=AutoModPresets._from_value(data.get('presets', [])), allow_list=data.get('allow_list')
+                type=type_, presets=AutoModPresets._from_value(data.get('presets', ())), allow_list=data.get('allow_list')
             )
         elif type_ is AutoModRuleTriggerType.mention_spam:
             return cls(
@@ -460,110 +460,6 @@ class AutoModRule:
         """
         return obj.id in self.exempt_channel_ids or obj.id in self.exempt_role_ids
 
-    async def edit(
-        self,
-        *,
-        name: str = MISSING,
-        event_type: AutoModRuleEventType = MISSING,
-        actions: List[AutoModRuleAction] = MISSING,
-        trigger: AutoModTrigger = MISSING,
-        enabled: bool = MISSING,
-        exempt_roles: Sequence[Snowflake] = MISSING,
-        exempt_channels: Sequence[Snowflake] = MISSING,
-        reason: str = MISSING,
-    ) -> Self:
-        """|coro|
-
-        Edits this auto moderation rule.
-
-        You must have :attr:`Permissions.manage_guild` to edit rules.
-
-        Parameters
-        -----------
-        name: :class:`str`
-            The new name to change to.
-        event_type: :class:`AutoModRuleEventType`
-            The new event type to change to.
-        actions: List[:class:`AutoModRuleAction`]
-            The new rule actions to update.
-        trigger: :class:`AutoModTrigger`
-            The new trigger to update.
-            You can only change the trigger metadata, not the type.
-        enabled: :class:`bool`
-            Whether the rule should be enabled or not.
-        exempt_roles: Sequence[:class:`abc.Snowflake`]
-            The new roles to exempt from the rule.
-        exempt_channels: Sequence[:class:`abc.Snowflake`]
-            The new channels to exempt from the rule.
-        reason: :class:`str`
-            The reason for updating this rule. Shows up on the audit log.
-
-        Raises
-        -------
-        Forbidden
-            You do not have permission to edit this rule.
-        HTTPException
-            Editing the rule failed.
-
-        Returns
-        --------
-        :class:`AutoModRule`
-            The updated auto moderation rule.
-        """
-        payload = {}
-        if actions is not MISSING:
-            payload['actions'] = [action.to_dict() for action in actions]
-
-        if name is not MISSING:
-            payload['name'] = name
-
-        if event_type is not MISSING:
-            payload['event_type'] = event_type.value
-
-        if trigger is not MISSING:
-            trigger_metadata = trigger.to_metadata_dict()
-            if trigger_metadata is not None:
-                payload['trigger_metadata'] = trigger_metadata
-
-        if enabled is not MISSING:
-            payload['enabled'] = enabled
-
-        if exempt_roles is not MISSING:
-            payload['exempt_roles'] = [x.id for x in exempt_roles]
-
-        if exempt_channels is not MISSING:
-            payload['exempt_channels'] = [x.id for x in exempt_channels]
-
-        data = await self._state.http.edit_auto_moderation_rule(
-            self.guild.id,
-            self.id,
-            reason=reason,
-            **payload,
-        )
-
-        return self.__class__(data=data, guild=self.guild, state=self._state)
-
-    async def delete(self, *, reason: str = MISSING) -> None:
-        """|coro|
-
-        Deletes the auto moderation rule.
-
-        You must have :attr:`Permissions.manage_guild` to delete rules.
-
-        Parameters
-        -----------
-        reason: :class:`str`
-            The reason for deleting this rule. Shows up on the audit log.
-
-        Raises
-        -------
-        Forbidden
-            You do not have permissions to delete the rule.
-        HTTPException
-            Deleting the rule failed.
-        """
-        await self._state.http.delete_auto_moderation_rule(self.guild.id, self.id, reason=reason)
-
 
 class AutoModAction:
     """Represents an action that was taken as the result of a moderation rule.
@@ -647,26 +543,3 @@ class AutoModAction:
     def member(self) -> Optional[Member]:
         """Optional[:class:`Member`]: The member this action was taken against /who triggered this rule."""
         return self.guild.get_member(self.user_id)
-
-    async def fetch_rule(self) -> AutoModRule:
-        """|coro|
-
-        Fetch the rule whose action was taken.
-
-        You must have :attr:`Permissions.manage_guild` to do this.
-
-        Raises
-        -------
-        Forbidden
-            You do not have permissions to view the rule.
-        HTTPException
-            Fetching the rule failed.
-
-        Returns
-        --------
-        :class:`AutoModRule`
-            The rule that was executed.
-        """
-
-        data = await self._state.http.get_auto_moderation_rule(self.guild.id, self.rule_id)
-        return AutoModRule(data=data, guild=self.guild, state=self._state)

@@ -255,13 +255,13 @@ class Widget:
         self.id: int = int(data['id'])
 
         self.channels: List[WidgetChannel] = []
-        for channel in data.get('channels', []):
+        for channel in data.get('channels', ()):
             _id = int(channel['id'])
             self.channels.append(WidgetChannel(id=_id, name=channel['name'], position=channel['position']))
 
         self.members: List[WidgetMember] = []
         channels = {channel.id: channel for channel in self.channels}
-        for member in data.get('members', []):
+        for member in data.get('members', ()):
             connected_channel = _get_as_snowflake(member, 'channel_id')
             if connected_channel is not None:
                 if connected_channel in channels:

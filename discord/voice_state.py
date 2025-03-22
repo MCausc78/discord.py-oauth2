@@ -560,7 +560,8 @@ class VoiceConnectionState:
 
     async def _voice_connect(self, *, self_deaf: bool = False, self_mute: bool = False) -> None:
         channel = self.voice_client.channel
-        await channel.guild.change_voice_state(channel=channel, self_deaf=self_deaf, self_mute=self_mute)
+        # TODO: make alternative for lobbies
+        # await channel.guild.change_voice_state(channel=channel, self_deaf=self_deaf, self_mute=self_mute)
 
     async def _voice_disconnect(self) -> None:
         _log.info(
@@ -569,7 +570,8 @@ class VoiceConnectionState:
             self.voice_client.guild.id,
         )
         self.state = ConnectionFlowState.disconnected
-        await self.voice_client.channel.guild.change_voice_state(channel=None)
+        # TODO: make alternative for lobbies
+        # await self.voice_client.channel.guild.change_voice_state(channel=None)
         self._expecting_disconnect = True
         self._disconnected.clear()
 
@@ -681,7 +683,8 @@ class VoiceConnectionState:
             await previous_ws.close()
 
     async def _move_to(self, channel: abc.Snowflake) -> None:
-        await self.voice_client.channel.guild.change_voice_state(channel=channel)
+        # TODO: make alternative for lobbies
+        # await self.voice_client.channel.guild.change_voice_state(channel=channel)
         self.state = ConnectionFlowState.set_guild_voice_state
 
     def _update_voice_channel(self, channel_id: Optional[int]) -> None:

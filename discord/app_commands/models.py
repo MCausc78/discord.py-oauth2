@@ -213,7 +213,7 @@ class AppCommand(Hashable):
         self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
         self.type: AppCommandType = try_enum(AppCommandType, data.get('type', 1))
         self.options: List[Union[Argument, AppCommandGroup]] = [
-            app_command_option_factory(data=d, parent=self, state=self._state) for d in data.get('options', [])
+            app_command_option_factory(data=d, parent=self, state=self._state) for d in data.get('options', ())
         ]
         self.default_member_permissions: Optional[Permissions]
         permissions = data.get('default_member_permissions')
@@ -897,8 +897,8 @@ class Argument:
         self.min_length: Optional[int] = data.get('min_length')
         self.max_length: Optional[int] = data.get('max_length')
         self.autocomplete: bool = data.get('autocomplete', False)
-        self.channel_types: List[ChannelType] = [try_enum(ChannelType, d) for d in data.get('channel_types', [])]
-        self.choices: List[Choice[Union[int, float, str]]] = [Choice.from_dict(d) for d in data.get('choices', [])]
+        self.channel_types: List[ChannelType] = [try_enum(ChannelType, d) for d in data.get('channel_types', ())]
+        self.choices: List[Choice[Union[int, float, str]]] = list(map(Choice.from_dict, data.get('choices', ())))
         self.name_localizations: Dict[Locale, str] = _to_locale_dict(data.get('name_localizations') or {})
         self.description_localizations: Dict[Locale, str] = _to_locale_dict(data.get('description_localizations') or {})
 
@@ -996,7 +996,7 @@ class AppCommandGroup:
         self.name: str = data['name']
         self.description: str = data['description']
         self.options: List[Union[Argument, AppCommandGroup]] = [
-            app_command_option_factory(data=d, parent=self, state=self._state) for d in data.get('options', [])
+            app_command_option_factory(data=d, parent=self, state=self._state) for d in data.get('options', ())
         ]
         self.name_localizations: Dict[Locale, str] = _to_locale_dict(data.get('name_localizations') or {})
         self.description_localizations: Dict[Locale, str] = _to_locale_dict(data.get('description_localizations') or {})

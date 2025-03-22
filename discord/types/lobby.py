@@ -29,6 +29,7 @@ from typing_extensions import NotRequired
 
 from .channel import GuildChannel
 from .snowflake import Snowflake
+from .voice import LobbyVoiceState
 
 
 class Lobby(TypedDict):
@@ -37,6 +38,9 @@ class Lobby(TypedDict):
     metadata: Optional[Dict[str, str]]
     members: List[LobbyMember]
     linked_channel: NotRequired[GuildChannel]
+
+    region: NotRequired[Optional[str]]
+    voice_states: NotRequired[List[LobbyVoiceState]]
 
 
 class LobbyMember(TypedDict):

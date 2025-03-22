@@ -25,24 +25,20 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 
-from typing import Optional, List, TYPE_CHECKING, Union, AsyncIterator, Dict
+from typing import Optional, List, TYPE_CHECKING, Union, Dict
 
 import datetime
 
 from .enums import PollLayoutType, try_enum, MessageType
 from . import utils
 from .emoji import PartialEmoji, Emoji
-from .user import User
-from .object import Object
 from .errors import ClientException
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .message import Message
-    from .abc import Snowflake
     from .state import ConnectionState
-    from .member import Member
 
     from .types.poll import (
         PollCreate as PollCreatePayload,
@@ -232,92 +228,6 @@ class PollAnswer:
             If the poll has not ended, this will always return ``False``.
         """
         return self._victor
-
-    async def voters(
-        self, *, limit: Optional[int] = None, after: Optional[Snowflake] = None
-    ) -> AsyncIterator[Union[User, Member]]:
-        """Returns an :term:`asynchronous iterator` representing the users that have voted on this answer.
-
-        The ``after`` parameter must represent a user
-        and meet the :class:`abc.Snowflake` abc.
-
-        This can only be called when the parent poll was sent to a message.
-
-        Examples
-        --------
-
-        Usage ::
-
-            async for voter in poll_answer.voters():
-                print(f'{voter} has voted for {poll_answer}!')
-
-        Flattening into a list: ::
-
-            voters = [voter async for voter in poll_answer.voters()]
-            # voters is now a list of User
-
-        Parameters
-        ----------
-        limit: Optional[:class:`int`]
-            The maximum number of results to return.
-            If not provided, returns all the users who
-            voted on this poll answer.
-        after: Optional[:class:`abc.Snowflake`]
-            For pagination, voters are sorted by member.
-
-        Raises
-        ------
-        HTTPException
-            Retrieving the users failed.
-
-        Yields
-        ------
-        Union[:class:`User`, :class:`Member`]
-            The member (if retrievable) or the user that has voted
-            on this poll answer. The case where it can be a :class:`Member`
-            is in a guild message context. Sometimes it can be a :class:`User`
-            if the member has left the guild or if the member is not cached.
-        """
-
-        if not self._message or not self._state:  # Make type checker happy
-            raise ClientException('You cannot fetch users to a poll not sent with a message')
-
-        if limit is None:
-            if not self._message.poll:
-                limit = 100
-            else:
-                limit = self.vote_count or 100
-
-        while limit > 0:
-            retrieve = min(limit, 100)
-
-            message = self._message
-            guild = self._message.guild
-            state = self._state
-            after_id = after.id if after else None
-
-            data = await state.http.get_poll_answer_voters(
-                message.channel.id, message.id, self.id, after=after_id, limit=retrieve
-            )
-            users = data['users']
-
-            if len(users) == 0:
-                # No more voters to fetch, terminate loop
-                break
-
-            limit -= len(users)
-            after = Object(id=int(users[-1]['id']))
-
-            if not guild or isinstance(guild, Object):
-                for raw_user in reversed(users):
-                    yield User(state=self._state, data=raw_user)
-                continue
-
-            for raw_member in reversed(users):
-                member_id = int(raw_member['id'])
-                member = guild.get_member(member_id)
-
-                yield member or User(state=self._state, data=raw_member)
 
 
 class Poll:
@@ -644,29 +554,3 @@ class Poll:
         """
 
         return self._answers.get(id)
-
-    async def end(self) -> Self:
-        """|coro|
-
-        Ends the poll.
-
-        Raises
-        ------
-        ClientException
-            This poll has no attached message.
-        HTTPException
-            Ending the poll failed.
-
-        Returns
-        -------
-        :class:`Poll`
-            The updated poll.
-        """
-
-        if not self._message or not self._state:  # Make type checker happy
-            raise ClientException('This poll has no attached message.')
-
-        message = await self._message.end_poll()
-        self._update(message)
-
-        return self

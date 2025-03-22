@@ -125,7 +125,7 @@ class ActionRow(Component):
     def __init__(self, data: ActionRowPayload, /) -> None:
         self.children: List[ActionRowChildComponentType] = []
 
-        for component_data in data.get('components', []):
+        for component_data in data.get('components', ()):
             component = _component_factory(component_data)
 
             if component is not None:
@@ -290,11 +290,11 @@ class SelectMenu(Component):
         self.placeholder: Optional[str] = data.get('placeholder')
         self.min_values: int = data.get('min_values', 1)
         self.max_values: int = data.get('max_values', 1)
-        self.options: List[SelectOption] = [SelectOption.from_dict(option) for option in data.get('options', [])]
+        self.options: List[SelectOption] = [SelectOption.from_dict(option) for option in data.get('options', ())]
         self.disabled: bool = data.get('disabled', False)
-        self.channel_types: List[ChannelType] = [try_enum(ChannelType, t) for t in data.get('channel_types', [])]
+        self.channel_types: List[ChannelType] = [try_enum(ChannelType, t) for t in data.get('channel_types', ())]
         self.default_values: List[SelectDefaultValue] = [
-            SelectDefaultValue.from_dict(d) for d in data.get('default_values', [])
+            SelectDefaultValue.from_dict(d) for d in data.get('default_values', ())
         ]
 
     def to_dict(self) -> SelectMenuPayload:

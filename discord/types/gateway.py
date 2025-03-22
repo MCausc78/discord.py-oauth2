@@ -47,6 +47,7 @@ from .scheduled_event import GuildScheduledEvent
 from .audit_log import AuditLogEntry
 from .soundboard import SoundboardSound
 from .subscription import Subscription
+from .lobby import LobbyMember, LobbyVoiceState, Lobby
 
 
 class SessionStartLimit(TypedDict):
@@ -378,3 +379,20 @@ class PollVoteActionEvent(TypedDict):
 
 
 SubscriptionCreateEvent = SubscriptionUpdateEvent = SubscriptionDeleteEvent = Subscription
+
+LobbyCreateEvent = LobbyUpdateEvent = Lobby
+
+
+class LobbyDeleteEvent(TypedDict):
+    id: Snowflake
+    reason: str
+
+
+class _LobbyMembersEvent(TypedDict):
+    member: LobbyMember
+    lobby_id: Snowflake
+    application_id: Snowflake
+
+
+LobbyMemberAddEvent = LobbyMemberUpdateEvent = LobbyMemberRemoveEvent = _LobbyMembersEvent
+LobbyVoiceStateUpdateEvent = LobbyVoiceState
