@@ -692,13 +692,6 @@ class Section(Component):
         """:class:`ComponentType`: The type of component."""
         return ComponentType.section
 
-    def to_dict(self) -> SectionPayload:
-        return {
-            'type': self.type.value,
-            'components': [child.to_dict() for child in self.children],
-            'accessory': self.accessory.to_dict(),
-        }
-
 
 class TextDisplay(Component):
     """Represents a text display from the Discord Bot UI Kit.
@@ -768,14 +761,6 @@ class Thumbnail(Component):
     def type(self) -> Literal[ComponentType.thumbnail]:
         """:class:`ComponentType`: The type of component."""
         return ComponentType.thumbnail
-
-    def to_dict(self) -> ThumbnailComponentPayload:
-        payload: TextDisplayPayload = {
-            'type': self.type.value,
-            'content': self.content,
-        }
-
-        return payload
 
 
 @overload

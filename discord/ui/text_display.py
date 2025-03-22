@@ -63,8 +63,7 @@ class TextDisplay(Item[V]):
     """
 
     __item_repr_attributes__: Tuple[str, ...] = (
-        'children',
-        'accessory',
+        'content',
     )
 
     def __init__(
@@ -85,7 +84,7 @@ class TextDisplay(Item[V]):
 
     @property
     def width(self) -> int:
-        return 5
+        return 10
 
     @property
     def content(self) -> str:
