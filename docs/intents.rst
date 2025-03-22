@@ -9,7 +9,7 @@ A Primer to Gateway Intents
 
 In version 1.5 comes the introduction of :class:`Intents`. This is a radical change in how bots are written. An intent basically allows a bot to subscribe to specific buckets of events. The events that correspond to each intent is documented in the individual attribute of the :class:`Intents` documentation.
 
-These intents are passed to the constructor of :class:`Client` or its subclasses (:class:`AutoShardedClient`, :class:`~.AutoShardedBot`, :class:`~.Bot`) with the ``intents`` argument.
+These intents are passed to the constructor of :class:`Client` or its subclasses (:class:`~.Bot`) with the ``intents`` argument.
 
 What intents are needed?
 --------------------------

@@ -287,8 +287,7 @@ class Interaction(Generic[ClientT]):
     def client(self) -> ClientT:
         """:class:`Client`: The client that is handling this interaction.
 
-        Note that :class:`AutoShardedClient`, :class:`~.commands.Bot`, and
-        :class:`~.commands.AutoShardedBot` are all subclasses of client.
+        Note that :class:`~.commands.Bot` is also subclass of client.
         """
         return self._client
 

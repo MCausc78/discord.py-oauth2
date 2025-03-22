@@ -50,14 +50,6 @@ Bot
     .. automethod:: Bot.listen(name=None)
         :decorator:
 
-AutoShardedBot
-~~~~~~~~~~~~~~~~
-
-.. attributetable:: discord.ext.commands.AutoShardedBot
-
-.. autoclass:: discord.ext.commands.AutoShardedBot
-    :members:
-
 Prefix Helpers
 ----------------
 

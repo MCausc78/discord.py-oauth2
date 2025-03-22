@@ -31,7 +31,7 @@ T = TypeVar('T')
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec
 
-    from .bot import Bot, AutoShardedBot
+    from .bot import Bot
     from .context import Context
     from .cog import Cog
     from .errors import CommandError
@@ -42,7 +42,7 @@ else:
     P = TypeVar('P')
     MaybeAwaitableFunc = Tuple[P, T]
 
-_Bot = Union['Bot', 'AutoShardedBot']
+_Bot = Bot
 Coro = Coroutine[Any, Any, T]
 CoroFunc = Callable[..., Coro[Any]]
 MaybeCoro = Union[T, Coro[T]]

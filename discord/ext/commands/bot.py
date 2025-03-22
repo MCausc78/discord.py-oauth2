@@ -90,7 +90,6 @@ __all__ = (
     'when_mentioned',
     'when_mentioned_or',
     'Bot',
-    'AutoShardedBot',
 )
 
 T = TypeVar('T')
@@ -207,7 +206,7 @@ class BotBase(GroupMixin[None]):
     # internal helpers
 
     async def _async_setup_hook(self) -> None:
-        # self/super() resolves to Client/AutoShardedClient
+        # self/super() resolves to Client
         await super()._async_setup_hook()  # type: ignore
         prefix = self.command_prefix
 
@@ -1208,7 +1207,7 @@ class BotBase(GroupMixin[None]):
         prefix = ret = self.command_prefix
 
         if callable(prefix):
-            # self will be a Bot or AutoShardedBot
+            # self will be a Bot
             ret = await discord.utils.maybe_coroutine(prefix, self, message)  # type: ignore
 
         if not isinstance(ret, str):
@@ -1509,22 +1508,6 @@ class Bot(BotBase, discord.Client):
         Note that you can override this on a per command basis.
 
         .. versionadded:: 2.4
-    """
-
-    pass
-
-
-class AutoShardedBot(BotBase, discord.AutoShardedClient):
-    """This is similar to :class:`.Bot` except that it is inherited from
-    :class:`discord.AutoShardedClient` instead.
-
-    .. container:: operations
-
-        .. describe:: async with x
-
-            Asynchronously initialises the bot and automatically cleans.
-
-            .. versionadded:: 2.0
     """
 
     pass

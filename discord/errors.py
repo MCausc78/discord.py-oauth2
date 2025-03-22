@@ -225,18 +225,15 @@ class ConnectionClosed(ClientException):
         The close code of the websocket.
     reason: :class:`str`
         The reason provided for the closure.
-    shard_id: Optional[:class:`int`]
-        The shard ID that got closed if applicable.
     """
 
-    def __init__(self, socket: ClientWebSocketResponse, *, shard_id: Optional[int], code: Optional[int] = None):
+    def __init__(self, socket: ClientWebSocketResponse, *, code: Optional[int] = None):
         # This exception is just the same exception except
         # reconfigured to subclass ClientException for users
         self.code: int = code or socket.close_code or -1
         # aiohttp doesn't seem to consistently provide close reason
         self.reason: str = ''
-        self.shard_id: Optional[int] = shard_id
-        super().__init__(f'Shard ID {self.shard_id} WebSocket closed with {self.code}')
+        super().__init__(f'WebSocket closed with {self.code}')
 
 
 class PrivilegedIntentsRequired(ClientException):
@@ -249,22 +246,16 @@ class PrivilegedIntentsRequired(ClientException):
     - :attr:`Intents.members`
     - :attr:`Intents.presences`
     - :attr:`Intents.message_content`
-
-    Attributes
-    -----------
-    shard_id: Optional[:class:`int`]
-        The shard ID that got closed if applicable.
     """
 
-    def __init__(self, shard_id: Optional[int]):
-        self.shard_id: Optional[int] = shard_id
+    def __init__(self):
         msg = (
-            'Shard ID %s is requesting privileged intents that have not been explicitly enabled in the '
+            'Gateway is requesting privileged intents that have not been explicitly enabled in the '
             'developer portal. It is recommended to go to https://discord.com/developers/applications/ '
             'and explicitly enable the privileged intents within your application\'s page. If this is not '
             'possible, then consider disabling the privileged intents instead.'
         )
-        super().__init__(msg % shard_id)
+        super().__init__(msg)
 
 
 class InteractionResponded(ClientException):

@@ -243,14 +243,14 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         ValueError
             The interaction does not have a valid command.
         TypeError
-            The interaction client is not derived from :class:`Bot` or :class:`AutoShardedBot`.
+            The interaction client is not derived from :class:`Bot`.
         """
 
         # Circular import
         from .bot import BotBase
 
         if not isinstance(interaction.client, BotBase):
-            raise TypeError('Interaction client is not derived from commands.Bot or commands.AutoShardedBot')
+            raise TypeError('Interaction client is not derived from commands.Bot')
 
         command = interaction.command
         if command is None:

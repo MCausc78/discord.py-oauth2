@@ -55,7 +55,6 @@ from . import (
 from .enums import *
 from .embeds import *
 from .mentions import *
-from .shard import *
 from .player import *
 from .webhook import *
 from .voice_client import *

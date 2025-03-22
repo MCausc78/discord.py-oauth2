@@ -228,7 +228,7 @@ class MemberConverter(IDConverter[discord.Member]):
         return discord.utils.find(predicate, members)
 
     async def query_member_by_id(self, bot: _Bot, guild: discord.Guild, user_id: int) -> Optional[discord.Member]:
-        ws = bot._get_websocket(shard_id=guild.shard_id)
+        ws = bot._get_websocket()
         cache = guild._state.member_cache_flags.joined
         if ws.is_ratelimited():
             # If we're being rate limited on the WS, then fall back to using the HTTP API

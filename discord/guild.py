@@ -523,7 +523,6 @@ class Guild(Hashable):
         attrs = (
             ('id', self.id),
             ('name', self.name),
-            ('shard_id', self.shard_id),
             ('chunked', self.chunked),
             ('member_count', self._member_count),
         )
@@ -1222,14 +1221,6 @@ class Guild(Hashable):
         if count is None:
             return False
         return count == len(self._members)
-
-    @property
-    def shard_id(self) -> int:
-        """:class:`int`: Returns the shard ID for this guild if applicable."""
-        count = self._state.shard_count
-        if count is None:
-            return 0
-        return (self.id >> 22) % count
 
     @property
     def created_at(self) -> datetime.datetime:

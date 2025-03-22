@@ -84,6 +84,7 @@ class PartialAppInfo(BaseAppInfo, total=False):
 
 class GatewayAppInfo(TypedDict):
     id: Snowflake
+    name: str
     flags: int
 
 

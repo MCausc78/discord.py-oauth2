@@ -88,7 +88,7 @@ if TYPE_CHECKING:
     from .app_commands import Command, ContextMenu
     from .automod import AutoModAction, AutoModRule
     from .channel import DMChannel, GroupChannel
-    from .ext.commands import AutoShardedBot, Bot, Context, CommandError
+    from .ext.commands import Bot, Context, CommandError
     from .guild import GuildChannel
     from .integrations import Integration
     from .interactions import Interaction
@@ -165,7 +165,7 @@ class Client:
     A number of options can be passed to the :class:`Client`.
 
     Parameters
-    -----------
+    ----------
     max_messages: Optional[:class:`int`]
         The maximum number of messages to store in the internal message cache.
         This defaults to ``1000``. Passing in ``None`` disables the message cache.
@@ -176,15 +176,11 @@ class Client:
         Proxy URL.
     proxy_auth: Optional[:class:`aiohttp.BasicAuth`]
         An object that represents proxy HTTP Basic Authorization.
-    shard_id: Optional[:class:`int`]
-        Integer starting at ``0`` and less than :attr:`.shard_count`.
-    shard_count: Optional[:class:`int`]
-        The total number of shards.
     application_id: :class:`int`
         The client's application ID.
     intents: :class:`Intents`
         The intents that you want to enable for the session. This is a way of
-        disabling and enabling certain gateway events from triggering and being sent.
+        disabling and enabling certain Gateway events from triggering and being sent.
 
         .. versionadded:: 1.5
 
@@ -267,7 +263,7 @@ class Client:
         .. versionadded:: 2.5
 
     Attributes
-    -----------
+    ----------
     ws
         The websocket gateway the client is currently connected to. Could be ``None``.
     """
@@ -277,8 +273,6 @@ class Client:
         # self.ws is set in the connect method
         self.ws: DiscordWebSocket = None  # type: ignore
         self._listeners: Dict[str, List[Tuple[asyncio.Future, Callable[..., bool]]]] = {}
-        self.shard_id: Optional[int] = options.get('shard_id')
-        self.shard_count: Optional[int] = options.get('shard_count')
 
         connector: Optional[aiohttp.BaseConnector] = options.get('connector', None)
         proxy: Optional[str] = options.pop('proxy', None)
@@ -306,7 +300,6 @@ class Client:
 
         self._enable_debug_events: bool = options.pop('enable_debug_events', False)
         self._connection: ConnectionState[Self] = self._get_state(intents=intents, **options)
-        self._connection.shard_count = self.shard_count
         self._closing_task: Optional[asyncio.Task[None]] = None
         self._ready: asyncio.Event = MISSING
         self._application: Optional[AppInfo] = None
@@ -335,7 +328,7 @@ class Client:
 
     # internals
 
-    def _get_websocket(self, guild_id: Optional[int] = None, *, shard_id: Optional[int] = None) -> DiscordWebSocket:
+    def _get_websocket(self, guild_id: Optional[int] = None) -> DiscordWebSocket:
         return self.ws
 
     def _get_state(self, **options: Any) -> ConnectionState[Self]:
@@ -556,13 +549,13 @@ class Client:
 
     # hooks
 
-    async def _call_before_identify_hook(self, shard_id: Optional[int], *, initial: bool = False) -> None:
+    async def _call_before_identify_hook(self, *, initial: bool = False) -> None:
         # This hook is an internal hook that actually calls the public one.
         # It allows the library to have its own hook without stepping on the
         # toes of those who need to override their own hook.
-        await self.before_identify_hook(shard_id, initial=initial)
+        await self.before_identify_hook(initial=initial)
 
-    async def before_identify_hook(self, shard_id: Optional[int], *, initial: bool = False) -> None:
+    async def before_identify_hook(self, *, initial: bool = False) -> None:
         """|coro|
 
         A hook that is called before IDENTIFYing a session. This is useful
@@ -574,9 +567,7 @@ class Client:
         .. versionadded:: 1.4
 
         Parameters
-        ------------
-        shard_id: :class:`int`
-            The shard ID that requested being IDENTIFY'd
+        ----------
         initial: :class:`bool`
             Whether this IDENTIFY is the first initial IDENTIFY.
         """
@@ -667,7 +658,7 @@ class Client:
             If we should attempt reconnecting, either due to internet
             failure or a specific failure on Discord's part. Certain
             disconnects that lead to bad state will not be handled (such as
-            invalid sharding payloads or bad tokens).
+            invalid intents or bad tokens).
 
         Raises
         -------
@@ -681,7 +672,6 @@ class Client:
         backoff = ExponentialBackoff()
         ws_params = {
             'initial': True,
-            'shard_id': self.shard_id,
         }
         while not self.is_closed():
             try:
@@ -728,12 +718,12 @@ class Client:
                     continue
 
                 # We should only get this when an unhandled close code happens,
-                # such as a clean disconnect (1000) or a bad state (bad token, no sharding, etc)
+                # such as a clean disconnect (1000) or a bad state (bad token, bad intents, etc)
                 # sometimes, discord sends us 1000 for unknown reasons so we should reconnect
                 # regardless and rely on is_closed instead
                 if isinstance(exc, ConnectionClosed):
                     if exc.code == 4014:
-                        raise PrivilegedIntentsRequired(exc.shard_id) from None
+                        raise PrivilegedIntentsRequired() from None
                     if exc.code != 1000:
                         await self.close()
                         raise
@@ -801,7 +791,7 @@ class Client:
             If we should attempt reconnecting, either due to internet
             failure or a specific failure on Discord's part. Certain
             disconnects that lead to bad state will not be handled (such as
-            invalid sharding payloads or bad tokens).
+            invalid intents or bad tokens).
 
         Raises
         -------
@@ -848,7 +838,7 @@ class Client:
             If we should attempt reconnecting, either due to internet
             failure or a specific failure on Discord's part. Certain
             disconnects that lead to bad state will not be handled (such as
-            invalid sharding payloads or bad tokens).
+            invalid intents or bad tokens).
         log_handler: Optional[:class:`logging.Handler`]
             The log handler to use for the library's logger. If this is ``None``
             then the library will not set up anything logging related. Logging
@@ -1336,17 +1326,6 @@ class Client:
         check: Optional[Callable[[], bool]] = ...,
         timeout: Optional[float] = ...,
     ) -> None:
-        ...
-
-    @overload
-    async def wait_for(
-        self,
-        event: Literal['shard_connect', 'shard_disconnect', 'shard_ready', 'shard_resumed'],
-        /,
-        *,
-        check: Optional[Callable[[int], bool]] = ...,
-        timeout: Optional[float] = ...,
-    ) -> int:
         ...
 
     @overload
@@ -1911,7 +1890,7 @@ class Client:
 
     @overload
     async def wait_for(
-        self: Union[Bot, AutoShardedBot],
+        self: Bot,
         event: Literal["command", "command_completion"],
         /,
         *,
@@ -1922,7 +1901,7 @@ class Client:
 
     @overload
     async def wait_for(
-        self: Union[Bot, AutoShardedBot],
+        self: Bot,
         event: Literal["command_error"],
         /,
         *,

@@ -45,14 +45,6 @@ Client
     .. automethod:: Client.event()
         :decorator:
 
-AutoShardedClient
-~~~~~~~~~~~~~~~~~~
-
-.. attributetable:: AutoShardedClient
-
-.. autoclass:: AutoShardedClient
-    :members:
-
 Application Info
 ------------------
 
@@ -396,27 +388,6 @@ Connection
 
     This function can be called many times without a corresponding :func:`on_connect` call.
 
-.. function:: on_shard_connect(shard_id)
-
-    Similar to :func:`on_connect` except used by :class:`AutoShardedClient`
-    to denote when a particular shard ID has connected to Discord.
-
-    .. versionadded:: 1.4
-
-    :param shard_id: The shard ID that has connected.
-    :type shard_id: :class:`int`
-
-
-.. function:: on_shard_disconnect(shard_id)
-
-    Similar to :func:`on_disconnect` except used by :class:`AutoShardedClient`
-    to denote when a particular shard ID has disconnected from Discord.
-
-    .. versionadded:: 1.4
-
-    :param shard_id: The shard ID that has disconnected.
-    :type shard_id: :class:`int`
-
 Debug
 ~~~~~~
 
@@ -563,25 +534,6 @@ Gateway
 .. function:: on_resumed()
 
     Called when the client has resumed a session.
-
-.. function:: on_shard_ready(shard_id)
-
-    Similar to :func:`on_ready` except used by :class:`AutoShardedClient`
-    to denote when a particular shard ID has become ready.
-
-    :param shard_id: The shard ID that is ready.
-    :type shard_id: :class:`int`
-
-
-.. function:: on_shard_resumed(shard_id)
-
-    Similar to :func:`on_resumed` except used by :class:`AutoShardedClient`
-    to denote when a particular shard ID has resumed a session.
-
-    .. versionadded:: 1.4
-
-    :param shard_id: The shard ID that has resumed.
-    :type shard_id: :class:`int`
 
 Guilds
 ~~~~~~~
@@ -5251,21 +5203,6 @@ SoundboardSound
 .. autoclass:: SoundboardSound()
     :members:
 
-ShardInfo
-~~~~~~~~~~~
-
-.. attributetable:: ShardInfo
-
-.. autoclass:: ShardInfo()
-    :members:
-
-SessionStartLimits
-~~~~~~~~~~~~~~~~~~~~
-
-.. attributetable:: SessionStartLimits
-
-.. autoclass:: SessionStartLimits()
-    :members:
 
 SKU
 ~~~~~~~~~~~

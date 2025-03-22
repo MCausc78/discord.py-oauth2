@@ -133,9 +133,7 @@ For example:
 
 This change applies to **all** subclasses of :class:`Client`.
 
-- :class:`AutoShardedClient`
 - :class:`~discord.ext.commands.Bot`
-- :class:`~discord.ext.commands.AutoShardedBot`
 
 
 Abstract Base Classes Changes

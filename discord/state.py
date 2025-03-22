@@ -43,13 +43,9 @@ from typing import (
     Generic,
     Tuple,
     Deque,
-    Literal,
-    overload,
 )
 import weakref
 import inspect
-
-import os
 
 from .guild import Guild
 from .activity import BaseActivity
@@ -96,7 +92,6 @@ if TYPE_CHECKING:
     from .poll import Poll
 
     from .types.automod import AutoModerationRule, AutoModerationActionExecution
-    from .types.snowflake import Snowflake
     from .types.activity import Activity as ActivityPayload
     from .types.channel import DMChannel as DMChannelPayload
     from .types.user import User as UserPayload, PartialUser as PartialUserPayload
@@ -505,7 +500,7 @@ class ConnectionState(Generic[ClientT]):
                 self.application_id = utils._get_as_snowflake(application, 'id')
                 self.application_name: str = application['name']
                 self.application_flags: ApplicationFlags = ApplicationFlags._from_value(application['flags'])
-        
+
         for guild_data in data.get('guilds', []):
             guild = self._add_guild_from_data(guild_data)  # type: ignore # _add_guild_from_data requires a complete Guild payload
             if guild.unavailable:
@@ -1095,9 +1090,9 @@ class ConnectionState(Generic[ClientT]):
         return self._add_guild_from_data(data)
 
     def parse_guild_create(self, data: gw.GuildCreateEvent) -> None:
-        guild_id = int(data['guild_id'])
+        guild_id = int(data['id'])
         guild = self._get_guild(guild_id)
-        
+
         if data.get('unavailable'):
             if guild is None:
                 guild = self._get_create_guild(data)
@@ -1109,7 +1104,7 @@ class ConnectionState(Generic[ClientT]):
 
         joined = guild is None
         guild = self._get_create_guild(data)
-        
+
         if joined:
             self.dispatch('guild_join', guild)
         else:
