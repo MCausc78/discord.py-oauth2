@@ -2392,24 +2392,6 @@ class Client:
 
         return Widget(state=self._connection, data=data)
 
-    async def application_info(self) -> AppInfo:
-        """|coro|
-
-        Retrieves the bot's application information.
-
-        Raises
-        -------
-        HTTPException
-            Retrieving the information failed somehow.
-
-        Returns
-        --------
-        :class:`.AppInfo`
-            The bot's application information.
-        """
-        data = await self.http.application_info()
-        return AppInfo(self._connection, data)
-
     async def create_dm(self, user: Snowflake) -> DMChannel:
         """|coro|
 

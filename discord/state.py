@@ -56,7 +56,7 @@ from .mentions import AllowedMentions
 from .partial_emoji import PartialEmoji
 from .message import Message
 from .channel import *
-from .channel import _channel_factory
+from .channel import _private_channel_factory, _channel_factory
 from .raw_models import *
 from .presences import RawPresenceUpdateEvent
 from .member import Member
@@ -77,6 +77,7 @@ from .audit_logs import AuditLogEntry
 from ._types import ClientT
 from .soundboard import SoundboardSound
 from .lobby import LobbyMember, Lobby
+from .relationship import Relationship
 
 if TYPE_CHECKING:
     from .abc import PrivateChannel
@@ -230,10 +231,13 @@ class ConnectionState(Generic[ClientT]):
     def clear(self, *, views: bool = True) -> None:
         self.user: Optional[ClientUser] = None
         self._users: weakref.WeakValueDictionary[int, User] = weakref.WeakValueDictionary()
-        self._lobbies: Dict[int, Lobby] = {}
         self._emojis: Dict[int, Emoji] = {}
         self._stickers: Dict[int, GuildSticker] = {}
         self._guilds: Dict[int, Guild] = {}
+
+        self._lobbies: Dict[int, Lobby] = {}
+        self._relationships: Dict[int, Relationship] = {}
+
         if views:
             self._view_store: ViewStore = ViewStore(self)
 
@@ -298,11 +302,36 @@ class ConnectionState(Generic[ClientT]):
         # this way is 300% faster than `dict.setdefault`.
         user_id = int(data['id'])
         try:
-            return self._users[user_id]
+            user = self._users[user_id]
         except KeyError:
             user = User(state=self, data=data)
             if cache:
                 self._users[user_id] = user
+            return user
+        else:
+            if cache and 'username' in data and 'discriminator' in data:
+                modified_avatar_decoration_data = data.get('avatar_decoration_data')
+
+                original = (
+                    user.name,
+                    user.discriminator,
+                    user._avatar,
+                    user.global_name,
+                    user._public_flags,
+                    None if user._avatar_decoration_data is None else user._avatar_decoration_data['sku_id'],
+                )
+                modified = (
+                    data['username'],
+                    data['discriminator'],
+                    data.get('avatar'),
+                    data.get('global_name'),
+                    data.get('public_flags') or 0,
+                    None if modified_avatar_decoration_data is None else int(modified_avatar_decoration_data['sku_id']),
+                )
+                if original != modified:
+                    before = copy(user)
+                    user._update(data)
+                    self.dispatch('user_update', before, user)
             return user
 
     def store_user_no_intents(self, data: Union[UserPayload, PartialUserPayload], *, cache: bool = True) -> User:
@@ -493,6 +522,10 @@ class ConnectionState(Generic[ClientT]):
 
     def parse_ready(self, data: gw.ReadyEvent) -> None:
         self.clear(views=False)
+
+        for user_data in data.get('users', ()):
+            self.store_user(user_data)
+
         self.user = user = ClientUser(state=self, data=data['user'])
         self._users[user.id] = user  # type: ignore
 
@@ -513,13 +546,92 @@ class ConnectionState(Generic[ClientT]):
             else:
                 self.dispatch('guild_available', guild)
 
+        for pm in data.get('private_channels', ()):
+            factory, _ = _private_channel_factory(pm['type'])
+            if factory is None:
+                continue
+            if 'recipients' not in pm:
+                pm['recipients'] = [self._users[int(u_id)] for u_id in pm.pop('recipient_ids')]
+            self._add_private_channel(factory(me=user, data=pm, state=self))
+
+        for relationship_data in data.get('relationships', ()):
+            relationship = Relationship(data=relationship_data, state=self)
+            self._relationships[relationship.id] = relationship
+
         for lobby_data in data.get('lobbies', ()):
             lobby = Lobby(data=lobby_data, state=self)
             self._lobbies[lobby.id] = lobby
 
         self.dispatch('connect')
+
+        # Before dispatching ready, we wait for READY_SUPPLEMENTAL
+        # It has initial presence cache, as well omitted private channels
+
+    def parse_ready_supplemental(self, data: gw.ReadySupplementalEvent) -> None:
+        merged_presences = data['merged_presences']
+
+        guilds = []
+
+        for guild_data, guild_members_data, guild_presences_data in zip(
+            data.get('guilds', ()),
+            data.get('merged_members', ()),
+            merged_presences['guilds'],
+        ):
+            guild_id = int(guild_data['id'])
+            guild = self._get_guild(guild_id)
+
+            if guild is None:
+                _log.debug('READY_SUPPLEMENTAL referencing an unknown guild ID: %s. Discarding.', guild_id)
+                continue
+
+            members = [Member(data=guild_member_data, guild=guild, state=self) for guild_member_data in guild_members_data]
+            for member in members:
+                guild._add_member(member)
+
+            # TODO: This needs optimization
+            guild_presences = []
+            for guild_presence_data in guild_presences_data:
+                event = RawPresenceUpdateEvent(data=guild_presence_data, state=self)
+                event.guild_id = guild_id
+                event.guild = guild
+                guild_presences.append(event)
+                member = guild.get_member(event.user_id)
+                if member is not None:
+                    member._presence_update(event, guild_presence_data['user'])
+
+            guilds.append(
+                SupplementalGuild(
+                    id=guild_id,
+                    members=members,
+                    presences=guild_presences,
+                    underlying=guild,
+                )
+            )
+
+        for pm in data.get('lazy_private_channels', ()):
+            factory, _ = _private_channel_factory(pm['type'])
+            if factory is None:
+                continue
+            if 'recipients' not in pm:
+                pm['recipients'] = [self._users[int(u_id)] for u_id in pm.pop('recipient_ids')]  # type: ignore
+            self._add_private_channel(factory(me=self.user, data=pm, state=self))  # type: ignore
+
+        # TODO: Optimize
+        friend_presences = []
+        for friend_presence_data in merged_presences.get('friends', ()):
+            event = RawPresenceUpdateEvent(data=friend_presence_data, state=self)
+            # TODO: Actually process this
+            friend_presences.append(event)
+
+        raw = RawReadyEvent(
+            state=self,
+            disclose=data.get('disclose', []),
+            friend_presences=friend_presences,
+            guilds=guilds,
+        )
+
         self.call_handlers('ready')
-        self.dispatch('ready')
+        self.dispatch('ready', raw)
 
     def parse_resumed(self, data: gw.ResumedEvent) -> None:
         self.dispatch('resumed')
@@ -1647,6 +1759,39 @@ class ConnectionState(Generic[ClientT]):
                 self.dispatch('voice_state_update', member, before, after)
             else:
                 _log.debug('LOBBY_VOICE_STATE_UPDATE referencing an unknown member ID: %s. Discarding.', data['user_id'])
+
+    def parse_relationship_add(self, data: gw.RelationshipAddEvent) -> None:
+        key = int(data['id'])
+        new = self._relationships.get(key)
+        if new is None:
+            relationship = Relationship(state=self, data=data)
+            self._relationships[key] = relationship
+            self.dispatch('relationship_add', relationship)
+        else:
+            old = copy(new)
+            new._update(data)
+            self.dispatch('relationship_update', old, new)
+
+    def parse_relationship_remove(self, data: gw.RelationshipEvent) -> None:
+        r_id = int(data['id'])
+
+        try:
+            old = self._relationships.pop(r_id)
+        except KeyError:
+            _log.warning('RELATIONSHIP_REMOVE referencing unknown relationship ID: %s. Discarding.', r_id)
+        else:
+            self.dispatch('relationship_remove', old)
+
+    def parse_relationship_update(self, data: gw.RelationshipEvent) -> None:
+        key = int(data['id'])
+        new = self._relationships.get(key)
+        if new is None:
+            relationship = Relationship(state=self, data=data)  # type: ignore
+            self._relationships[key] = relationship
+        else:
+            old = copy(new)
+            new._update(data)
+            self.dispatch('relationship_update', old, new)
 
     def _get_reaction_user(self, channel: MessageableChannel, user_id: int) -> Optional[Union[User, Member]]:
         if isinstance(channel, (TextChannel, Thread, VoiceChannel)):

@@ -63,6 +63,7 @@ __all__ = (
     'EventStatus',
     'AppCommandType',
     'AppCommandOptionType',
+    'RelationshipType',
     'AppCommandPermissionType',
     'AutoModRuleTriggerType',
     'AutoModRuleEventType',
@@ -325,6 +326,16 @@ class DefaultAvatar(Enum):
 
     def __str__(self) -> str:
         return self.name
+
+
+class RelationshipType(Enum):
+    none = 0
+    friend = 1
+    blocked = 2
+    incoming_request = 3
+    outgoing_request = 4
+    implicit = 5
+    suggestion = 6
 
 
 class NotificationLevel(Enum, comparable=True):

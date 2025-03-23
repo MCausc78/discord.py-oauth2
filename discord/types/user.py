@@ -54,3 +54,31 @@ class User(PartialUser, total=False):
     flags: int
     premium_type: PremiumType
     public_flags: int
+
+
+RelationshipType = Literal[-1, 0, 1, 2, 3, 4, 5, 6]
+
+
+class Relationship(TypedDict):
+    id: Snowflake
+    type: RelationshipType
+    user: PartialUser
+    nickname: Optional[str]
+    is_spam_request: NotRequired[bool]
+    stranger_request: NotRequired[bool]
+    user_ignored: bool
+    origin_application_id: NotRequired[Optional[Snowflake]]
+    since: NotRequired[str]
+
+
+GameRelationshipType = Literal[1, 3, 4]
+
+
+class GameRelationship(TypedDict):
+    id: Snowflake
+    application_id: Snowflake
+    type: GameRelationshipType
+    user: PartialUser
+    since: str
+    dm_access_type: int
+    user_id: int

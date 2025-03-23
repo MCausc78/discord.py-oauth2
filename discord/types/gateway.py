@@ -22,7 +22,9 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from typing import List, Literal, Optional, TypedDict
+from __future__ import annotations
+
+from typing import List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired, Required
 
 from .automod import AutoModerationAction, AutoModerationRuleTriggerType
@@ -31,7 +33,7 @@ from .sku import Entitlement
 from .voice import GuildVoiceState
 from .integration import BaseIntegration, IntegrationApplication
 from .role import Role
-from .channel import ChannelType, StageInstance, VoiceChannelEffect
+from .channel import ChannelType, DMChannel, GroupDMChannel, StageInstance, VoiceChannelEffect
 from .interactions import Interaction
 from .invite import InviteTargetType
 from .emoji import Emoji, PartialEmoji
@@ -41,7 +43,7 @@ from .message import Message, ReactionType
 from .sticker import GuildSticker
 from .appinfo import GatewayAppInfo, PartialAppInfo
 from .guild import Guild, UnavailableGuild
-from .user import User, AvatarDecorationData
+from .user import User, AvatarDecorationData, RelationshipType, Relationship
 from .threads import Thread, ThreadMember
 from .scheduled_event import GuildScheduledEvent
 from .audit_log import AuditLogEntry
@@ -73,6 +75,23 @@ class ReadyEvent(TypedDict):
     session_id: str
     resume_gateway_url: str
     application: GatewayAppInfo
+
+
+class ReadySupplementalEvent(TypedDict):
+    guilds: List[SupplementalGuild]
+    merged_members: List[List[MemberWithUser]]
+    merged_presences: MergedPresences
+    lazy_private_channels: List[Union[DMChannel, GroupDMChannel]]
+    disclose: List[str]
+
+
+class SupplementalGuild(TypedDict):
+    id: int
+
+
+class MergedPresences(TypedDict):
+    friends: List[PartialPresenceUpdate]
+    guilds: List[List[PartialPresenceUpdate]]
 
 
 ResumedEvent = Literal[None]
@@ -396,3 +415,13 @@ class _LobbyMembersEvent(TypedDict):
 
 LobbyMemberAddEvent = LobbyMemberUpdateEvent = LobbyMemberRemoveEvent = _LobbyMembersEvent
 LobbyVoiceStateUpdateEvent = LobbyVoiceState
+
+
+class RelationshipAddEvent(Relationship):
+    should_notify: NotRequired[bool]
+
+
+class RelationshipEvent(TypedDict):
+    id: Snowflake
+    type: RelationshipType
+    nickname: Optional[str]

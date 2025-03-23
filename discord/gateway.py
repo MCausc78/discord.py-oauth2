@@ -434,7 +434,8 @@ class DiscordWebSocket:
             'op': self.IDENTIFY,
             'd': {
                 'token': 'Bearer ' + (self.token or ''),
-                'capabilities': 65536,
+                # DEDUPE_USER_OBJECTS | PRIORITIZED_READY_PAYLOAD | AUTO_CALL_CONNECT | AUTO_LOBBY_CONNECT
+                'capabilities': (1 << 4) | (1 << 5) | (1 << 12) | (1 << 16),
                 'properties': {
                     'os': sys.platform,
                     'browser': 'Discord Embedded',

@@ -27,10 +27,11 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Literal, Optional, Set, List, Union
 
-from .enums import ChannelType, try_enum, ReactionType
-from .utils import _get_as_snowflake, _RawReprMixin
 from .app_commands import AppCommandPermissions
 from .colour import Colour
+from .enums import ChannelType, try_enum, ReactionType
+from .presences import RawPresenceUpdateEvent
+from .utils import _get_as_snowflake, _RawReprMixin
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -79,6 +80,8 @@ __all__ = (
     'RawMemberRemoveEvent',
     'RawAppCommandPermissionsUpdateEvent',
     'RawPollVoteActionEvent',
+    'SupplementalGuild',
+    'RawReadyEvent',
 )
 
 
@@ -536,3 +539,73 @@ class RawPollVoteActionEvent(_RawReprMixin):
         self.message_id: int = int(data['message_id'])
         self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
         self.answer_id: int = int(data['answer_id'])
+
+
+class SupplementalGuild:
+    """Represents a supplemental guild.
+
+    Parameters
+    ----------
+    id: :class:`int`
+        The guild's ID.
+    members: List[:class:`.Member`]
+        The guild's members. May be empty, or partial.
+    presences: List[:class:`RawPresenceUpdateEvent`]
+        The presences for guild members.
+    underlying: :class:`.Guild`
+        The underlying guild.
+    """
+
+    __slots__ = (
+        'id',
+        'members',
+        'presences',
+        'underlying',
+    )
+
+    def __init__(
+        self,
+        *,
+        id: int,
+        members: List[Member],
+        presences: List[RawPresenceUpdateEvent],
+        underlying: Guild,
+    ) -> None:
+        self.id: int = id
+        self.members: List[Member] = members
+        self.presences: List[RawPresenceUpdateEvent] = presences
+        self.underlying: Guild = underlying
+
+
+class RawReadyEvent(_RawReprMixin):
+    """Represents the payload for a :func:`on_ready`.
+
+    Attributes
+    ----------
+    disclose: List[:class:`str`]
+        The upcoming changes that the client should disclose to the user.
+    friend_presences: List[:class:`RawPresenceUpdateEvent`]
+        The presences for your friends.
+    guilds: List[:class:`SupplementalGuild`]
+        The guilds you're in.
+    """
+
+    __slots__ = (
+        '_state',
+        'disclose',
+        'friend_presences',
+        'guilds',
+    )
+
+    def __init__(
+        self,
+        *,
+        state: ConnectionState,
+        disclose: List[str],
+        friend_presences: List[RawPresenceUpdateEvent],
+        guilds: List[SupplementalGuild],
+    ) -> None:
+        self._state: ConnectionState = state
+        self.disclose: List[str] = disclose
+        self.friend_presences: List[RawPresenceUpdateEvent] = friend_presences
+        self.guilds: List[SupplementalGuild] = guilds

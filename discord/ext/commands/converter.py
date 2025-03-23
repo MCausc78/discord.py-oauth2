@@ -209,45 +209,6 @@ class MemberConverter(IDConverter[discord.Member]):
         the removal of discriminators in an API change.
     """
 
-    async def query_member_named(self, guild: discord.Guild, argument: str) -> Optional[discord.Member]:
-        cache = guild._state.member_cache_flags.joined
-        username, _, discriminator = argument.rpartition('#')
-
-        # If # isn't found then "discriminator" actually has the username
-        if not username:
-            discriminator, username = username, discriminator
-
-        if discriminator == '0' or (len(discriminator) == 4 and discriminator.isdigit()):
-            lookup = username
-            predicate = lambda m: m.name == username and m.discriminator == discriminator
-        else:
-            lookup = argument
-            predicate = lambda m: m.name == argument or m.global_name == argument or m.nick == argument
-
-        members = await guild.query_members(lookup, limit=100, cache=cache)
-        return discord.utils.find(predicate, members)
-
-    async def query_member_by_id(self, bot: _Bot, guild: discord.Guild, user_id: int) -> Optional[discord.Member]:
-        ws = bot._get_websocket()
-        cache = guild._state.member_cache_flags.joined
-        if ws.is_ratelimited():
-            # If we're being rate limited on the WS, then fall back to using the HTTP API
-            # So we don't have to wait ~60 seconds for the query to finish
-            try:
-                member = await guild.fetch_member(user_id)
-            except discord.HTTPException:
-                return None
-
-            if cache:
-                guild._add_member(member)
-            return member
-
-        # If we're not being rate limited then we can use the websocket to actually query
-        members = await guild.query_members(limit=1, user_ids=[user_id], cache=cache)
-        if not members:
-            return None
-        return members[0]
-
     async def convert(self, ctx: Context[BotT], argument: str) -> discord.Member:
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r'<@!?([0-9]{15,20})>$', argument)
@@ -269,16 +230,7 @@ class MemberConverter(IDConverter[discord.Member]):
                 result = _get_from_guilds(bot, 'get_member', user_id)
 
         if not isinstance(result, discord.Member):
-            if guild is None:
-                raise MemberNotFound(argument)
-
-            if user_id is not None:
-                result = await self.query_member_by_id(bot, guild, user_id)
-            else:
-                result = await self.query_member_named(guild, argument)
-
-            if not result:
-                raise MemberNotFound(argument)
+            raise MemberNotFound(argument)
 
         return result
 
@@ -318,10 +270,7 @@ class UserConverter(IDConverter[discord.User]):
             user_id = int(match.group(1))
             result = ctx.bot.get_user(user_id) or _utils_get(ctx.message.mentions, id=user_id)
             if result is None:
-                try:
-                    result = await ctx.bot.fetch_user(user_id)
-                except discord.HTTPException:
-                    raise UserNotFound(argument) from None
+                raise UserNotFound(argument) from None
 
             return result  # type: ignore
 
@@ -420,17 +369,14 @@ class MessageConverter(IDConverter[discord.Message]):
     async def convert(self, ctx: Context[BotT], argument: str) -> discord.Message:
         guild_id, message_id, channel_id = PartialMessageConverter._get_id_matches(ctx, argument)
         message = ctx.bot._connection._get_message(message_id)
-        if message:
+        if message is not None:
             return message
+
         channel = PartialMessageConverter._resolve_channel(ctx, guild_id, channel_id)
-        if not channel or not isinstance(channel, discord.abc.Messageable):
+        if channel is None or not isinstance(channel, discord.abc.Messageable):
             raise ChannelNotFound(channel_id)
-        try:
-            return await channel.fetch_message(message_id)
-        except discord.NotFound:
-            raise MessageNotFound(argument)
-        except discord.Forbidden:
-            raise ChannelNotReadable(channel)  # type: ignore # type-checker thinks channel could be a DMChannel at this point
+
+        raise MessageNotFound(argument)
 
 
 class GuildChannelConverter(IDConverter[discord.abc.GuildChannel]):

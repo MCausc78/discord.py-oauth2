@@ -73,6 +73,11 @@ __all__ = (
     'PartialMessageable',
     'VoiceChannelEffect',
     'VoiceChannelSoundEffect',
+    '_guild_channel_factory',
+    '_private_channel_factory',
+    '_channel_factory',
+    '_threaded_channel_factory',
+    '_threaded_guild_channel_factory',
 )
 
 if TYPE_CHECKING:
@@ -1763,6 +1768,17 @@ def _guild_channel_factory(channel_type: int):
         return ForumChannel, value
     elif value is ChannelType.media:
         return ForumChannel, value
+    else:
+        return None, value
+
+
+def _private_channel_factory(channel_type: int):
+    value = try_enum(ChannelType, channel_type)
+
+    if value is ChannelType.private:
+        return DMChannel, value
+    elif value is ChannelType.group:
+        return GroupChannel, value
     else:
         return None, value
 
