@@ -123,6 +123,10 @@ class Relationship(Hashable):
 
     def _update_inner_user(self, user: UserPayload) -> Optional[Tuple[User, User]]:
         u = self.user
+        if isinstance(u, Object):
+            self.user = self._state.store_user(user, dispatch=False)
+            return None
+
         original = (
             u.name,
             u.discriminator,

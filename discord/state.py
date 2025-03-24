@@ -185,9 +185,6 @@ class ConnectionState(Generic[ClientT]):
         self._activity: Optional[ActivityPayload] = activity
         self._status: Optional[str] = status
         self._intents: Intents = intents
-        if not intents.members or cache_flags._empty:
-            self.store_user = self.store_user_no_intents
-
         self.raw_presence_flag: bool = options.get('enable_raw_presences', utils.MISSING)
         if self.raw_presence_flag is utils.MISSING:
             self.raw_presence_flag = not intents.members and intents.presences
@@ -284,7 +281,7 @@ class ConnectionState(Generic[ClientT]):
         for vc in self.voice_clients:
             vc.main_ws = ws  # type: ignore # Silencing the unknown attribute (ok at runtime).
 
-    def store_user(self, data: Union[UserPayload, PartialUserPayload], *, cache: bool = True) -> User:
+    def store_user(self, data: Union[UserPayload, PartialUserPayload], *, cache: bool = True, dispatch: bool = True) -> User:
         # this way is 300% faster than `dict.setdefault`.
         user_id = int(data['id'])
         try:
@@ -317,11 +314,9 @@ class ConnectionState(Generic[ClientT]):
                 if original != modified:
                     before = copy(user)
                     user._update(data)
-                    self.dispatch('user_update', before, user)
+                    if dispatch:
+                        self.dispatch('user_update', before, user)
             return user
-
-    def store_user_no_intents(self, data: Union[UserPayload, PartialUserPayload], *, cache: bool = True) -> User:
-        return User(state=self, data=data)
 
     def create_user(self, data: Union[UserPayload, PartialUserPayload]) -> User:
         return User(state=self, data=data)
@@ -518,8 +513,6 @@ class ConnectionState(Generic[ClientT]):
             factory, _ = _private_channel_factory(pm['type'])
             if factory is None:
                 continue
-            if 'recipients' not in pm:
-                pm['recipients'] = [self._users[int(u_id)] for u_id in pm.pop('recipient_ids')]
             self._add_private_channel(factory(me=user, data=pm, state=self))
 
         for relationship_data in data.get('relationships', ()):
@@ -559,7 +552,7 @@ class ConnectionState(Generic[ClientT]):
             guild_presences = []
             for guild_presence_data in guild_presences_data:
                 event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
-                event.user_id = int(guild_presence_data['user']['id'])
+                event.user_id = int(guild_presence_data['user_id'])
                 event.client_status = ClientStatus(
                     status=guild_presence_data['status'], data=guild_presence_data['client_status']
                 )
@@ -585,13 +578,14 @@ class ConnectionState(Generic[ClientT]):
             factory, _ = _private_channel_factory(pm['type'])
             if factory is None:
                 continue
-            if 'recipients' not in pm:
-                pm['recipients'] = [self._users[int(u_id)] for u_id in pm.pop('recipient_ids')]  # type: ignore
             self._add_private_channel(factory(me=self.user, data=pm, state=self))  # type: ignore
 
         friend_presences = []
         for friend_presence_data in merged_presences.get('friends', ()):
-            user_data = friend_presence_data['user']
+            if 'user' in friend_presence_data:
+                user_data = friend_presence_data['user']
+            else:
+                user_data = {'id': friend_presence_data['user_id']}
 
             event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
             event.user_id = int(user_data['id'])
@@ -605,10 +599,15 @@ class ConnectionState(Generic[ClientT]):
             try:
                 relationship = self._relationships[event.user_id]
             except KeyError:
+                if len(user_data) > 1:
+                    user = self.store_user(user_data)  # type: ignore
+                else:
+                    user = Object(id=int(user_data['id']))  # type: ignore
                 self._relationships[relationship.id] = relationship = Relationship._from_implicit(
-                    state=self, user=self.store_user(user_data)
+                    state=self,
+                    user=user,
                 )
-            relationship._presence_update(event, user_data)
+            relationship._presence_update(event, user_data)  # type: ignore
 
             friend_presences.append(event)
 

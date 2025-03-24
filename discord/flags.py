@@ -1358,6 +1358,7 @@ class Intents(BaseFlags):
         """
         return 1 << 21
 
+    @flag_value
     def relationships(self):
         """:class:`bool`: Whether relationship related events are enabled.
 
@@ -1370,7 +1371,7 @@ class Intents(BaseFlags):
         - :func:`on_game_relationship_update`
         - :func:`on_game_relationship_remove`
         """
-        return 1 << 23
+        return 1 << 22
 
     @alias_flag_value
     def polls(self):

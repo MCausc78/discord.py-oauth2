@@ -91,6 +91,8 @@ class LobbyMember(Hashable):
     def from_dict(cls, *, data: LobbyMemberPayload, lobby: Lobby, state: ConnectionState) -> Self:
         self = cls.__new__(cls)
         self._state = state
+        if 'id' not in data:
+            data['id'] = data['user_id']
         self.id = int(data['id'])
         self.lobby = lobby
         self._update(data)

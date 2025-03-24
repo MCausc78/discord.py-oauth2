@@ -43,6 +43,19 @@ class Lobby(TypedDict):
     voice_states: NotRequired[List[LobbyVoiceState]]
 
 
+# {
+#     "user_id": "1073325901825187841",
+#     "user": {
+#         "id": "1073325901825187841"
+#     },
+#     "metadata": {
+#         "baller": "balls"
+#     },
+#     "flags": 1,
+#     "connected": true
+# }
+
+
 class LobbyMember(TypedDict):
     id: Snowflake
     metadata: NotRequired[Optional[Dict[str, str]]]

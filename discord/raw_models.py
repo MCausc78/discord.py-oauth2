@@ -27,7 +27,6 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Literal, Optional, Set, List, Union
 
-from .app_commands import AppCommandPermissions
 from .colour import Colour
 from .enums import ChannelType, try_enum, ReactionType
 from .presences import RawPresenceUpdateEvent
@@ -506,9 +505,9 @@ class RawAppCommandPermissionsUpdateEvent(_RawReprMixin):
         self.target_id: int = int(data['id'])
         self.application_id: int = int(data['application_id'])
         self.guild: Guild = state._get_or_create_unavailable_guild(int(data['guild_id']))
-        self.permissions: List[AppCommandPermissions] = [
-            AppCommandPermissions(data=perm, guild=self.guild, state=state) for perm in data['permissions']
-        ]
+        # self.permissions: List[AppCommandPermissions] = [
+        #     AppCommandPermissions(data=perm, guild=self.guild, state=state) for perm in data['permissions']
+        # ]
 
 
 class RawPollVoteActionEvent(_RawReprMixin):

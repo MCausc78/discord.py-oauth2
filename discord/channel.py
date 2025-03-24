@@ -1605,7 +1605,17 @@ class GroupChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable
         self.owner_id: int = int(data['owner_id'])
         self._icon: Optional[str] = data.get('icon')
         self.name: Optional[str] = data.get('name')
-        self.recipients: List[User] = [self._state.store_user(u) for u in data.get('recipients', ())]
+        self.recipients: List[User]
+        if 'recipients' in data:
+            self.recipients = [self._state.store_user(u) for u in data['recipients']]
+        elif 'recipient_ids' in data:
+            self.recipients = []
+            for recipient_id_str in data['recipient_ids']:
+                recipient_id = int(recipient_id_str)
+                recipient = self._state.get_user(recipient_id) or Object(id=recipient_id)
+                self.recipients.append(recipient)  # type: ignore
+        elif not hasattr(self, 'recipients'):
+            self.recipients = []
         self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
         self.last_pin_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('last_pin_timestamp'))
         self.managed: bool = data.get('managed', False)

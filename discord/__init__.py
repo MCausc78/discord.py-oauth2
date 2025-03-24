@@ -49,8 +49,6 @@ from . import (
     utils as utils,
     opus as opus,
     abc as abc,
-    ui as ui,
-    app_commands as app_commands,
 )
 from .enums import *
 from .embeds import *
@@ -64,7 +62,6 @@ from .team import *
 from .sticker import *
 from .stage_instance import *
 from .scheduled_event import *
-from .interactions import *
 from .components import *
 from .threads import *
 from .automod import *
@@ -72,6 +69,9 @@ from .poll import *
 from .soundboard import *
 from .subscription import *
 from .presences import *
+
+from .lobby import *
+from .relationship import *
 
 
 class VersionInfo(NamedTuple):
@@ -85,11 +85,5 @@ class VersionInfo(NamedTuple):
 version_info: VersionInfo = VersionInfo(major=2, minor=6, micro=0, releaselevel='alpha', serial=0)
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
-
-# This is a backwards compatibility hack and should be removed in v3
-# Essentially forcing the exception to have different base classes
-# In the future, this should only inherit from ClientException
-if len(MissingApplicationID.__bases__) == 1:
-    MissingApplicationID.__bases__ = (app_commands.AppCommandError, ClientException)
 
 del logging, NamedTuple, Literal, VersionInfo
