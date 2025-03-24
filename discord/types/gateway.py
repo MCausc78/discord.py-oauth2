@@ -185,7 +185,20 @@ class _ChannelEvent(TypedDict):
     type: ChannelType
 
 
+class PartialChannelUpdate(TypedDict):
+    id: Snowflake
+    last_message_id: Optional[Snowflake]
+    last_pin_timestamp: NotRequired[Optional[str]]
+
+
 ChannelCreateEvent = ChannelUpdateEvent = ChannelDeleteEvent = _ChannelEvent
+ChannelUpdatePartialEvent = PartialChannelUpdate
+
+
+class ChannelRecipientEvent(TypedDict):
+    channel_id: Snowflake
+    user: User
+    nick: str
 
 
 class ChannelPinsUpdateEvent(TypedDict):

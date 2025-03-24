@@ -681,7 +681,7 @@ class PublicUserFlags(BaseFlags):
 
 @fill_with_flags()
 class Intents(BaseFlags):
-    r"""Wraps up a Discord gateway intent flag.
+    r"""Wraps up a Discord Gateway intent flag.
 
     Similar to :class:`Permissions`\, the properties provided are two way.
     You can set and retrieve individual bits using the properties as if they
@@ -690,8 +690,8 @@ class Intents(BaseFlags):
     To construct an object you can pass keyword arguments denoting the flags
     to enable or disable.
 
-    This is used to disable certain gateway features that are unnecessary to
-    run your bot. To make use of this, it is passed to the ``intents`` keyword
+    This is used to disable certain Gateway features that are unnecessary to
+    run your client. To make use of this, it is passed to the ``intents`` keyword
     argument of :class:`Client`.
 
     .. versionadded:: 1.5
@@ -817,7 +817,7 @@ class Intents(BaseFlags):
         - :meth:`Client.get_channel`
         - :meth:`Client.get_all_channels`
 
-        It is highly advisable to leave this intent enabled for your bot to function.
+        It is highly advisable to leave this intent enabled for your client to function.
         """
         return 1 << 0
 
@@ -1287,7 +1287,31 @@ class Intents(BaseFlags):
 
     @flag_value
     def private_channels(self):
-        """:class:`bool`: TODO."""
+        """:class:`bool`: Whether private channel related events are enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_guild_join`
+        - :func:`on_guild_remove`
+        - :func:`on_guild_available`
+        - :func:`on_guild_unavailable`
+        - :func:`on_guild_channel_update`
+        - :func:`on_guild_channel_create`
+        - :func:`on_guild_channel_delete`
+        - :func:`on_guild_channel_pins_update`
+        - :func:`on_thread_create`
+        - :func:`on_thread_join`
+        - :func:`on_thread_update`
+        - :func:`on_thread_delete`
+
+        This also corresponds to the following attributes and classes in terms of cache:
+
+        - :attr:`Client.private_channels`
+        - :attr:`Member.dm_channel`
+        - :attr:`User.dm_channel`
+
+        It is highly advisable to leave this intent enabled for your client to function.
+        """
 
         return 1 << 18
 

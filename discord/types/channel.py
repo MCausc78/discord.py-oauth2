@@ -179,19 +179,30 @@ class _BaseDMChannel(_BaseChannel):
     last_message_id: Optional[Snowflake]
 
 
-class DMChannel(_BaseDMChannel):
+class DMChannel(_BaseChannel):
+    type: Literal[1]
+    last_message_id: Optional[Snowflake]
     recipients: List[PartialUser]
+    is_message_request: NotRequired[bool]
+    is_message_request_timestamp: NotRequired[str]
+    is_spam: NotRequired[bool]
 
 
-class InteractionDMChannel(_BaseDMChannel):
-    recipients: NotRequired[List[PartialUser]]
+class GroupDMNickname(TypedDict):
+    id: Snowflake
+    nick: str
 
 
 class GroupDMChannel(_BaseChannel):
     type: Literal[3]
+    name: Optional[str]
     icon: Optional[str]
     owner_id: Snowflake
+    application_id: NotRequired[Snowflake]
+    managed: NotRequired[bool]
+    nicks: NotRequired[List[GroupDMNickname]]
     recipients: List[PartialUser]
+    origin_channel_id: NotRequired[Snowflake]  # Only present in CHANNEL_CREATE
 
 
 Channel = Union[GuildChannel, DMChannel, GroupDMChannel]

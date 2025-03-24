@@ -99,6 +99,7 @@ if TYPE_CHECKING:
         DMChannel as DMChannelPayload,
         CategoryChannel as CategoryChannelPayload,
         GroupDMChannel as GroupChannelPayload,
+        GroupDMNickname as GroupDMNicknamePayload,
         ForumChannel as ForumChannelPayload,
         MediaChannel as MediaChannelPayload,
         ForumTag as ForumTagPayload,
@@ -1317,7 +1318,7 @@ class ForumChannel(discord.abc.GuildChannel, Hashable):
         return self._type == ChannelType.media.value
 
 
-class DMChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable):
+class DMChannel(discord.abc.Messageable, discord.abc.Connectable, discord.abc.PrivateChannel, Hashable):
     """Represents a Discord direct message channel.
 
     .. container:: operations
@@ -1340,27 +1341,54 @@ class DMChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable):
 
     Attributes
     ----------
-    recipient: Optional[:class:`User`]
-        The user you are participating with in the direct message channel.
-        If this channel is received through the gateway, the recipient information
-        may not be always available.
-    recipients: List[:class:`User`]
-        The users you are participating with in the DM channel.
-
-        .. versionadded:: 2.4
-    me: :class:`ClientUser`
-        The user presenting yourself.
     id: :class:`int`
         The direct message channel ID.
+    recipient: :class:`User`
+        The user you are participating with in the direct message channel.
+    me: :class:`ClientUser`
+        The user presenting yourself.
+    last_message_id: Optional[:class:`int`]
+        The last message ID of the message sent to this channel. It may
+        *not* point to an existing or valid message.
+
+        .. versionadded:: 2.0
+    last_pin_timestamp: Optional[:class:`datetime.datetime`]
+        When the last pinned message was pinned. ``None`` if there are no pinned messages.
+
+        .. versionadded:: 2.0
     """
 
-    __slots__ = ('id', 'recipients', 'me', '_state')
+    __slots__ = (
+        'id',
+        'recipient',
+        'me',
+        'last_message_id',
+        'last_pin_timestamp',
+        '_message_request',
+        '_requested_at',
+        '_spam',
+        '_state',
+    )
 
     def __init__(self, *, me: ClientUser, state: ConnectionState, data: DMChannelPayload):
         self._state: ConnectionState = state
-        self.recipients: List[User] = [state.store_user(u) for u in data.get('recipients', ())]
+        self.recipient: Optional[User] = state.store_user(data['recipients'][0]) if data.get('recipients') else None
         self.me: ClientUser = me
         self.id: int = int(data['id'])
+        self._update(data)
+
+    def _update(self, data: DMChannelPayload) -> None:
+        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
+        self.last_pin_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('last_pin_timestamp'))
+        self._message_request: Optional[bool] = data.get('is_message_request')
+        self._requested_at: Optional[datetime.datetime] = utils.parse_time(data.get('is_message_request_timestamp'))
+        self._spam: bool = data.get('is_spam', False)
+
+    def _get_voice_client_key(self) -> Tuple[int, str]:
+        return self.me.id, 'self_id'
+
+    def _get_voice_state_pair(self) -> Tuple[int, int]:
+        return self.me.id, self.id
 
     async def _get_channel(self) -> Self:
         return self
@@ -1374,20 +1402,19 @@ class DMChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable):
         return f'<DMChannel id={self.id} recipient={self.recipient!r}>'
 
     @classmethod
-    def _from_message(cls, state: ConnectionState, channel_id: int) -> Self:
+    def _from_message(cls, state: ConnectionState, channel_id: int, message_id: Optional[int]) -> Self:
         self = cls.__new__(cls)
         self._state = state
-        self.id = channel_id
-        self.recipients = []
+        self.recipient = None
         # state.user won't be None here
         self.me = state.user  # type: ignore
+        self.id = channel_id
+        self.last_message_id = message_id
+        self.last_pin_timestamp = None
+        self._message_request = False
+        self._requested_at = None
+        self._spam = False
         return self
-
-    @property
-    def recipient(self) -> Optional[User]:
-        if self.recipients:
-            return self.recipients[0]
-        return None
 
     @property
     def type(self) -> Literal[ChannelType.private]:
@@ -1416,6 +1443,23 @@ class DMChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable):
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the direct message channel's creation time in UTC."""
         return utils.snowflake_time(self.id)
+
+    @property
+    def requested_at(self) -> Optional[datetime.datetime]:
+        """Optional[:class:`datetime.datetime`]: Returns the message request's creation time in UTC, if applicable."""
+        return self._requested_at
+
+    def is_message_request(self) -> bool:
+        """:class:`bool`: Indicates if the direct message is/was a message request."""
+        return self._message_request is not None
+
+    def is_accepted(self) -> bool:
+        """:class:`bool`: Indicates if the message request is accepted. For regular direct messages, this is always ``True``."""
+        return not self._message_request if self._message_request is not None else True
+
+    def is_spam(self) -> bool:
+        """:class:`bool`: Indicates if the direct message is a spam message request."""
+        return self._spam
 
     def permissions_for(self, obj: Any = None, /) -> Permissions:
         """Handles permission resolution for a :class:`User`.
@@ -1505,41 +1549,80 @@ class GroupChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable
 
     Attributes
     ----------
+    last_message_id: Optional[:class:`int`]
+        The last message ID of the message sent to this channel. It may
+        *not* point to an existing or valid message.
+    last_pin_timestamp: Optional[:class:`datetime.datetime`]
+        When the last pinned message was pinned. ``None`` if there are no pinned messages.
     recipients: List[:class:`User`]
         The users you are participating with in the group channel.
     me: :class:`ClientUser`
         The user presenting yourself.
     id: :class:`int`
         The group channel ID.
-    owner: Optional[:class:`User`]
-        The user that owns the group channel.
     owner_id: :class:`int`
         The owner ID that owns the group channel.
+    managed: :class:`bool`
+        Whether the group channel is managed by an application.
 
-        .. versionadded:: 2.0
+        This restricts the operations that can be performed on the channel,
+        and means :attr:`owner` will usually be ``None``.
+    application_id: Optional[:class:`int`]
+        The ID of the managing application, if any.
     name: Optional[:class:`str`]
         The group channel's name if provided.
+    nicks: Dict[:class:`User`, :class:`str`]
+        A mapping of users to their respective nicknames in the group channel.
+    origin_channel_id: Optional[:class:`int`]
+        The ID of the DM this group channel originated from, if any.
+        This can only be accurately received in :func:`on_private_channel_create`
+        due to a Discord limitation.
     """
 
-    __slots__ = ('id', 'recipients', 'owner_id', 'owner', '_icon', 'name', 'me', '_state')
+    __slots__ = (
+        '_state',
+        'id',
+        'last_message_id',
+        'last_pin_timestamp',
+        'recipients',
+        'owner_id',
+        'managed',
+        'application_id',
+        'nicks',
+        'origin_channel_id',
+        '_icon',
+        'name',
+        'me',
+    )
 
     def __init__(self, *, me: ClientUser, state: ConnectionState, data: GroupChannelPayload):
         self._state: ConnectionState = state
         self.id: int = int(data['id'])
         self.me: ClientUser = me
-        self._update_group(data)
+        self._update(data)
 
-    def _update_group(self, data: GroupChannelPayload) -> None:
-        self.owner_id: Optional[int] = utils._get_as_snowflake(data, 'owner_id')
+    def _update(self, data: GroupChannelPayload) -> None:
+        self.owner_id: int = int(data['owner_id'])
         self._icon: Optional[str] = data.get('icon')
         self.name: Optional[str] = data.get('name')
         self.recipients: List[User] = [self._state.store_user(u) for u in data.get('recipients', ())]
+        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
+        self.last_pin_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('last_pin_timestamp'))
+        self.managed: bool = data.get('managed', False)
+        self.application_id: Optional[int] = utils._get_as_snowflake(data, 'application_id')
+        self.nicks: Dict[User, str] = self._unroll_nicks(data.get('nicks', ()))
+        self.origin_channel_id: Optional[int] = utils._get_as_snowflake(data, 'origin_channel_id')
 
-        self.owner: Optional[BaseUser]
-        if self.owner_id == self.me.id:
-            self.owner = self.me
-        else:
-            self.owner = utils.find(lambda u: u.id == self.owner_id, self.recipients)
+    def _unroll_nicks(
+        self, data: Union[List[GroupDMNicknamePayload], Tuple[GroupDMNicknamePayload, ...]]
+    ) -> Dict[User, str]:
+        ret = {}
+        for entry in data:
+            user_id = int(entry['id'])
+            user = utils.get(self.recipients, id=user_id)
+            if user:
+                ret[user] = entry['nick']
+        return ret
 
     async def _get_channel(self) -> Self:
         return self
@@ -1577,6 +1660,15 @@ class GroupChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable
         if self._icon is None:
             return None
         return Asset._from_icon(self._state, self.id, self._icon, path='channel')
+
+    @property
+    def origin_channel(self) -> Optional[DMChannel]:
+        """Optional[:class:`DMChannel`]: The DM this group channel originated from, if any.
+
+        This can only be accurately received in :func:`on_private_channel_create`
+        due to a Discord limitation.
+        """
+        return self._state._get_private_channel(self.origin_channel_id) if self.origin_channel_id else None  # type: ignore
 
     @property
     def created_at(self) -> datetime.datetime:

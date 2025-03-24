@@ -32,7 +32,6 @@ from typing import (
     Dict,
     Optional,
     TYPE_CHECKING,
-    Type,
     Union,
     Callable,
     Any,
@@ -66,8 +65,6 @@ from . import utils
 from .flags import ApplicationFlags, Intents, MemberCacheFlags
 from .invite import Invite
 from .integrations import _integration_factory
-from .interactions import Interaction
-from .ui.view import ViewStore, View
 from .scheduled_event import ScheduledEvent
 from .stage_instance import StageInstance
 from .threads import Thread, ThreadMember
@@ -87,9 +84,6 @@ if TYPE_CHECKING:
     from .http import HTTPClient
     from .voice_client import VoiceProtocol
     from .gateway import DiscordWebSocket
-    from .ui.item import Item
-    from .ui.dynamic import DynamicItem
-    from .app_commands import CommandTree, Translator
     from .poll import Poll
 
     from .types.automod import AutoModerationRule, AutoModerationActionExecution
@@ -191,9 +185,6 @@ class ConnectionState(Generic[ClientT]):
         self._activity: Optional[ActivityPayload] = activity
         self._status: Optional[str] = status
         self._intents: Intents = intents
-        self._command_tree: Optional[CommandTree] = None
-        self._translator: Optional[Translator] = None
-
         if not intents.members or cache_flags._empty:
             self.store_user = self.store_user_no_intents
 
@@ -224,9 +215,6 @@ class ConnectionState(Generic[ClientT]):
                 # if an error happens during disconnects, disregard it.
                 pass
 
-        if self._translator:
-            await self._translator.unload()
-
         # Purposefully don't call `clear` because users rely on cache being available post-close
 
     def clear(self, *, views: bool = True) -> None:
@@ -238,9 +226,6 @@ class ConnectionState(Generic[ClientT]):
 
         self._lobbies: Dict[int, Lobby] = {}
         self._relationships: Dict[int, Relationship] = {}
-
-        if views:
-            self._view_store: ViewStore = ViewStore(self)
 
         self._voice_clients: Dict[int, VoiceProtocol] = {}
 
@@ -285,15 +270,15 @@ class ConnectionState(Generic[ClientT]):
     def voice_clients(self) -> List[VoiceProtocol]:
         return list(self._voice_clients.values())
 
-    def _get_voice_client(self, guild_id: Optional[int]) -> Optional[VoiceProtocol]:
+    def _get_voice_client(self, key_id: Optional[int]) -> Optional[VoiceProtocol]:
         # the keys of self._voice_clients are ints
-        return self._voice_clients.get(guild_id)  # type: ignore
+        return self._voice_clients.get(key_id)  # type: ignore
 
-    def _add_voice_client(self, guild_id: int, voice: VoiceProtocol) -> None:
-        self._voice_clients[guild_id] = voice
+    def _add_voice_client(self, key_id: int, voice: VoiceProtocol) -> None:
+        self._voice_clients[key_id] = voice
 
-    def _remove_voice_client(self, guild_id: int) -> None:
-        self._voice_clients.pop(guild_id, None)
+    def _remove_voice_client(self, key_id: int) -> None:
+        self._voice_clients.pop(key_id, None)
 
     def _update_references(self, ws: DiscordWebSocket) -> None:
         for vc in self.voice_clients:
@@ -354,24 +339,6 @@ class ConnectionState(Generic[ClientT]):
         sticker_id = int(data['id'])
         self._stickers[sticker_id] = sticker = GuildSticker(state=self, data=data)
         return sticker
-
-    def store_view(self, view: View, message_id: Optional[int] = None, interaction_id: Optional[int] = None) -> None:
-        if interaction_id is not None:
-            self._view_store.remove_interaction_mapping(interaction_id)
-        self._view_store.add_view(view, message_id)
-
-    def prevent_view_updates_for(self, message_id: int) -> Optional[View]:
-        return self._view_store.remove_message_tracking(message_id)
-
-    def store_dynamic_items(self, *items: Type[DynamicItem[Item[Any]]]) -> None:
-        self._view_store.add_dynamic_items(*items)
-
-    def remove_dynamic_items(self, *items: Type[DynamicItem[Item[Any]]]) -> None:
-        self._view_store.remove_dynamic_items(*items)
-
-    @property
-    def persistent_views(self) -> Sequence[View]:
-        return self._view_store.persistent_views
 
     @property
     def guilds(self) -> Sequence[Guild]:
@@ -486,7 +453,7 @@ class ConnectionState(Generic[ClientT]):
             guild_id = guild_id or int(data['guild_id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
             guild = self._get_guild(guild_id)
         except KeyError:
-            channel = DMChannel._from_message(self, channel_id)
+            channel = DMChannel._from_message(self, channel_id, int(data.get('id', 0)) or None)
             guild = None
         else:
             channel = guild and guild._resolve_channel(channel_id)
@@ -585,7 +552,7 @@ class ConnectionState(Generic[ClientT]):
                 _log.debug('READY_SUPPLEMENTAL referencing an unknown guild ID: %s. Discarding.', guild_id)
                 continue
 
-            members = [Member(data=guild_member_data, guild=guild, state=self) for guild_member_data in guild_members_data]
+            members = [Member(data=guild_member_data, guild=guild, state=self) for guild_member_data in guild_members_data]  # type: ignore # ???
             for member in members:
                 guild._add_member(member)
 
@@ -717,9 +684,6 @@ class ConnectionState(Generic[ClientT]):
             except (KeyError, ValueError):
                 entity_id = raw.message_id
 
-            if self._view_store.is_message_tracked(entity_id):
-                self._view_store.update_from_message(entity_id, data['components'])
-
     def parse_message_reaction_add(self, data: gw.MessageReactionAddEvent) -> None:
         emoji = PartialEmoji.from_dict(data['emoji'])
         emoji._state = self
@@ -789,24 +753,6 @@ class ConnectionState(Generic[ClientT]):
             else:
                 if reaction:
                     self.dispatch('reaction_clear_emoji', reaction)
-
-    def parse_interaction_create(self, data: gw.InteractionCreateEvent) -> None:
-        interaction = Interaction(data=data, state=self)
-        if data['type'] in (2, 4) and self._command_tree:  # application command and auto complete
-            self._command_tree._from_interaction(interaction)
-        elif data['type'] == 3:  # interaction component
-            # These keys are always there for this interaction type
-            inner_data = data['data']
-            custom_id = inner_data['custom_id']
-            component_type = inner_data['component_type']
-            self._view_store.dispatch_view(component_type, custom_id, interaction)
-        elif data['type'] == 5:  # modal submit
-            # These keys are always there for this interaction type
-            inner_data = data['data']
-            custom_id = inner_data['custom_id']
-            components = inner_data['components']
-            self._view_store.dispatch_modal(custom_id, interaction, components)
-        self.dispatch('interaction', interaction)
 
     def parse_presence_update(self, data: gw.PresenceUpdateEvent) -> None:
         raw = RawPresenceUpdateEvent(data=data, state=self)
@@ -889,7 +835,7 @@ class ConnectionState(Generic[ClientT]):
             if channel is not None:
                 old_channel = copy(channel)
                 # the channel is a GroupChannel rather than PrivateChannel
-                channel._update_group(data)  # type: ignore
+                channel._update(data)  # type: ignore
                 self.dispatch('private_channel_update', old_channel, channel)
                 return
             else:
@@ -907,6 +853,22 @@ class ConnectionState(Generic[ClientT]):
                 _log.debug('CHANNEL_UPDATE referencing an unknown channel ID: %s. Discarding.', channel_id)
         else:
             _log.debug('CHANNEL_UPDATE referencing an unknown guild ID: %s. Discarding.', guild_id)
+
+    def parse_channel_update_partial(self, data: gw.ChannelUpdatePartialEvent) -> None:
+        channel_id = int(data['id'])
+        channel = self._get_private_channel(channel_id)
+
+        if channel is None:
+            _log.debug('CHANNEL_UPDATE_PARTIAL referencing an unknown channel ID: %s. Discarding.', channel_id)
+            return
+
+        old = copy(channel)
+
+        channel.last_message_id = utils._get_as_snowflake(data, 'last_message_id')  # type: ignore
+        if 'last_pin_timestamp' in data and hasattr(channel, 'last_pin_timestamp'):
+            channel.last_pin_timestamp = utils.parse_time(data['last_pin_timestamp'])  # type: ignore
+
+        self.dispatch('private_channel_update', old, channel)
 
     def parse_channel_create(self, data: gw.ChannelCreateEvent) -> None:
         factory, ch_type = _channel_factory(data['type'])
@@ -945,6 +907,32 @@ class ConnectionState(Generic[ClientT]):
             self.dispatch('private_channel_pins_update', channel, last_pin)
         else:
             self.dispatch('guild_channel_pins_update', channel, last_pin)
+
+    def parse_channel_recipient_add(self, data: gw.ChannelRecipientEvent) -> None:
+        channel = self._get_private_channel(int(data['channel_id']))
+        if channel is None:
+            _log.debug('CHANNEL_RECIPIENT_ADD referencing an unknown channel ID: %s. Discarding.', data['channel_id'])
+            return
+
+        user = self.store_user(data['user'])
+        channel.recipients.append(user)  # type: ignore
+        if 'nick' in data:
+            channel.nicks[user] = data['nick']  # type: ignore
+        self.dispatch('group_join', channel, user)
+
+    def parse_channel_recipient_remove(self, data: gw.ChannelRecipientEvent) -> None:
+        channel = self._get_private_channel(int(data['channel_id']))
+        if channel is None:
+            _log.debug('CHANNEL_RECIPIENT_REMOVE referencing an unknown channel ID: %s. Discarding.', data['channel_id'])
+            return
+
+        user = self.store_user(data['user'])
+        try:
+            channel.recipients.remove(user)  # type: ignore
+        except ValueError:
+            pass
+        else:
+            self.dispatch('group_remove', channel, user)
 
     def parse_thread_create(self, data: gw.ThreadCreateEvent) -> None:
         guild_id = int(data['guild_id'])
@@ -1619,15 +1607,18 @@ class ConnectionState(Generic[ClientT]):
         channel, guild = self._get_guild_channel(data)
 
         if channel is not None:
-            if isinstance(channel, DMChannel):
-                if raw.user is not None and raw.user not in channel.recipients:
-                    channel.recipients.append(raw.user)
-            elif guild is not None:
-                raw.user = guild.get_member(raw.user_id)
-
-                if raw.user is None:
+            if raw.user is None:
+                if isinstance(channel, DMChannel):
+                    raw.user = channel.recipient
+                elif isinstance(channel, GroupChannel):
+                    raw.user = utils.find(lambda x: x.id == raw.user_id, channel.recipients)
+            if raw.user is None and guild is not None:
+                member = guild.get_member(raw.user_id)
+                if member is not None:
+                    raw.user = member
+                elif raw.user is None:
                     member_data = data.get('member')
-                    if member_data:
+                    if member_data is not None:
                         raw.user = Member(data=member_data, state=self, guild=guild)
 
             if raw.user is not None:
@@ -1773,30 +1764,34 @@ class ConnectionState(Generic[ClientT]):
         self.dispatch('lobby_member_remove', removed)
 
     def parse_lobby_voice_state_update(self, data: gw.LobbyVoiceStateUpdateEvent) -> None:
-        guild = self._get_guild(utils._get_as_snowflake(data, 'guild_id'))
+        lobby_id = int(data['lobby_id'])
         channel_id = utils._get_as_snowflake(data, 'channel_id')
-        flags = self.member_cache_flags
+
         # self.user is *always* cached when this is called
         self_id = self.user.id  # type: ignore
-        if guild is not None:
-            if int(data['user_id']) == self_id:
-                voice = self._get_voice_client(guild.id)
-                if voice is not None:
-                    coro = voice.on_voice_state_update(data)
-                    asyncio.create_task(logging_coroutine(coro, info='Voice Protocol voice state update handler'))
 
-            member, before, after = guild._update_voice_state(data, channel_id)  # type: ignore
-            if member is not None:
-                if flags.voice:
-                    if channel_id is None and flags._voice_only and member.id != self_id:
-                        # Only remove from cache if we only have the voice flag enabled
-                        guild._remove_member(member)
-                    elif channel_id is not None:
-                        guild._add_member(member)
+        lobby = self._get_lobby(lobby_id)
+        if lobby is None:
+            _log.debug('LOBBY_VOICE_STATE_UPDATE referencing an unknown lobby ID: %s. Discarding.', lobby_id)
+            return
 
-                self.dispatch('voice_state_update', member, before, after)
-            else:
-                _log.debug('LOBBY_VOICE_STATE_UPDATE referencing an unknown member ID: %s. Discarding.', data['user_id'])
+        channel = self._get_lobby(channel_id)
+        user_id = int(data['user_id'])
+
+        member = lobby.get_member(user_id)
+        if member is None:
+            _log.debug('LOBBY_VOICE_STATE_UPDATE referencing an unknown member ID: %s. Discarding.', data['user_id'])
+            return
+
+        old, new = lobby._update_voice_state(data, channel)
+        member.connected = channel is not None
+        self.dispatch('lobby_voice_state_update', member, old, new)
+
+        if user_id == self_id:
+            voice = self._get_voice_client(lobby.id)
+            if voice is not None:
+                coro = voice.on_voice_state_update(data)
+                asyncio.create_task(logging_coroutine(coro, info='Voice Protocol voice state update handler'))
 
     def parse_relationship_add(self, data: gw.RelationshipAddEvent) -> None:
         key = int(data['id'])

@@ -82,13 +82,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .abc import Messageable, PrivateChannel, Snowflake, SnowflakeTime
-    from .app_commands import Command, ContextMenu
     from .automod import AutoModAction, AutoModRule
     from .channel import DMChannel, GroupChannel
     from .ext.commands import Bot, Context, CommandError
     from .guild import GuildChannel
     from .integrations import Integration
-    from .interactions import Interaction
     from .member import Member, VoiceState
     from .message import Message
     from .raw_models import (
@@ -1192,17 +1190,6 @@ class Client:
     ) -> RawAppCommandPermissionsUpdateEvent:
         ...
 
-    @overload
-    async def wait_for(
-        self,
-        event: Literal['app_command_completion'],
-        /,
-        *,
-        check: Optional[Callable[[Interaction[Self], Union[Command[Any, ..., Any], ContextMenu]], bool]] = ...,
-        timeout: Optional[float] = ...,
-    ) -> Tuple[Interaction[Self], Union[Command[Any, ..., Any], ContextMenu]]:
-        ...
-
     # AutoMod
 
     @overload
@@ -1475,19 +1462,6 @@ class Client:
         check: Optional[Callable[[RawIntegrationDeleteEvent], bool]] = ...,
         timeout: Optional[float] = ...,
     ) -> RawIntegrationDeleteEvent:
-        ...
-
-    # Interactions
-
-    @overload
-    async def wait_for(
-        self,
-        event: Literal['interaction'],
-        /,
-        *,
-        check: Optional[Callable[[Interaction[Self]], bool]] = ...,
-        timeout: Optional[float] = ...,
-    ) -> Interaction[Self]:
         ...
 
     # Members
