@@ -753,6 +753,9 @@ class Intents(BaseFlags):
         rather than using this raw value.
     """
 
+    # Only following intents can be used in OAuth2 context:
+    # GUILDS | GUILD_MEMBERS | GUILD_VOICE_STATES | GUILD_PRESENCES | PRIVATE_CHANNELS | USER_RELATIONSHIPS | USER_PRESENCE | LOBBIES | LOBBY_DELETE
+
     __slots__ = ()
 
     def __init__(self, value: int = 0, **kwargs: bool) -> None:
@@ -992,6 +995,28 @@ class Intents(BaseFlags):
 
     @flag_value
     def presences(self):
+        """:class:`bool`: Whether guild/user presence related events are enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_presence_update`
+
+        This also corresponds to the following attributes and classes in terms of cache:
+
+        - :attr:`Member.activities`
+        - :attr:`Member.status`
+        - :attr:`Member.raw_status`
+        - :attr:`Relationship.activities`
+        - :attr:`Relationship.status`
+        - :attr:`Relationship.raw_status`
+
+
+        For more information go to the :ref:`presence intent documentation <need_presence_intent>`.
+        """
+        return (1 << 8) | (1 << 23)
+
+    @flag_value
+    def guild_presences(self):
         """:class:`bool`: Whether guild presence related events are enabled.
 
         This corresponds to the following events:
@@ -1012,6 +1037,24 @@ class Intents(BaseFlags):
             Bots in over 100 guilds will need to apply to Discord for verification.
         """
         return 1 << 8
+
+    @flag_value
+    def user_presences(self):
+        """:class:`bool`: Whether user presence related events are enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_presence_update`
+
+        This also corresponds to the following attributes and classes in terms of cache:
+
+        - :attr:`Relationship.activities`
+        - :attr:`Relationship.status`
+        - :attr:`Relationship.raw_status`
+
+        For more information go to the :ref:`presence intent documentation <need_presence_intent>`.
+        """
+        return 1 << 23
 
     @alias_flag_value
     def messages(self):
@@ -1242,6 +1285,12 @@ class Intents(BaseFlags):
         """
         return 1 << 16
 
+    @flag_value
+    def private_channels(self):
+        """:class:`bool`: TODO."""
+
+        return 1 << 18
+
     @alias_flag_value
     def auto_moderation(self):
         """:class:`bool`: Whether auto moderation related events are enabled.
@@ -1284,6 +1333,20 @@ class Intents(BaseFlags):
         .. versionadded:: 2.0
         """
         return 1 << 21
+
+    def relationships(self):
+        """:class:`bool`: Whether relationship related events are enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_relationship_add`
+        - :func:`on_relationship_update`
+        - :func:`on_relationship_remove`
+        - :func:`on_game_relationship_add`
+        - :func:`on_game_relationship_update`
+        - :func:`on_game_relationship_remove`
+        """
+        return 1 << 23
 
     @alias_flag_value
     def polls(self):
@@ -1335,6 +1398,34 @@ class Intents(BaseFlags):
         .. versionadded:: 2.4
         """
         return 1 << 25
+
+    @flag_value
+    def lobbies(self):
+        """:class:`bool`: Whether lobby related events are enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_lobby_create`
+        - :func:`on_lobby_update`
+        - :func:`on_lobby_member_join`
+        - :func:`on_lobby_member_update`
+        - :func:`on_lobby_member_remove`
+        - :func:`on_lobby_message_create`
+        - :func:`on_lobby_message_update`
+        - :func:`on_lobby_message_delete`
+        - :func:`on_lobby_voice_state_update`
+        """
+        return 1 << 27
+
+    @flag_value
+    def lobby_delete(self):
+        """:class:`bool`: Whether lobby delete event is enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_lobby_remove`
+        """
+        return 1 << 28
 
 
 @fill_with_flags()

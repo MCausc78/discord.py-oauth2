@@ -48,7 +48,7 @@ import weakref
 import inspect
 
 from .guild import Guild
-from .activity import BaseActivity
+from .activity import BaseActivity, create_activity
 from .sku import Entitlement
 from .user import User, ClientUser
 from .emoji import Emoji
@@ -77,6 +77,7 @@ from .audit_logs import AuditLogEntry
 from ._types import ClientT
 from .soundboard import SoundboardSound
 from .lobby import LobbyMember, Lobby
+from .presences import ClientStatus
 from .relationship import Relationship
 
 if TYPE_CHECKING:
@@ -588,12 +589,17 @@ class ConnectionState(Generic[ClientT]):
             for member in members:
                 guild._add_member(member)
 
-            # TODO: This needs optimization
             guild_presences = []
             for guild_presence_data in guild_presences_data:
-                event = RawPresenceUpdateEvent(data=guild_presence_data, state=self)
+                event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
+                event.user_id = int(guild_presence_data['user']['id'])
+                event.client_status = ClientStatus(
+                    status=guild_presence_data['status'], data=guild_presence_data['client_status']
+                )
+                event.activities = tuple(create_activity(d, self) for d in guild_presence_data['activities'])
                 event.guild_id = guild_id
                 event.guild = guild
+
                 guild_presences.append(event)
                 member = guild.get_member(event.user_id)
                 if member is not None:
@@ -616,11 +622,27 @@ class ConnectionState(Generic[ClientT]):
                 pm['recipients'] = [self._users[int(u_id)] for u_id in pm.pop('recipient_ids')]  # type: ignore
             self._add_private_channel(factory(me=self.user, data=pm, state=self))  # type: ignore
 
-        # TODO: Optimize
         friend_presences = []
         for friend_presence_data in merged_presences.get('friends', ()):
-            event = RawPresenceUpdateEvent(data=friend_presence_data, state=self)
-            # TODO: Actually process this
+            user_data = friend_presence_data['user']
+
+            event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
+            event.user_id = int(user_data['id'])
+            event.client_status = ClientStatus(
+                status=friend_presence_data['status'], data=friend_presence_data['client_status']
+            )
+            event.activities = tuple(create_activity(d, self) for d in friend_presence_data['activities'])
+            event.guild_id = None
+            event.guild = None
+
+            try:
+                relationship = self._relationships[event.user_id]
+            except KeyError:
+                self._relationships[relationship.id] = relationship = Relationship._from_implicit(
+                    state=self, user=self.store_user(user_data)
+                )
+            relationship._presence_update(event, user_data)
+
             friend_presences.append(event)
 
         raw = RawReadyEvent(
@@ -791,6 +813,22 @@ class ConnectionState(Generic[ClientT]):
 
         if self.raw_presence_flag:
             self.dispatch('raw_presence_update', raw)
+
+        if raw.guild_id is None:
+            try:
+                relationship = self._relationships[raw.user_id]
+            except KeyError:
+                relationship = Relationship._from_implicit(state=self, user=self.store_user(data['user']))
+                old = copy(relationship)
+                old.client_status = ClientStatus()
+                old.activities = ()
+            else:
+                old = copy(relationship)
+                user_update = relationship._presence_update(raw, data['user'])
+                if user_update:
+                    self.dispatch('user_update', user_update[0], user_update[1])
+            self.dispatch('presence_update', old, relationship)
+            return
 
         if raw.guild is None:
             _log.debug('PRESENCE_UPDATE referencing an unknown guild ID: %s. Discarding.', raw.guild_id)

@@ -77,14 +77,6 @@ class ReadyEvent(TypedDict):
     application: GatewayAppInfo
 
 
-class ReadySupplementalEvent(TypedDict):
-    guilds: List[SupplementalGuild]
-    merged_members: List[List[MemberWithUser]]
-    merged_presences: MergedPresences
-    lazy_private_channels: List[Union[DMChannel, GroupDMChannel]]
-    disclose: List[str]
-
-
 class SupplementalGuild(TypedDict):
     id: int
 
@@ -92,6 +84,14 @@ class SupplementalGuild(TypedDict):
 class MergedPresences(TypedDict):
     friends: List[PartialPresenceUpdate]
     guilds: List[List[PartialPresenceUpdate]]
+
+
+class ReadySupplementalEvent(TypedDict):
+    guilds: List[SupplementalGuild]
+    merged_members: List[List[MemberWithUser]]
+    merged_presences: MergedPresences
+    lazy_private_channels: List[Union[DMChannel, GroupDMChannel]]
+    disclose: List[str]
 
 
 ResumedEvent = Literal[None]

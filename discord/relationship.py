@@ -37,9 +37,10 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .activity import ActivityTypes
+    from .presences import RawPresenceUpdateEvent
     from .state import ConnectionState
     from .types.gateway import RelationshipEvent
-    from .types.user import Relationship as RelationshipPayload
+    from .types.user import User as UserPayload, Relationship as RelationshipPayload
     from .user import User
 
 # fmt: off
@@ -112,6 +113,47 @@ class Relationship(Hashable):
         elif 'user_id' in data:
             user_id = int(data['user_id'])
             self.user = self._state.get_user(user_id) or Object(id=user_id)  # type: ignore # Lying for better developer UX
+
+    def _presence_update(self, raw: RawPresenceUpdateEvent, user: UserPayload) -> Optional[Tuple[User, User]]:
+        self.activities = raw.activities
+        self.client_status = raw.client_status
+
+        if len(user) > 1:
+            return self._update_inner_user(user)
+
+    def _update_inner_user(self, user: UserPayload) -> Optional[Tuple[User, User]]:
+        u = self.user
+        original = (
+            u.name,
+            u.discriminator,
+            u._avatar,
+            u.global_name,
+            u._public_flags,
+            u._avatar_decoration_data['sku_id'] if u._avatar_decoration_data is not None else None,
+        )
+
+        decoration_payload = user.get('avatar_decoration_data')
+        # These keys seem to always be available
+        modified = (
+            user['username'],
+            user['discriminator'],
+            user['avatar'],
+            user.get('global_name'),
+            user.get('public_flags', 0),
+            decoration_payload['sku_id'] if decoration_payload is not None else None,
+        )
+        if original != modified:
+            to_return = User._copy(self.user)
+            u.name, u.discriminator, u._avatar, u.global_name, u._public_flags, u._avatar_decoration_data = (
+                user['username'],
+                user['discriminator'],
+                user['avatar'],
+                user.get('global_name'),
+                user.get('public_flags', 0),
+                decoration_payload,
+            )
+            # Signal to dispatch on_user_update
+            return to_return, u
 
     @classmethod
     def _from_implicit(cls, *, state: ConnectionState, user: User) -> Relationship:

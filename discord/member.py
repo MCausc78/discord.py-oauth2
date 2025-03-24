@@ -307,7 +307,10 @@ class Member(discord.abc.Messageable, _UserTag):
 
     def __init__(self, *, data: MemberWithUserPayload, guild: Guild, state: ConnectionState):
         self._state: ConnectionState = state
-        self._user: User = state.store_user(data['user'])
+        if 'user' in data:
+            self._user: User = state.store_user(data['user'])
+        elif 'user_id' in data:
+            self._user: User = state._users[int(data['user_id'])]
         self.guild: Guild = guild
         self.joined_at: Optional[datetime.datetime] = utils.parse_time(data.get('joined_at'))
         self.premium_since: Optional[datetime.datetime] = utils.parse_time(data.get('premium_since'))

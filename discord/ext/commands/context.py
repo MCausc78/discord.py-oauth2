@@ -924,7 +924,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
         suppress_embeds: bool = False,
         ephemeral: bool = False,
         silent: bool = False,
-        poll: Poll = MISSING,
+        poll: Optional[Poll] = None,
     ) -> Message:
         """|coro|
 
@@ -1014,7 +1014,7 @@ class Context(discord.abc.Messageable, Generic[BotT]):
 
             .. versionadded:: 2.2
 
-        poll: :class:`~discord.Poll`
+        poll: Optional[:class:`~discord.Poll`]
             The poll to send with this message.
 
             .. versionadded:: 2.4
