@@ -504,10 +504,6 @@ class ConnectionState(Generic[ClientT]):
 
         for guild_data in data.get('guilds', ()):
             guild = self._add_guild_from_data(guild_data)  # type: ignore # _add_guild_from_data requires a complete Guild payload
-            if guild.unavailable:
-                self.dispatch('guild_unavailable', guild)
-            else:
-                self.dispatch('guild_available', guild)
 
         for pm in data.get('private_channels', ()):
             factory, _ = _private_channel_factory(pm['type'])
@@ -552,7 +548,7 @@ class ConnectionState(Generic[ClientT]):
             guild_presences = []
             for guild_presence_data in guild_presences_data:
                 event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
-                event.user_id = int(guild_presence_data['user_id'])
+                event.user_id = int(guild_presence_data['user_id'])  # type: ignore
                 event.client_status = ClientStatus(
                     status=guild_presence_data['status'], data=guild_presence_data['client_status']
                 )
