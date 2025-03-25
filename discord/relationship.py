@@ -30,7 +30,7 @@ from .enums import RelationshipType, Status, try_enum
 from .mixins import Hashable
 from .object import Object
 from .presences import ClientStatus
-from .utils import parse_time
+from .utils import _get_as_snowflake, parse_time
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -70,28 +70,38 @@ class Relationship(Hashable):
             Return the relationship's hash.
 
     Attributes
-    -----------
-    user: :class:`User`
-        The user you have the relationship with.
+    ----------
     type: :class:`RelationshipType`
         The type of relationship you have.
+    user: :class:`User`
+        The user you have the relationship with.
     nick: Optional[:class:`str`]
         The user's friend nickname (if applicable).
-    since: Optional[:class:`datetime.datetime`]
+    spam_request: :class:`bool`
+        Whether the friend request was flagged as spam.
+    stranger_request: :class:`bool`
+        Whether the friend request was sent by a user without a mutual friend or small mutual guild.
+    user_ignored: :class:`bool`
+        Whether the target user has been ignored by the current user.
+    origin_application_id: Optional[:class:`int`]
+        The application's ID that created the relationship.
+    since: Optional[:class:`~datetime.datetime`]
         When the relationship was created.
-        Only available for type :class:`RelationshipType.incoming_request`.
-
-        .. versionadded:: 2.0
+        Only available for type :class:`RelationshipType.friend`, :class:`RelationshipType.blocked`, and :class:`RelationshipType.incoming_request`.
     """
 
     __slots__ = (
         '_state',
         'type',
+        'user',
+        'nick',
         'client_status',
         'activities',
+        'spam_request',
+        'stranger_request',
+        'user_ignored',
+        'origin_application_id',
         'since',
-        'nick',
-        'user',
     )
 
     if TYPE_CHECKING:
@@ -105,14 +115,19 @@ class Relationship(Hashable):
 
     def _update(self, data: Union[RelationshipPayload, RelationshipEvent]) -> None:
         self.type: RelationshipType = try_enum(RelationshipType, data['type'])
-        self.nick: Optional[str] = data.get('nickname')
-        self.since: Optional[datetime] = parse_time(data.get('since'))
 
         if 'user' in data:
             self.user: User = self._state.store_user(data['user'])
         elif 'user_id' in data:
             user_id = int(data['user_id'])
             self.user = self._state.get_user(user_id) or Object(id=user_id)  # type: ignore # Lying for better developer UX
+
+        self.nick: Optional[str] = data.get('nickname')
+        self.spam_request: bool = data.get('is_spam_request', False)
+        self.stranger_request: bool = data.get('stranger_request', False)
+        self.user_ignored: bool = data.get('user_ignored', False)
+        self.origin_application_id: Optional[int] = _get_as_snowflake(data, 'origin_application_id')
+        self.since: Optional[datetime] = parse_time(data.get('since'))
 
     def _presence_update(self, raw: RawPresenceUpdateEvent, user: UserPayload) -> Optional[Tuple[User, User]]:
         self.activities = raw.activities

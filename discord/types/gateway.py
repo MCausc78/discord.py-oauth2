@@ -50,6 +50,7 @@ from .audit_log import AuditLogEntry
 from .soundboard import SoundboardSound
 from .subscription import Subscription
 from .lobby import LobbyMember, LobbyVoiceState, Lobby
+from .settings import GatewayUserSettings
 
 
 class SessionStartLimit(TypedDict):
@@ -75,6 +76,7 @@ class GatewayFeatureFlags(TypedDict):
 
 class ReadyEvent(TypedDict):
     v: int
+    user_settings: GatewayUserSettings
     users: List[User]
     user: User
     session_id: str
@@ -456,7 +458,7 @@ class RelationshipEvent(TypedDict):
 GameRelationshipAddEvent = GameRelationship
 
 
-class GameRelationshipRemove(TypedDict):
+class GameRelationshipRemoveEvent(TypedDict):
     id: Snowflake
     application_id: Snowflake
     type: GameRelationshipType

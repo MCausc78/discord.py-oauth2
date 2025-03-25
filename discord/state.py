@@ -1760,15 +1760,15 @@ class ConnectionState(Generic[ClientT]):
         member_data = data['member']
         member_id = int(member_data['id'])
 
-        after = lobby.get_member(member_id)
-        if after is None:
+        new = lobby.get_member(member_id)
+        if new is None:
             _log.debug('LOBBY_MEMBER_UPDATE referencing an unknown member ID: %s. Discarding.', member_id)
             return
 
-        before = copy(after)
-        after._update(member_data)
+        old = copy(new)
+        new._update(member_data)
 
-        self.dispatch('lobby_member_update', before, after)
+        self.dispatch('lobby_member_update', old, new)
 
     def parse_lobby_member_remove(self, data: gw.LobbyMemberRemoveEvent) -> None:
         lobby_id = int(data['lobby_id'])
@@ -1827,12 +1827,27 @@ class ConnectionState(Generic[ClientT]):
                 asyncio.create_task(logging_coroutine(coro, info='Voice Protocol voice state update handler'))
 
     def parse_relationship_add(self, data: gw.RelationshipAddEvent) -> None:
-        key = int(data['id'])
-        new = self._relationships.get(key)
-        if new is None:
+        r_id = int(data['id'])
+
+        try:
+            new = self._relationships[r_id]
+        except KeyError:
             relationship = Relationship(state=self, data=data)
-            self._relationships[key] = relationship
+            self._relationships[r_id] = relationship
             self.dispatch('relationship_add', relationship)
+        else:
+            old = copy(new)
+            new._update(data)
+            self.dispatch('relationship_update', old, new)
+
+    def parse_relationship_update(self, data: gw.RelationshipEvent) -> None:
+        r_id = int(data['id'])
+
+        try:
+            new = self._relationships[r_id]
+        except KeyError:
+            relationship = Relationship(state=self, data=data)  # type: ignore
+            self._relationships[r_id] = relationship
         else:
             old = copy(new)
             new._update(data)
@@ -1848,16 +1863,29 @@ class ConnectionState(Generic[ClientT]):
         else:
             self.dispatch('relationship_remove', old)
 
-    def parse_relationship_update(self, data: gw.RelationshipEvent) -> None:
-        key = int(data['id'])
-        new = self._relationships.get(key)
-        if new is None:
-            relationship = Relationship(state=self, data=data)  # type: ignore
-            self._relationships[key] = relationship
+    def parse_game_relationship_add(self, data: gw.GameRelationshipAddEvent) -> None:
+        r_id = int(data['id'])
+
+        try:
+            new = self._game_relationships[r_id]
+        except KeyError:
+            game_relationship = GameRelationship(state=self, data=data)
+            self._game_relationships[r_id] = game_relationship
+            self.dispatch('game_relationship_add', game_relationship)
         else:
             old = copy(new)
             new._update(data)
-            self.dispatch('relationship_update', old, new)
+            self.dispatch('game_relationship_update', old, new)
+
+    def parse_game_relationship_remove(self, data: gw.GameRelationshipRemoveEvent) -> None:
+        r_id = int(data['id'])
+
+        try:
+            old = self._game_relationships.pop(r_id)
+        except KeyError:
+            _log.warning('GAME_RELATIONSHIP_REMOVE referencing unknown game relationship ID: %s. Discarding.', r_id)
+        else:
+            self.dispatch('game_relationship_remove', old)
 
     def _get_reaction_user(self, channel: MessageableChannel, user_id: int) -> Optional[Union[User, Member]]:
         if isinstance(channel, (TextChannel, Thread, VoiceChannel)):
