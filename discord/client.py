@@ -49,17 +49,16 @@ from typing import (
 import aiohttp
 
 from .sku import Entitlement
-from .user import User, ClientUser
+from .user import _UserTag, User, ClientUser
 from .invite import Invite
 from .template import Template
 from .widget import Widget
 from .guild import Guild
 from .emoji import Emoji
 from .channel import PartialMessageable
-from .enums import ChannelType
+from .enums import ChannelType, Status, RelationshipType
 from .mentions import AllowedMentions
 from .errors import *
-from .enums import Status
 from .flags import ApplicationFlags, Intents
 from .gateway import *
 from .activity import ActivityTypes, BaseActivity, create_activity
@@ -2393,3 +2392,136 @@ class Client:
 
         data = await state.http.start_private_message(user.id)
         return state.add_dm_channel(data)
+
+    @overload
+    async def send_friend_request(self, user: _UserTag, /) -> None:
+        ...
+
+    @overload
+    async def send_friend_request(self, user: str, /) -> None:
+        ...
+
+    @overload
+    async def send_friend_request(self, username: str, discriminator: str, /) -> None:
+        ...
+
+    async def send_friend_request(self, *args: Union[_UserTag, str, int]) -> None:
+        """|coro|
+
+        Sends a friend request to another user.
+
+        This function can be used in multiple ways.
+
+        .. code-block:: python
+
+            # Passing a user object:
+            await client.send_friend_request(user)
+
+            # Passing a username
+            await client.send_friend_request('dolfies')
+
+            # Passing a legacy user:
+            await client.send_friend_request('Dolfies#0040')
+
+            # Passing a legacy username and discriminator:
+            await client.send_friend_request('Dolfies', '0040')
+
+        Parameters
+        ----------
+        user: Union[:class:`discord.User`, :class:`str`, :class:`int`]
+            The user to send the friend request to.
+        username: :class:`str`
+            The username of the user to send the friend request to.
+        discriminator: :class:`str`
+            The discriminator of the user to send the friend request to.
+
+        Raises
+        ------
+        Forbidden
+            Not allowed to send a friend request to this user.
+        HTTPException
+            Sending the friend request failed.
+        TypeError
+            More than 2 parameters or less than 1 parameter was passed.
+        """
+        username: str
+        discrim: str
+        if len(args) == 1:
+            user = args[0]
+            if isinstance(user, int):
+                await self._connection.http.add_relationship(user, RelationshipType.outgoing_request.value)
+                return
+
+            if isinstance(user, _UserTag):
+                user = str(user)
+            username, _, discrim = user.partition('#')
+        elif len(args) == 2:
+            username, discrim = args  # type: ignore
+        else:
+            raise TypeError(f'send_friend_request() takes 1 or 2 arguments but {len(args)} were given')
+
+        state = self._connection
+        await state.http.send_friend_request(username, discrim or 0)
+
+    @overload
+    async def send_game_friend_request(self, user: _UserTag, /) -> None:
+        ...
+
+    @overload
+    async def send_game_friend_request(self, user: int, /) -> None:
+        ...
+
+    @overload
+    async def send_game_friend_request(self, user: str, /) -> None:
+        ...
+
+    async def send_game_friend_request(self, *args: Union[_UserTag, str, int]) -> None:
+        """|coro|
+
+        Sends a game friend request to another user.
+
+        This function can be used in multiple ways.
+
+        .. code-block:: python
+
+            # Passing a user object:
+            await client.send_game_friend_request(user)
+
+            # Passing a username
+            await client.send_game_friend_request('dolfies')
+
+            # Passing a ID
+            await client.send_game_friend_request(852892297661906993)
+
+
+        Parameters
+        ----------
+        user: Union[:class:`discord.User`, :class:`str`, :class:`int`]
+            The user to send the game friend request to.
+        username: :class:`str`
+            The username of the user to send the game friend request to.
+
+        Raises
+        ------
+        Forbidden
+            Not allowed to send a game friend request to this user.
+        HTTPException
+            Sending the game friend request failed.
+        TypeError
+            More than 2 parameters or less than 1 parameter was passed.
+        """
+
+        if len(args) != 1:
+            raise TypeError(f'send_game_friend_request() takes 1 or 2 arguments but {len(args)} were given')
+
+        state = self._connection
+        user = args[0]
+        if isinstance(user, _UserTag):
+            username = str(user)
+        elif isinstance(user, str):
+            username = user
+        elif isinstance(user, int):
+            await state.http.add_game_relationship(user, RelationshipType.outgoing_request.value)
+            return
+
+        await state.http.send_game_friend_request(username)

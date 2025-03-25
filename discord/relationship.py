@@ -77,6 +77,17 @@ class Relationship(Hashable):
         The user you have the relationship with.
     nick: Optional[:class:`str`]
         The user's friend nickname (if applicable).
+    client_status: :class:`ClientStatus`
+        Model which holds information about the status of the member on various clients/platforms via presence updates.
+    activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
+        The activities that the user is currently doing.
+
+        .. note::
+
+            Due to a Discord API limitation, a user's Spotify activity may not appear
+            if they are listening to a song with a title longer
+            than 128 characters. See :issue:`1738` for more information.
+
     spam_request: :class:`bool`
         Whether the friend request was flagged as spam.
     stranger_request: :class:`bool`

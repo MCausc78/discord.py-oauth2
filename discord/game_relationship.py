@@ -52,7 +52,7 @@ __all__ = (
 class GameRelationship(Hashable):
     """Represents a in-game relationship in Discord.
 
-    A relationship is like a friendship, a person who is blocked, etc.
+    A game relationship is like a friendship, a friend request to/from someone, etc.
 
     .. container:: operations
 
@@ -69,28 +69,38 @@ class GameRelationship(Hashable):
             Return the relationship's hash.
 
     Attributes
-    -----------
-    user: :class:`User`
-        The user you have the relationship with.
+    ----------
+    application_id: :class:`int`
+        The application's ID the game relationship belongs to.
     type: :class:`RelationshipType`
         The type of relationship you have.
-    nick: Optional[:class:`str`]
-        The user's friend nickname (if applicable).
-    since: Optional[:class:`datetime.datetime`]
-        When the relationship was created.
-        Only available for type :class:`RelationshipType.incoming_request`.
+    user: :class:`User`
+        The user you have the relationship with.
+    client_status: :class:`ClientStatus`
+        Model which holds information about the status of the member on various clients/platforms via presence updates.
+    activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
+        The activities that the user is currently doing.
 
-        .. versionadded:: 2.0
+        .. note::
+
+            Due to a Discord API limitation, a user's Spotify activity may not appear
+            if they are listening to a song with a title longer
+            than 128 characters. See :issue:`1738` for more information.
+    since: :class:`~datetime.datetime`
+        When the relationship was created.
+    dm_access_type: :class:`int`
+        The DM access level for the relationship. Currently unknown.
     """
 
     __slots__ = (
         '_state',
+        'application_id',
         'type',
+        'user',
         'client_status',
         'activities',
         'since',
-        'nick',
-        'user',
+        'dm_access_type',
     )
 
     if TYPE_CHECKING:
@@ -103,15 +113,15 @@ class GameRelationship(Hashable):
         self._update(data)
 
     def _update(self, data: GameRelationshipPayload) -> None:
+        self.application_id: int = int(data['application_id'])
         self.type: RelationshipType = try_enum(RelationshipType, data['type'])
-        self.nick: Optional[str] = data.get('nickname')
-        self.since: Optional[datetime] = parse_time(data.get('since'))
-
         if 'user' in data:
             self.user: User = self._state.store_user(data['user'])
         elif 'user_id' in data:
             user_id = int(data['user_id'])
             self.user = self._state.get_user(user_id) or Object(id=user_id)  # type: ignore # Lying for better developer UX
+        self.since: datetime = parse_time(data['since'])
+        self.dm_access_type: int = data.get('dm_access_type', 0)  # I've seen it always 0
 
     def _presence_update(self, raw: RawPresenceUpdateEvent, user: UserPayload) -> Optional[Tuple[User, User]]:
         self.activities = raw.activities
@@ -163,16 +173,18 @@ class GameRelationship(Hashable):
         self = cls.__new__(cls)  # to bypass __init__
 
         self._state = relationship._state
+        self.application_id = relationship.application_id
+        self.type = relationship.type
+        self.user = relationship.user
         self.client_status = client_status
         self.activities = activities
-        self.type = relationship.type
-        self.nick = relationship.nick
         self.since = relationship.since
-        self.user = relationship.user
+        self.dm_access_type = relationship.dm_access_type
+
         return self
 
     def __repr__(self) -> str:
-        return f'<GameRelationship user={self.user!r} type={self.type!r} nick={self.nick!r}>'
+        return f'<GameRelationship user={self.user!r} type={self.type!r}>'
 
     @property
     def id(self) -> int:
@@ -273,9 +285,9 @@ class GameRelationship(Hashable):
     async def delete(self) -> None:
         """|coro|
 
-        Deletes the relationship.
+        Deletes the game relationship.
 
-        Depending on the type, this could mean unfriending or unblocking the user,
+        Depending on the type, this could mean unfriending the user,
         denying an incoming friend request, discarding an outgoing friend request, etc.
 
         Raises
@@ -284,12 +296,12 @@ class GameRelationship(Hashable):
             Deleting the relationship failed.
         """
 
-        await self._state.http.remove_relationship(self.user.id)
+        await self._state.http.remove_game_relationship(self.user.id)
 
     async def accept(self) -> None:
         """|coro|
 
-        Accepts the relationship request. Only applicable for
+        Accepts the game relationship request. Only applicable for
         type :class:`RelationshipType.incoming_request`.
 
         Raises
@@ -297,4 +309,4 @@ class GameRelationship(Hashable):
         HTTPException
             Accepting the relationship failed.
         """
-        await self._state.http.add_relationship(self.user.id)
+        await self._state.http.add_game_relationship(self.user.id)
