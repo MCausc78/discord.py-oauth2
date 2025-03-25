@@ -76,6 +76,8 @@ from .soundboard import SoundboardSound
 from .lobby import LobbyMember, Lobby
 from .presences import ClientStatus
 from .relationship import Relationship
+from .game_relationship import GameRelationship
+from .object import Object
 
 if TYPE_CHECKING:
     from .abc import PrivateChannel
@@ -214,7 +216,7 @@ class ConnectionState(Generic[ClientT]):
 
         # Purposefully don't call `clear` because users rely on cache being available post-close
 
-    def clear(self, *, views: bool = True) -> None:
+    def clear(self) -> None:
         self.user: Optional[ClientUser] = None
         self._users: weakref.WeakValueDictionary[int, User] = weakref.WeakValueDictionary()
         self._emojis: Dict[int, Emoji] = {}
@@ -222,7 +224,14 @@ class ConnectionState(Generic[ClientT]):
         self._guilds: Dict[int, Guild] = {}
 
         self._lobbies: Dict[int, Lobby] = {}
+        self._game_relationships: Dict[int, GameRelationship] = {}
         self._relationships: Dict[int, Relationship] = {}
+
+        self.analytics_token: Optional[str] = None
+        self.av_sf_protocol_floor: int = -1
+        self.disabled_gateway_events: Tuple[str, ...] = ()
+        self.disabled_functions: Tuple[str, ...] = ()
+        self.scopes: Tuple[str, ...] = ()
 
         self._voice_clients: Dict[int, VoiceProtocol] = {}
 
@@ -484,13 +493,21 @@ class ConnectionState(Generic[ClientT]):
             cached.poll._update_results_from_message(from_)
 
     def parse_ready(self, data: gw.ReadyEvent) -> None:
-        self.clear(views=False)
+        self.clear()
 
         for user_data in data.get('users', ()):
             self.store_user(user_data)
 
         self.user = user = ClientUser(state=self, data=data['user'])
         self._users[user.id] = user  # type: ignore
+
+        feature_flags = data.get('feature_flags') or {}
+
+        self.analytics_token = data.get('analytics_token')
+        self.av_sf_protocol_floor = data.get('av_sf_protocol_floor', -1)
+        self.scopes = tuple(data.get('scopes', ()))
+        self.disabled_gateway_events = tuple(feature_flags.get('disabled_gateway_events', ()))
+        self.disabled_functions = tuple(feature_flags.get('disabled_functions', ()))
 
         if self.application_id is None:
             try:
@@ -503,17 +520,21 @@ class ConnectionState(Generic[ClientT]):
                 self.application_flags: ApplicationFlags = ApplicationFlags._from_value(application['flags'])
 
         for guild_data in data.get('guilds', ()):
-            guild = self._add_guild_from_data(guild_data)  # type: ignore # _add_guild_from_data requires a complete Guild payload
+            self._add_guild_from_data(guild_data)  # _add_guild_from_data requires a complete Guild payload
 
         for pm in data.get('private_channels', ()):
             factory, _ = _private_channel_factory(pm['type'])
             if factory is None:
                 continue
-            self._add_private_channel(factory(me=user, data=pm, state=self))
+            self._add_private_channel(factory(me=user, data=pm, state=self))  # type: ignore
 
         for relationship_data in data.get('relationships', ()):
             relationship = Relationship(data=relationship_data, state=self)
             self._relationships[relationship.id] = relationship
+
+        for game_relationship_data in data.get('game_relationships', ()):
+            game_relationship = GameRelationship(data=game_relationship_data, state=self)
+            self._game_relationships[relationship.id] = game_relationship
 
         for lobby_data in data.get('lobbies', ()):
             lobby = Lobby(data=lobby_data, state=self)
@@ -598,10 +619,10 @@ class ConnectionState(Generic[ClientT]):
                 if len(user_data) > 1:
                     user = self.store_user(user_data)  # type: ignore
                 else:
-                    user = Object(id=int(user_data['id']))  # type: ignore
+                    user = Object(id=int(user_data['id']))
                 self._relationships[relationship.id] = relationship = Relationship._from_implicit(
                     state=self,
-                    user=user,
+                    user=user,  # type: ignore
                 )
             relationship._presence_update(event, user_data)  # type: ignore
 
@@ -756,13 +777,30 @@ class ConnectionState(Generic[ClientT]):
             self.dispatch('raw_presence_update', raw)
 
         if raw.guild_id is None:
+            old: Union[Relationship, GameRelationship]
+            relationship: Union[Relationship, GameRelationship]
+
             try:
                 relationship = self._relationships[raw.user_id]
             except KeyError:
-                relationship = Relationship._from_implicit(state=self, user=self.store_user(data['user']))
-                old = copy(relationship)
-                old.client_status = ClientStatus()
-                old.activities = ()
+                try:
+                    relationship = self._game_relationships[raw.user_id]
+                except KeyError:
+                    user_data = data['user']
+                    if len(user_data) > 1:
+                        user = self.store_user(user_data)
+                    else:
+                        user = Object(id=raw.user_id)
+
+                    relationship = Relationship._from_implicit(state=self, user=user)  # type: ignore
+                    old = copy(relationship)
+                    old.client_status = ClientStatus()
+                    old.activities = ()
+                else:
+                    old = copy(relationship)
+                    user_update = relationship._presence_update(raw, data['user'])
+                    if user_update:
+                        self.dispatch('user_update', user_update[0], user_update[1])
             else:
                 old = copy(relationship)
                 user_update = relationship._presence_update(raw, data['user'])

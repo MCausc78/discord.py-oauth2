@@ -43,7 +43,7 @@ from .message import Message, ReactionType
 from .sticker import GuildSticker
 from .appinfo import GatewayAppInfo, PartialAppInfo
 from .guild import Guild, UnavailableGuild
-from .user import User, AvatarDecorationData, RelationshipType, Relationship
+from .user import User, AvatarDecorationData, RelationshipType, Relationship, GameRelationshipType, GameRelationship
 from .threads import Thread, ThreadMember
 from .scheduled_event import GuildScheduledEvent
 from .audit_log import AuditLogEntry
@@ -68,13 +68,26 @@ class GatewayBot(Gateway):
     session_start_limit: SessionStartLimit
 
 
+class GatewayFeatureFlags(TypedDict):
+    disabled_gateway_events: List[str]
+    disabled_functions: List[str]
+
+
 class ReadyEvent(TypedDict):
     v: int
+    users: List[User]
     user: User
-    guilds: List[UnavailableGuild]
     session_id: str
+    scopes: List[str]
     resume_gateway_url: str
+    relationships: NotRequired[List[Relationship]]
+    private_channels: NotRequired[List[Union[DMChannel, GroupDMChannel]]]
+    guilds: List[Guild]
+    game_relationships: List[GameRelationship]
+    feature_flags: GatewayFeatureFlags
+    av_sf_protocol_floor: int
     application: GatewayAppInfo
+    analytics_token: str
 
 
 class SupplementalGuild(TypedDict):
@@ -438,3 +451,15 @@ class RelationshipEvent(TypedDict):
     id: Snowflake
     type: RelationshipType
     nickname: Optional[str]
+
+
+GameRelationshipAddEvent = GameRelationship
+
+
+class GameRelationshipRemove(TypedDict):
+    id: Snowflake
+    application_id: Snowflake
+    type: GameRelationshipType
+    since: str
+    dm_access_type: int
+    user_id: Snowflake

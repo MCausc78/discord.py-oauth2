@@ -61,7 +61,6 @@ _log = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from .ui.view import View
     from .embeds import Embed
     from .message import Attachment
     from .flags import MessageFlags
@@ -132,7 +131,7 @@ def handle_message_parameters(
     embed: Optional[Embed] = MISSING,
     embeds: Sequence[Embed] = MISSING,
     attachments: Sequence[Union[Attachment, File]] = MISSING,
-    view: Optional[View] = MISSING,
+    # view: Optional[View] = MISSING,
     allowed_mentions: Optional[AllowedMentions] = MISSING,
     message_reference: Optional[message.MessageReference] = MISSING,
     stickers: Optional[SnowflakeList] = MISSING,
@@ -172,11 +171,11 @@ def handle_message_parameters(
         else:
             payload['content'] = None
 
-    if view is not MISSING:
-        if view is not None:
-            payload['components'] = view.to_components()
-        else:
-            payload['components'] = []
+    # if view is not MISSING:
+    #     if view is not None:
+    #         payload['components'] = view.to_components()
+    #     else:
+    #         payload['components'] = []
 
     if nonce is not None:
         payload['nonce'] = str(nonce)
@@ -1216,6 +1215,28 @@ class HTTPClient:
     def send_friend_request(self, username: str, discriminator: Optional[Union[int, str]] = None) -> Response[None]:
         payload = {'username': username, 'discriminator': None if discriminator is None else int(discriminator) or None}
         return self.request(Route('POST', '/users/@me/relationships'), json=payload)
+
+    # Game Relationships
+    def get_game_relationships(self) -> Response[List[user.GameRelationship]]:
+        return self.request(Route('GET', '/users/@me/game-relationships'))
+
+    def send_game_friend_request(self, username: str) -> Response[None]:
+        payload = {'username': username}
+        return self.request(Route('POST', '/users/@me/game-relationships'), json=payload)
+
+    def add_game_relationship(
+        self,
+        user_id: Snowflake,
+        type: Optional[int] = None,
+    ) -> Response[None]:
+        payload = {}
+        if type is not None:
+            payload['type'] = type
+
+        return self.request(Route('PUT', '/users/@me/game-relationships/{user_id}', user_id=user_id), json=payload)
+
+    def remove_game_relationship(self, user_id: Snowflake) -> Response[None]:
+        return self.request(Route('DELETE', '/users/@me/game-relationships/{user_id}', user_id=user_id))
 
     # Misc
 
