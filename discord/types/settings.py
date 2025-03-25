@@ -29,7 +29,7 @@ from .activity import StatusType
 from .snowflake import Snowflake
 
 
-class CustomStatus(TypedDict):
+class UserSettingsCustomStatus(TypedDict):
     text: Optional[str]
     emoji_id: Optional[Snowflake]
     emoji_name: Optional[str]
@@ -45,7 +45,7 @@ class GuildFolder(TypedDict):
 
 class UserSettings(TypedDict):
     status: NotRequired[StatusType]
-    custom_status: NotRequired[Optional[CustomStatus]]
+    custom_status: NotRequired[Optional[UserSettingsCustomStatus]]
 
 
 class GatewayUserSettings(UserSettings):

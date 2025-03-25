@@ -71,7 +71,8 @@ if TYPE_CHECKING:
     from ..emoji import Emoji
     from ..channel import VoiceChannel
     from ..abc import Snowflake
-    from ..ui.view import View
+
+    # from ..ui.view import View
     from ..poll import Poll
     import datetime
     from ..types.webhook import (
@@ -552,7 +553,7 @@ def interaction_message_response_params(
     embed: Optional[Embed] = MISSING,
     embeds: Sequence[Embed] = MISSING,
     attachments: Sequence[Union[Attachment, File]] = MISSING,
-    view: Optional[View] = MISSING,
+    # view: Optional[View] = MISSING,
     allowed_mentions: Optional[AllowedMentions] = MISSING,
     previous_allowed_mentions: Optional[AllowedMentions] = None,
     poll: Poll = MISSING,
@@ -589,11 +590,11 @@ def interaction_message_response_params(
         else:
             data['content'] = None
 
-    if view is not MISSING:
-        if view is not None:
-            data['components'] = view.to_components()
-        else:
-            data['components'] = []
+    # if view is not MISSING:
+    #     if view is not None:
+    #         data['components'] = view.to_components()
+    #     else:
+    #         data['components'] = []
 
     if flags is not MISSING:
         data['flags'] = flags.value
@@ -802,7 +803,7 @@ class WebhookMessage(Message):
         embeds: Sequence[Embed] = MISSING,
         embed: Optional[Embed] = MISSING,
         attachments: Sequence[Union[Attachment, File]] = MISSING,
-        view: Optional[View] = MISSING,
+        # view: Optional[View] = MISSING,
         allowed_mentions: Optional[AllowedMentions] = None,
     ) -> WebhookMessage:
         """|coro|
@@ -868,7 +869,7 @@ class WebhookMessage(Message):
             embeds=embeds,
             embed=embed,
             attachments=attachments,
-            view=view,
+            # view=view,
             allowed_mentions=allowed_mentions,
             thread=self._state._thread,
         )
@@ -1612,7 +1613,7 @@ class Webhook(BaseWebhook):
         embed: Embed = MISSING,
         embeds: Sequence[Embed] = MISSING,
         allowed_mentions: AllowedMentions = MISSING,
-        view: View = MISSING,
+        # view: View = MISSING,
         thread: Snowflake = MISSING,
         thread_name: str = MISSING,
         wait: Literal[True],
@@ -1637,7 +1638,7 @@ class Webhook(BaseWebhook):
         embed: Embed = MISSING,
         embeds: Sequence[Embed] = MISSING,
         allowed_mentions: AllowedMentions = MISSING,
-        view: View = MISSING,
+        # view: View = MISSING,
         thread: Snowflake = MISSING,
         thread_name: str = MISSING,
         wait: Literal[False] = ...,
@@ -1661,7 +1662,7 @@ class Webhook(BaseWebhook):
         embed: Embed = MISSING,
         embeds: Sequence[Embed] = MISSING,
         allowed_mentions: AllowedMentions = MISSING,
-        view: View = MISSING,
+        # view: View = MISSING,
         thread: Snowflake = MISSING,
         thread_name: str = MISSING,
         wait: bool = False,
@@ -1812,17 +1813,17 @@ class Webhook(BaseWebhook):
         if application_webhook:
             wait = True
 
-        if view is not MISSING:
-            if not hasattr(view, '__discord_ui_view__'):
-                raise TypeError(f'expected view parameter to be of type View not {view.__class__.__name__}')
+        # if view is not MISSING:
+        #     if not hasattr(view, '__discord_ui_view__'):
+        #         raise TypeError(f'expected view parameter to be of type View not {view.__class__.__name__}')
 
-            if isinstance(self._state, _WebhookState) and view.is_dispatchable():
-                raise ValueError(
-                    'Webhook views with any component other than URL buttons require an associated state with the webhook'
-                )
+        #     if isinstance(self._state, _WebhookState) and view.is_dispatchable():
+        #         raise ValueError(
+        #             'Webhook views with any component other than URL buttons require an associated state with the webhook'
+        #         )
 
-            if ephemeral is True and view.timeout is None and view.is_dispatchable():
-                view.timeout = 15 * 60.0
+        #     if ephemeral is True and view.timeout is None and view.is_dispatchable():
+        #         view.timeout = 15 * 60.0
 
         if thread_name is not MISSING and thread is not MISSING:
             raise TypeError('Cannot mix thread_name and thread keyword arguments.')
@@ -1842,7 +1843,7 @@ class Webhook(BaseWebhook):
             embed=embed,
             embeds=embeds,
             flags=flags,
-            view=view,
+            # view=view,
             thread_name=thread_name,
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_mentions,
@@ -1865,16 +1866,16 @@ class Webhook(BaseWebhook):
                 files=params.files,
                 thread_id=thread_id,
                 wait=wait,
-                with_components=view is not MISSING,
+                with_components=True,
             )
 
         msg = None
         if wait:
             msg = self._create_message(data, thread=thread)
 
-        if view is not MISSING and not view.is_finished():
-            message_id = None if msg is None else msg.id
-            self._state.store_view(view, message_id)
+        # if view is not MISSING and not view.is_finished():
+        #     message_id = None if msg is None else msg.id
+        #     self._state.store_view(view, message_id)
 
         if poll is not MISSING and msg:
             poll._update(msg)
@@ -1939,7 +1940,7 @@ class Webhook(BaseWebhook):
         embeds: Sequence[Embed] = MISSING,
         embed: Optional[Embed] = MISSING,
         attachments: Sequence[Union[Attachment, File]] = MISSING,
-        view: Optional[View] = MISSING,
+        # view: Optional[View] = MISSING,
         allowed_mentions: Optional[AllowedMentions] = None,
         thread: Snowflake = MISSING,
     ) -> WebhookMessage:
@@ -2011,11 +2012,11 @@ class Webhook(BaseWebhook):
         if self.token is None:
             raise ValueError('This webhook does not have a token associated with it')
 
-        if view is not MISSING:
-            if isinstance(self._state, _WebhookState):
-                raise ValueError('This webhook does not have state associated with it')
+        # if view is not MISSING:
+        #     if isinstance(self._state, _WebhookState):
+        #         raise ValueError('This webhook does not have state associated with it')
 
-            self._state.prevent_view_updates_for(message_id)
+        #     self._state.prevent_view_updates_for(message_id)
 
         previous_mentions: Optional[AllowedMentions] = getattr(self._state, 'allowed_mentions', None)
         with handle_message_parameters(
@@ -2023,7 +2024,7 @@ class Webhook(BaseWebhook):
             attachments=attachments,
             embed=embed,
             embeds=embeds,
-            view=view,
+            # view=view,
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_mentions,
         ) as params:
@@ -2046,8 +2047,8 @@ class Webhook(BaseWebhook):
             )
 
         message = self._create_message(data, thread=thread)
-        if view and not view.is_finished():
-            self._state.store_view(view, message_id)
+        # if view and not view.is_finished():
+        #     self._state.store_view(view, message_id)
         return message
 
     async def delete_message(self, message_id: int, /, *, thread: Snowflake = MISSING) -> None:

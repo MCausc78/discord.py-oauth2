@@ -31,7 +31,7 @@ from .asset import Asset
 from .enums import ActivityType, try_enum
 from .colour import Colour
 from .partial_emoji import PartialEmoji
-from .utils import _get_as_snowflake
+from .utils import _get_as_snowflake, parse_time
 
 __all__ = (
     'BaseActivity',
@@ -89,14 +89,18 @@ t.ActivityFlags = {
 """
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
+    from .state import ConnectionState
     from .types.activity import (
         Activity as ActivityPayload,
         ActivityTimestamps,
         ActivityParty,
         ActivityAssets,
     )
-
-    from .state import ConnectionState
+    from .types.settings import (
+        UserSettingsCustomStatus as UserSettingsCustomStatusPayload,
+    )
 
 
 class BaseActivity:
@@ -749,23 +753,31 @@ class CustomActivity(BaseActivity):
     .. versionadded:: 1.3
 
     Attributes
-    -----------
+    ----------
     name: Optional[:class:`str`]
         The custom activity's name.
     emoji: Optional[:class:`PartialEmoji`]
         The emoji to pass to the activity, if any.
+    expires_at: Optional[:class:`~datetime.datetime`]
+        When the custom activity will expire. This is only available from :attr:`UserSettings.custom_activity`.
     """
 
-    __slots__ = ('name', 'emoji', 'state')
+    __slots__ = ('name', 'emoji', 'state', 'expires_at')
 
     def __init__(
-        self, name: Optional[str], *, emoji: Optional[Union[PartialEmoji, Dict[str, Any], str]] = None, **extra: Any
+        self,
+        name: Optional[str],
+        *,
+        emoji: Optional[Union[PartialEmoji, Dict[str, Any], str]] = None,
+        state: Optional[str] = None,
+        expires_at: Optional[datetime.datetime] = None,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(**extra)
+        super().__init__(**kwargs)
+        if name == 'Custom Status':
+            name = state
         self.name: Optional[str] = name
-        self.state: Optional[str] = extra.pop('state', name)
-        if self.name == 'Custom Status':
-            self.name = self.state
+        self.expires_at: Optional[datetime.datetime] = expires_at
 
         self.emoji: Optional[PartialEmoji]
         if emoji is None:
@@ -787,25 +799,69 @@ class CustomActivity(BaseActivity):
         """
         return ActivityType.custom
 
-    def to_dict(self) -> Dict[str, Any]:
-        if self.name == self.state:
-            o = {
-                'type': ActivityType.custom.value,
-                'state': self.name,
-                'name': 'Custom Status',
-            }
+    @classmethod
+    def from_user_settings_payload(cls, data: UserSettingsCustomStatusPayload) -> Optional[Self]:
+        emoji_id = _get_as_snowflake(data, 'emoji_id')
+        emoji_name = data.get('emoji_name')
+
+        if emoji_id is None and emoji_name is None:
+            emoji = None
         else:
-            o = {
-                'type': ActivityType.custom.value,
-                'name': self.name,
-            }
+            emoji = PartialEmoji(
+                name=emoji_name or '',
+                id=emoji_id,
+            )
+
+        text = data.get('text')
+        if text is None and emoji is None:
+            return None
+
+        expires_at = parse_time(data.get('expires_at'))
+
+        return cls(
+            text,
+            emoji=emoji,
+            expires_at=expires_at,
+        )
+
+    def to_user_settings_payload(self) -> UserSettingsCustomStatusPayload:
+        payload: Dict[str, Any] = {
+            'text': self.name,
+        }
+        if self.emoji is not None:
+            emoji_payload = {}
+
+            emoji_id = self.emoji.id
+            emoji_name = self.emoji.name
+            if emoji_id is not None and emoji_id != 0:
+                emoji_payload['id'] = str(emoji_id)
+            if emoji_name is not None and len(emoji_name):
+                emoji_payload['name'] = emoji_name
+            payload['emoji'] = emoji_payload
+
+        if self.expires_at is not None:
+            payload['expires_at'] = self.expires_at.isoformat()
+
+        return payload  # type: ignore
+
+    def to_dict(self) -> Dict[str, Any]:
+        o = {
+            'type': ActivityType.custom.value,
+            'state': self.name,
+            'name': 'Custom Status',
+        }
 
         if self.emoji:
             o['emoji'] = self.emoji.to_dict()
         return o
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, CustomActivity) and other.name == self.name and other.emoji == self.emoji
+        return (
+            isinstance(other, CustomActivity)
+            and other.name == self.name
+            and other.emoji == self.emoji
+            and other.expires_at == self.expires_at
+        )
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

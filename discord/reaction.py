@@ -23,11 +23,8 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, AsyncIterator, Union, Optional
+from typing import TYPE_CHECKING, Union, Optional
 
-from .user import User
-from .object import Object
-from .enums import ReactionType
 
 # fmt: off
 __all__ = (
@@ -36,12 +33,10 @@ __all__ = (
 # fmt: on
 
 if TYPE_CHECKING:
-    from .member import Member
     from .types.message import Reaction as ReactionPayload
     from .message import Message
     from .partial_emoji import PartialEmoji
     from .emoji import Emoji
-    from .abc import Snowflake
 
 
 class Reaction:

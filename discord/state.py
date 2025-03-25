@@ -70,7 +70,6 @@ from .stage_instance import StageInstance
 from .threads import Thread, ThreadMember
 from .sticker import GuildSticker
 from .automod import AutoModRule, AutoModAction
-from .audit_logs import AuditLogEntry
 from ._types import ClientT
 from .soundboard import SoundboardSound
 from .lobby import LobbyMember, Lobby
@@ -310,7 +309,7 @@ class ConnectionState(Generic[ClientT]):
                     user._avatar,
                     user.global_name,
                     user._public_flags,
-                    None if user._avatar_decoration_data is None else user._avatar_decoration_data['sku_id'],
+                    None if user._avatar_decoration_data is None else int(user._avatar_decoration_data['sku_id']),
                 )
                 modified = (
                     data['username'],
@@ -828,8 +827,14 @@ class ConnectionState(Generic[ClientT]):
         self.dispatch('presence_update', old_member, member)
 
     def parse_user_update(self, data: gw.UserUpdateEvent) -> None:
-        if self.user:
-            self.user._update(data)
+        if self.user is None:
+            _log.debug('USER_UPDATE is sent before READY. Discarding.')
+            return
+
+        old = copy(self.user)
+        self.user._update(data)
+
+        self.dispatch('current_user_update', old, self.user)
 
     def parse_invite_create(self, data: gw.InviteCreateEvent) -> None:
         invite = Invite.from_gateway(state=self, data=data)
@@ -1197,24 +1202,6 @@ class ConnectionState(Generic[ClientT]):
 
         guild.stickers = tuple(map(lambda d: self.store_sticker(guild, d), data['stickers']))
         self.dispatch('guild_stickers_update', guild, before_stickers, guild.stickers)
-
-    def parse_guild_audit_log_entry_create(self, data: gw.GuildAuditLogEntryCreate) -> None:
-        guild = self._get_guild(int(data['guild_id']))
-        if guild is None:
-            _log.debug('GUILD_AUDIT_LOG_ENTRY_CREATE referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
-            return
-
-        entry = AuditLogEntry(
-            users=self._users,
-            integrations={},
-            app_commands={},
-            automod_rules={},
-            webhooks={},
-            data=data,
-            guild=guild,
-        )
-
-        self.dispatch('audit_log_entry_create', entry)
 
     def parse_auto_moderation_rule_create(self, data: AutoModerationRule) -> None:
         guild = self._get_guild(int(data['guild_id']))
@@ -1625,6 +1612,17 @@ class ConnectionState(Generic[ClientT]):
             self.dispatch('voice_channel_effect', effect)
         else:
             _log.debug('VOICE_CHANNEL_EFFECT_SEND referencing an unknown guild ID: %s. Discarding.', data['guild_id'])
+
+    def parse_voice_channel_status_update(self, data: gw.VoiceChannelStatusUpdateEvent) -> None:
+        raw = RawVoiceChannelStatusUpdateEvent(data)
+        guild = self._get_guild(raw.guild_id)
+        if guild is not None:
+            channel = guild.get_channel(raw.channel_id)
+            if channel is not None:
+                raw.cached_status = channel.status  # type: ignore # must be a voice channel
+                channel.status = raw.status  # type: ignore # must be a voice channel
+
+        self.dispatch('raw_voice_channel_status_update', raw)
 
     def parse_voice_server_update(self, data: gw.VoiceServerUpdateEvent) -> None:
         key_id = int(data['guild_id'])

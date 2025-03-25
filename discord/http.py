@@ -1115,6 +1115,49 @@ class HTTPClient:
 
     # SKU
 
+    # Following endpoints work for OAuth2:
+    # - GET /applications/{application.id}/entitlements
+    # - GET /applications/{application.id}/entitlements/{entitlement.id}
+    # - DELETE /applications/{application.id}/entitlements/{entitlement.id}
+    # - POST /applications/{application.id}/entitlements/{entitlement.id}/consume
+    # - GET /applications/{application.id}/skus
+    # - POST /store/skus
+    # - GET /oauth2/applications/{application.id}/assets
+    # - GET /store/applications/{application.id}/assets
+    # - POST /store/applications/{application.id}/assets
+    # - DELETE /store/applications/{application.id}/assets/{asset.id}
+    # - GET /activities/statistics/applications/{application.id}
+    # - GET /activities
+    # - GET /applications/{application_id}/manifest-labels
+    # - GET /applications/{application_id}/branches
+    # - GET /applications/{application_id}/branches/{branch_id}/builds
+    # - GET /applications/{application_id}/branches/{branch_id}/builds/{build_id}
+    # - GET /applications/{application_id}/branches/{branch_id}/builds/latest
+    # - GET /applications/{application_id}/branches/{branch_id}/builds/live
+    # - POST /applications/{application_id}/branches/{branch_id}/builds/{build_id}/size
+    # - POST /applications/{application_id}/download-signatures
+    # - GET /store/listings/{listing.id}
+    # - GET /store/published-listings/skus/{sku_id}
+    # - GET /store/skus/{sku.id}/listings
+    # - GET /store/published-listings/skus
+    # - GET /store/published-listings/applications/{application_id}
+    # - GET /store/published-listings/applications
+    # - POST /store/listings
+    # - PATCH /store/listings/{listing.id}
+    # - GET /store/skus/{sku.id}
+    # - PATCH /store/skus/{sku.id}
+    # - GET /store/eulas/{eula.id}
+    # - POST /applications/{application.id}/achievements
+    # - GET /applications/{application.id}/achievements
+    # - GET /applications/{application.id}/achievements/{achievement.id}
+    # - PATCH /applications/{application.id}/achievements/{achievement.id}
+    # - PUT /users/{user.id}/applications/{application.id}/achievements/{achievement.id}
+    # - DELETE /applications/{application.id}/achievements/{achievement.id}
+    # - GET /entitlements/gift-codes/{gift.code} (actually unauthenticated)
+    # - GET /oauth2/authorize (also unauthenticated)
+    # - GET /skus/{sku.id}/subscriptions
+    # - GET /skus/{sku.id}/subscriptions/{subscription.id}
+
     def get_skus(self, application_id: Snowflake) -> Response[List[sku.SKU]]:
         return self.request(Route('GET', '/applications/{application_id}/skus', application_id=application_id))
 

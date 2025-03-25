@@ -1819,9 +1819,19 @@ class ChannelFlags(BaseFlags):
     """
 
     @flag_value
+    def guild_feed_removed(self):
+        """:class:`bool`: Returns ``True`` if the channel is hidden from the guild's feed."""
+        return 1 << 0
+
+    @flag_value
     def pinned(self):
         """:class:`bool`: Returns ``True`` if the thread is pinned to the forum channel."""
         return 1 << 1
+
+    @flag_value
+    def active_channels_removed(self):
+        """:class:`bool`: Returns ``True`` if the channel has been removed from the guild's active channels."""
+        return 1 << 2
 
     @flag_value
     def require_tag(self):
@@ -1833,6 +1843,43 @@ class ChannelFlags(BaseFlags):
         return 1 << 4
 
     @flag_value
+    def spam(self):
+        """:class:`bool`: Returns ``True`` if the channel is marked as spammy."""
+        return 1 << 5
+
+    # Nice skip, 1 << 6
+
+    @flag_value
+    def guild_resource_channel(self):
+        """:class:`bool`: Returns ``True`` if the channel is used as a read-only resource for onboarding and is not shown in the channel list."""
+        return 1 << 7
+
+    @flag_value
+    def clyde_ai(self):
+        """:class:`bool`: Returns ``True`` if the channel is created by Clyde AI, which has full access to all message content."""
+        return 1 << 8
+
+    @flag_value
+    def scheduled_for_deletion(self):
+        """:class:`bool`: Returns ``True`` if the channel is scheduled for deletion and is not shown in the UI."""
+        return 1 << 9
+
+    @flag_value
+    def summaries_disabled(self):
+        """:class:`bool`: Returns ``True`` if the channel has summaries disabled."""
+        return 1 << 11
+
+    @flag_value
+    def role_subscription_template_preview_channel(self):
+        """:class:`bool`: Returns ``True`` if role subscription tier for this guild channel has not been published yet."""
+        return 1 << 13
+
+    @flag_value
+    def broadcasting(self):
+        """:class:`bool`: Returns ``True`` if the group is used for broadcasting a live stream."""
+        return 1 << 14
+
+    @flag_value
     def hide_media_download_options(self):
         """:class:`bool`: Returns ``True`` if the client hides embedded media download options in a :class:`ForumChannel`.
         Only available in media channels.
@@ -1840,6 +1887,16 @@ class ChannelFlags(BaseFlags):
         .. versionadded:: 2.4
         """
         return 1 << 15
+
+    @flag_value
+    def join_request_interview_channel(self):
+        """:class:`bool`: Returns ``True`` if the group is used for guild join request interviews."""
+        return 1 << 16
+
+    @flag_value
+    def obfuscated(self):
+        """:class:`bool`: Returns ``True`` if the user does not have permissions to view the channel."""
+        return 1 << 17
 
 
 class ArrayFlags(BaseFlags):
@@ -2217,6 +2274,11 @@ class MemberFlags(BaseFlags):
         .. versionadded:: 2.5
         """
         return 1 << 9
+
+    @flag_value
+    def automod_quarantined_clan_tag(self):
+        """:class:`bool`: Returns ``True`` if the member's clan tag has been blocked by AutoMod."""
+        return 1 << 10
 
 
 @fill_with_flags()

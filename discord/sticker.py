@@ -24,11 +24,10 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 from typing import Literal, TYPE_CHECKING, List, Optional, Tuple, Type, Union
-import unicodedata
 
 from .mixins import Hashable
 from .asset import Asset, AssetMixin
-from .utils import cached_slot_property, snowflake_time, get, MISSING, _get_as_snowflake
+from .utils import cached_slot_property, snowflake_time, get, _get_as_snowflake
 from .enums import StickerType, StickerFormatType, try_enum
 
 __all__ = (
@@ -212,25 +211,6 @@ class StickerItem(_StickerTag):
     def __str__(self) -> str:
         return self.name
 
-    async def fetch(self) -> Union[Sticker, StandardSticker, GuildSticker]:
-        """|coro|
-
-        Attempts to retrieve the full sticker data of the sticker item.
-
-        Raises
-        --------
-        HTTPException
-            Retrieving the sticker failed.
-
-        Returns
-        --------
-        Union[:class:`StandardSticker`, :class:`GuildSticker`]
-            The retrieved sticker.
-        """
-        data: StickerPayload = await self._state.http.get_sticker(self.id)
-        cls, _ = _sticker_factory(data['type'])
-        return cls(state=self._state, data=data)
-
 
 class Sticker(_StickerTag):
     """Represents a sticker.
@@ -346,29 +326,6 @@ class StandardSticker(Sticker):
     def __repr__(self) -> str:
         return f'<StandardSticker id={self.id} name={self.name!r} pack_id={self.pack_id}>'
 
-    async def pack(self) -> StickerPack:
-        """|coro|
-
-        Retrieves the sticker pack that this sticker belongs to.
-
-        .. versionchanged:: 2.5
-            Now raises ``NotFound`` instead of ``InvalidData``.
-
-        Raises
-        --------
-        NotFound
-            The corresponding sticker pack was not found.
-        HTTPException
-            Retrieving the sticker pack failed.
-
-        Returns
-        --------
-        :class:`StickerPack`
-            The retrieved sticker pack.
-        """
-        data = await self._state.http.get_sticker_pack(self.pack_id)
-        return StickerPack(state=self._state, data=data)
-
 
 class GuildSticker(Sticker):
     """Represents a sticker that belongs to a guild.
@@ -432,83 +389,6 @@ class GuildSticker(Sticker):
         .. versionadded:: 2.0
         """
         return self._state._get_guild(self.guild_id)
-
-    async def edit(
-        self,
-        *,
-        name: str = MISSING,
-        description: str = MISSING,
-        emoji: str = MISSING,
-        reason: Optional[str] = None,
-    ) -> GuildSticker:
-        """|coro|
-
-        Edits a :class:`GuildSticker` for the guild.
-
-        Parameters
-        -----------
-        name: :class:`str`
-            The sticker's new name. Must be at least 2 characters.
-        description: Optional[:class:`str`]
-            The sticker's new description. Can be ``None``.
-        emoji: :class:`str`
-            The name of a unicode emoji that represents the sticker's expression.
-        reason: :class:`str`
-            The reason for editing this sticker. Shows up on the audit log.
-
-        Raises
-        -------
-        Forbidden
-            You are not allowed to edit stickers.
-        HTTPException
-            An error occurred editing the sticker.
-
-        Returns
-        --------
-        :class:`GuildSticker`
-            The newly modified sticker.
-        """
-        payload = {}
-
-        if name is not MISSING:
-            payload['name'] = name
-
-        if description is not MISSING:
-            payload['description'] = description
-
-        if emoji is not MISSING:
-            try:
-                emoji = unicodedata.name(emoji)
-            except TypeError:
-                pass
-            else:
-                emoji = emoji.replace(' ', '_')
-
-            payload['tags'] = emoji
-
-        data: GuildStickerPayload = await self._state.http.modify_guild_sticker(self.guild_id, self.id, payload, reason)
-        return GuildSticker(state=self._state, data=data)
-
-    async def delete(self, *, reason: Optional[str] = None) -> None:
-        """|coro|
-
-        Deletes the custom :class:`Sticker` from the guild.
-
-        You must have :attr:`~Permissions.manage_emojis_and_stickers` to do this.
-
-        Parameters
-        -----------
-        reason: Optional[:class:`str`]
-            The reason for deleting this sticker. Shows up on the audit log.
-
-        Raises
-        -------
-        Forbidden
-            You are not allowed to delete stickers.
-        HTTPException
-            An error occurred deleting the sticker.
-        """
-        await self._state.http.delete_guild_sticker(self.guild_id, self.id, reason)
 
 
 def _sticker_factory(sticker_type: Literal[1, 2]) -> Tuple[Type[Union[StandardSticker, GuildSticker, Sticker]], StickerType]:

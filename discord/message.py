@@ -99,7 +99,6 @@ if TYPE_CHECKING:
     from .mentions import AllowedMentions
     from .user import User
     from .role import Role
-    from .ui.view import View
 
     EmojiInputType = Union[Emoji, PartialEmoji, str]
     MessageComponentType = Union[ActionRow, ActionRowChildComponentType]
@@ -1287,7 +1286,7 @@ class PartialMessage(Hashable):
         attachments: Sequence[Union[Attachment, File]] = ...,
         delete_after: Optional[float] = ...,
         allowed_mentions: Optional[AllowedMentions] = ...,
-        view: Optional[View] = ...,
+        # view: Optional[View] = ...,
     ) -> Message:
         ...
 
@@ -1300,7 +1299,7 @@ class PartialMessage(Hashable):
         attachments: Sequence[Union[Attachment, File]] = ...,
         delete_after: Optional[float] = ...,
         allowed_mentions: Optional[AllowedMentions] = ...,
-        view: Optional[View] = ...,
+        # view: Optional[View] = ...,
     ) -> Message:
         ...
 
@@ -1313,7 +1312,7 @@ class PartialMessage(Hashable):
         attachments: Sequence[Union[Attachment, File]] = MISSING,
         delete_after: Optional[float] = None,
         allowed_mentions: Optional[AllowedMentions] = MISSING,
-        view: Optional[View] = MISSING,
+        # view: Optional[View] = MISSING,
     ) -> Message:
         """|coro|
 
@@ -1390,27 +1389,27 @@ class PartialMessage(Hashable):
         else:
             previous_allowed_mentions = None
 
-        if view is not MISSING:
-            self._state.prevent_view_updates_for(self.id)
+        # if view is not MISSING:
+        #     self._state.prevent_view_updates_for(self.id)
 
         with handle_message_parameters(
             content=content,
             embed=embed,
             embeds=embeds,
             attachments=attachments,
-            view=view,
+            # view=view,
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_allowed_mentions,
         ) as params:
             data = await self._state.http.edit_message(self.channel.id, self.id, params=params)
             message = Message(state=self._state, channel=self.channel, data=data)
 
-        if view and not view.is_finished():
-            interaction: Optional[MessageInteraction] = getattr(self, 'interaction', None)
-            if interaction is not None:
-                self._state.store_view(view, self.id, interaction_id=interaction.id)
-            else:
-                self._state.store_view(view, self.id)
+        # if view and not view.is_finished():
+        #     interaction: Optional[MessageInteraction] = getattr(self, 'interaction', None)
+        #     if interaction is not None:
+        #         self._state.store_view(view, self.id, interaction_id=interaction.id)
+        #     else:
+        #         self._state.store_view(view, self.id)
 
         if delete_after is not None:
             await self.delete(delay=delete_after)
@@ -1431,7 +1430,7 @@ class PartialMessage(Hashable):
         allowed_mentions: AllowedMentions = ...,
         reference: Union[Message, MessageReference, PartialMessage] = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        # view: View = ...,
         suppress_embeds: bool = ...,
         silent: bool = ...,
         poll: Poll = ...,
@@ -1452,7 +1451,7 @@ class PartialMessage(Hashable):
         allowed_mentions: AllowedMentions = ...,
         reference: Union[Message, MessageReference, PartialMessage] = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        # view: View = ...,
         suppress_embeds: bool = ...,
         silent: bool = ...,
         poll: Poll = ...,
@@ -1473,7 +1472,7 @@ class PartialMessage(Hashable):
         allowed_mentions: AllowedMentions = ...,
         reference: Union[Message, MessageReference, PartialMessage] = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        # view: View = ...,
         suppress_embeds: bool = ...,
         silent: bool = ...,
         poll: Poll = ...,
@@ -1494,7 +1493,7 @@ class PartialMessage(Hashable):
         allowed_mentions: AllowedMentions = ...,
         reference: Union[Message, MessageReference, PartialMessage] = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        # view: View = ...,
         suppress_embeds: bool = ...,
         silent: bool = ...,
         poll: Poll = ...,
@@ -1772,6 +1771,11 @@ class Message(PartialMessage, Hashable):
         The message snapshots attached to this message.
 
         .. versionadded:: 2.5
+    metadata: Optional[Dict[:class:`str`, :class:`str`]]
+        The message metadata.
+
+        This can only be accurately received in :func:`on_message` and :func:`on_lobby_message`
+        due to a Discord limitation.
     """
 
     __slots__ = (
@@ -1811,6 +1815,7 @@ class Message(PartialMessage, Hashable):
         'call',
         'purchase_notification',
         'message_snapshots',
+        'metadata',
     )
 
     if TYPE_CHECKING:
@@ -1953,6 +1958,8 @@ class Message(PartialMessage, Hashable):
         else:
             self.purchase_notification = PurchaseNotification(purchase_notification)
 
+        self.metadata: Optional[Dict[str, str]] = data.get('metadata')
+
         for handler in ('author', 'member', 'mentions', 'mention_roles', 'components', 'call'):
             try:
                 getattr(self, f'_handle_{handler}')(data[handler])  # type: ignore
@@ -2079,7 +2086,7 @@ class Message(PartialMessage, Hashable):
         self.nonce = value
 
     def _handle_author(self, author: UserPayload) -> None:
-        self.author = self._state.store_user(author, cache=self.webhook_id is None)
+        self.author = self._state.store_user(author, cache=self.webhook_id is None, dispatch=False)
         if isinstance(self.guild, Guild):
             found = self.guild.get_member(self.author.id)
             if found is not None:
@@ -2105,7 +2112,7 @@ class Message(PartialMessage, Hashable):
         guild = self.guild
         state = self._state
         if not isinstance(guild, Guild):
-            self.mentions = [state.store_user(m) for m in mentions]
+            self.mentions = [state.store_user(m, dispatch=False) for m in mentions]
             return
 
         for mention in filter(None, mentions):
@@ -2493,7 +2500,7 @@ class Message(PartialMessage, Hashable):
         suppress: bool = ...,
         delete_after: Optional[float] = ...,
         allowed_mentions: Optional[AllowedMentions] = ...,
-        view: Optional[View] = ...,
+        # view: Optional[View] = ...,
     ) -> Message:
         ...
 
@@ -2507,7 +2514,7 @@ class Message(PartialMessage, Hashable):
         suppress: bool = ...,
         delete_after: Optional[float] = ...,
         allowed_mentions: Optional[AllowedMentions] = ...,
-        view: Optional[View] = ...,
+        # view: Optional[View] = ...,
     ) -> Message:
         ...
 
@@ -2521,7 +2528,7 @@ class Message(PartialMessage, Hashable):
         suppress: bool = False,
         delete_after: Optional[float] = None,
         allowed_mentions: Optional[AllowedMentions] = MISSING,
-        view: Optional[View] = MISSING,
+        # view: Optional[View] = MISSING,
     ) -> Message:
         """|coro|
 
@@ -2612,8 +2619,8 @@ class Message(PartialMessage, Hashable):
         else:
             flags = MISSING
 
-        if view is not MISSING:
-            self._state.prevent_view_updates_for(self.id)
+        # if view is not MISSING:
+        #     self._state.prevent_view_updates_for(self.id)
 
         with handle_message_parameters(
             content=content,
@@ -2621,15 +2628,15 @@ class Message(PartialMessage, Hashable):
             embed=embed,
             embeds=embeds,
             attachments=attachments,
-            view=view,
+            # view=view,
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_allowed_mentions,
         ) as params:
             data = await self._state.http.edit_message(self.channel.id, self.id, params=params)
             message = Message(state=self._state, channel=self.channel, data=data)
 
-        if view and not view.is_finished():
-            self._state.store_view(view, self.id)
+        # if view and not view.is_finished():
+        #     self._state.store_view(view, self.id)
 
         if delete_after is not None:
             await self.delete(delay=delete_after)

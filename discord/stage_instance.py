@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from .utils import MISSING, cached_slot_property, _get_as_snowflake
+from .utils import cached_slot_property, _get_as_snowflake
 from .mixins import Hashable
 from .enums import PrivacyLevel, try_enum
 
@@ -123,70 +123,3 @@ class StageInstance(Hashable):
         """Optional[:class:`ScheduledEvent`]: The scheduled event that belongs to the stage instance."""
         # Guild.get_scheduled_event() expects an int, we are passing Optional[int]
         return self.guild.get_scheduled_event(self.scheduled_event_id)  # type: ignore
-
-    async def edit(
-        self,
-        *,
-        topic: str = MISSING,
-        privacy_level: PrivacyLevel = MISSING,
-        reason: Optional[str] = None,
-    ) -> None:
-        """|coro|
-
-        Edits the stage instance.
-
-        You must have :attr:`~Permissions.manage_channels` to do this.
-
-        Parameters
-        -----------
-        topic: :class:`str`
-            The stage instance's new topic.
-        privacy_level: :class:`PrivacyLevel`
-            The stage instance's new privacy level.
-        reason: :class:`str`
-            The reason the stage instance was edited. Shows up on the audit log.
-
-        Raises
-        ------
-        TypeError
-            If the ``privacy_level`` parameter is not the proper type.
-        Forbidden
-            You do not have permissions to edit the stage instance.
-        HTTPException
-            Editing a stage instance failed.
-        """
-
-        payload = {}
-
-        if topic is not MISSING:
-            payload['topic'] = topic
-
-        if privacy_level is not MISSING:
-            if not isinstance(privacy_level, PrivacyLevel):
-                raise TypeError('privacy_level field must be of type PrivacyLevel')
-
-            payload['privacy_level'] = privacy_level.value
-
-        if payload:
-            await self._state.http.edit_stage_instance(self.channel_id, **payload, reason=reason)
-
-    async def delete(self, *, reason: Optional[str] = None) -> None:
-        """|coro|
-
-        Deletes the stage instance.
-
-        You must have :attr:`~Permissions.manage_channels` to do this.
-
-        Parameters
-        -----------
-        reason: :class:`str`
-            The reason the stage instance was deleted. Shows up on the audit log.
-
-        Raises
-        ------
-        Forbidden
-            You do not have permissions to delete the stage instance.
-        HTTPException
-            Deleting the stage instance failed.
-        """
-        await self._state.http.delete_stage_instance(self.channel_id, reason=reason)

@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Literal, Optional, Set, List, Union
 from .colour import Colour
 from .enums import ChannelType, try_enum, ReactionType
 from .presences import RawPresenceUpdateEvent
-from .utils import _get_as_snowflake, _RawReprMixin
+from .utils import _get_as_snowflake, MISSING, _RawReprMixin
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -50,6 +50,7 @@ if TYPE_CHECKING:
         TypingStartEvent,
         GuildMemberRemoveEvent,
         PollVoteActionEvent,
+        VoiceChannelStatusUpdateEvent,
     )
     from .types.command import GuildApplicationCommandPermissions
     from .message import Message
@@ -79,6 +80,7 @@ __all__ = (
     'RawMemberRemoveEvent',
     'RawAppCommandPermissionsUpdateEvent',
     'RawPollVoteActionEvent',
+    'RawVoiceChannelStatusUpdateEvent',
     'SupplementalGuild',
     'RawReadyEvent',
 )
@@ -538,6 +540,31 @@ class RawPollVoteActionEvent(_RawReprMixin):
         self.message_id: int = int(data['message_id'])
         self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
         self.answer_id: int = int(data['answer_id'])
+
+
+class RawVoiceChannelStatusUpdateEvent(_RawReprMixin):
+    """Represents the payload for a :func:`on_raw_voice_channel_status_update` event.
+
+    Attributes
+    ----------
+    channel_id: :class:`int`
+        The id of the voice channel whose status was updated.
+    guild_id: :class:`int`
+        The id of the guild the voice channel is in.
+    status: Optional[:class:`str`]
+        The newly updated status of the voice channel. ``None`` if no status is set.
+    cached_status: Optional[:class:`str`]
+        The cached status, if the voice channel is found in the internal channel cache otherwise :attr:`utils.MISSING`.
+        Represents the status before it is modified. ``None`` if no status was set.
+    """
+
+    __slots__ = ('channel_id', 'guild_id', 'status', 'cached_status')
+
+    def __init__(self, data: VoiceChannelStatusUpdateEvent):
+        self.channel_id: int = int(data['id'])
+        self.guild_id: int = int(data['guild_id'])
+        self.status: Optional[str] = data['status'] or None
+        self.cached_status: Optional[str] = MISSING
 
 
 class SupplementalGuild:

@@ -28,14 +28,12 @@ from typing import TYPE_CHECKING, Optional
 
 from . import utils
 from .mixins import Hashable
-from .partial_emoji import PartialEmoji, _EmojiTag
+from .partial_emoji import PartialEmoji
 from .user import User
-from .utils import MISSING
 from .asset import Asset, AssetMixin
 
 if TYPE_CHECKING:
     import datetime
-    from typing import Dict, Any
 
     from .types.soundboard import (
         BaseSoundboardSound as BaseSoundboardSoundPayload,
@@ -44,7 +42,7 @@ if TYPE_CHECKING:
     )
     from .state import ConnectionState
     from .guild import Guild
-    from .message import EmojiInputType
+
 
 __all__ = ('BaseSoundboardSound', 'SoundboardDefaultSound', 'SoundboardSound')
 

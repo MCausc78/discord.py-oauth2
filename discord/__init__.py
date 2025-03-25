@@ -56,7 +56,6 @@ from .mentions import *
 from .player import *
 from .webhook import *
 from .voice_client import *
-from .audit_logs import *
 from .raw_models import *
 from .team import *
 from .sticker import *

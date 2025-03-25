@@ -23,13 +23,13 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, Union, overload, TYPE_CHECKING
+from typing import Any, List, Optional, Union, TYPE_CHECKING
 
 from .asset import Asset
 from .permissions import Permissions
 from .colour import Colour
 from .mixins import Hashable
-from .utils import snowflake_time, _bytes_to_base64_data, _get_as_snowflake, MISSING
+from .utils import snowflake_time, _get_as_snowflake, MISSING
 from .flags import RoleFlags
 
 __all__ = (
@@ -43,7 +43,6 @@ if TYPE_CHECKING:
         Role as RolePayload,
         RoleTags as RoleTagPayload,
     )
-    from .types.guild import RolePositionUpdate
     from .guild import Guild
     from .member import Member
     from .state import ConnectionState

@@ -25,13 +25,12 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, AsyncIterator, Dict, Optional, Union, overload, Literal
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from .asset import Asset
 from .enums import EventStatus, EntityType, PrivacyLevel, try_enum
 from .mixins import Hashable
-from .object import Object, OLDEST_OBJECT
-from .utils import parse_time, _get_as_snowflake, _bytes_to_base64_data, MISSING
+from .utils import parse_time, _get_as_snowflake
 
 if TYPE_CHECKING:
     from .types.scheduled_event import (
@@ -40,7 +39,6 @@ if TYPE_CHECKING:
         EntityMetadata,
     )
 
-    from .abc import Snowflake
     from .guild import Guild
     from .channel import VoiceChannel, StageChannel
     from .state import ConnectionState

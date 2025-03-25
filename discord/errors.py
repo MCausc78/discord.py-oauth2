@@ -31,8 +31,6 @@ if TYPE_CHECKING:
 
     _ResponseType = Union[ClientResponse, Response]
 
-    from .interactions import Interaction
-
 __all__ = (
     'DiscordException',
     'ClientException',
@@ -46,7 +44,6 @@ __all__ = (
     'LoginFailure',
     'ConnectionClosed',
     'PrivilegedIntentsRequired',
-    'InteractionResponded',
     'MissingApplicationID',
 )
 
@@ -256,25 +253,6 @@ class PrivilegedIntentsRequired(ClientException):
             'possible, then consider disabling the privileged intents instead.'
         )
         super().__init__(msg)
-
-
-class InteractionResponded(ClientException):
-    """Exception that's raised when sending another interaction response using
-    :class:`InteractionResponse` when one has already been done before.
-
-    An interaction can only respond once.
-
-    .. versionadded:: 2.0
-
-    Attributes
-    -----------
-    interaction: :class:`Interaction`
-        The interaction that's already been responded to.
-    """
-
-    def __init__(self, interaction: Interaction):
-        self.interaction: Interaction = interaction
-        super().__init__('This interaction has already been responded to before')
 
 
 class MissingApplicationID(ClientException):

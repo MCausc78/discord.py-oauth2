@@ -87,7 +87,6 @@ if TYPE_CHECKING:
     )
     from .poll import Poll
     from .threads import Thread
-    from .ui.view import View
     from .types.channel import (
         PermissionOverwrite as PermissionOverwritePayload,
         GuildChannel as GuildChannelPayload,
@@ -670,7 +669,7 @@ class Messageable:
         allowed_mentions: AllowedMentions = ...,
         reference: Union[Message, MessageReference, PartialMessage] = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        # view: View = ...,
         suppress_embeds: bool = ...,
         silent: bool = ...,
         poll: Poll = ...,
@@ -691,7 +690,7 @@ class Messageable:
         allowed_mentions: AllowedMentions = ...,
         reference: Union[Message, MessageReference, PartialMessage] = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        # view: View = ...,
         suppress_embeds: bool = ...,
         silent: bool = ...,
         poll: Poll = ...,
@@ -712,7 +711,7 @@ class Messageable:
         allowed_mentions: AllowedMentions = ...,
         reference: Union[Message, MessageReference, PartialMessage] = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        # view: View = ...,
         suppress_embeds: bool = ...,
         silent: bool = ...,
         poll: Poll = ...,
@@ -733,7 +732,7 @@ class Messageable:
         allowed_mentions: AllowedMentions = ...,
         reference: Union[Message, MessageReference, PartialMessage] = ...,
         mention_author: bool = ...,
-        view: View = ...,
+        # view: View = ...,
         suppress_embeds: bool = ...,
         silent: bool = ...,
         poll: Poll = ...,
@@ -755,7 +754,7 @@ class Messageable:
         allowed_mentions: Optional[AllowedMentions] = None,
         reference: Optional[Union[Message, MessageReference, PartialMessage]] = None,
         mention_author: Optional[bool] = None,
-        view: Optional[View] = None,
+        # view: Optional[View] = None,
         suppress_embeds: bool = False,
         silent: bool = False,
         poll: Optional[Poll] = None,
@@ -891,8 +890,8 @@ class Messageable:
         else:
             reference_dict = MISSING
 
-        if view and not hasattr(view, '__discord_ui_view__'):
-            raise TypeError(f'view parameter must be View not {view.__class__.__name__}')
+        # if view and not hasattr(view, '__discord_ui_view__'):
+        #     raise TypeError(f'view parameter must be View not {view.__class__.__name__}')
 
         if suppress_embeds or silent:
             from .message import MessageFlags  # circular import
@@ -919,15 +918,15 @@ class Messageable:
             previous_allowed_mentions=previous_allowed_mention,
             mention_author=mention_author,
             stickers=sticker_ids,
-            view=view,
+            # view=view,
             flags=flags,
             poll=poll,
         ) as params:
             data = await state.http.send_message(channel.id, params=params)
 
         ret = state.create_message(channel=channel, data=data)
-        if view and not view.is_finished():
-            state.store_view(view, ret.id)
+        # if view and not view.is_finished():
+        #     state.store_view(view, ret.id)
 
         if poll:
             poll._update(ret)
