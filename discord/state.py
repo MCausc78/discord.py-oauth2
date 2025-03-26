@@ -77,6 +77,7 @@ from .presences import ClientStatus
 from .relationship import Relationship
 from .game_relationship import GameRelationship
 from .object import Object
+from .settings import UserSettings
 
 if TYPE_CHECKING:
     from .abc import PrivateChannel
@@ -231,6 +232,7 @@ class ConnectionState(Generic[ClientT]):
         self.disabled_gateway_events: Tuple[str, ...] = ()
         self.disabled_functions: Tuple[str, ...] = ()
         self.scopes: Tuple[str, ...] = ()
+        self.user_settings: UserSettings = UserSettings(data={}, state=self)
 
         self._voice_clients: Dict[int, VoiceProtocol] = {}
 
@@ -500,13 +502,14 @@ class ConnectionState(Generic[ClientT]):
         self.user = user = ClientUser(state=self, data=data['user'])
         self._users[user.id] = user  # type: ignore
 
-        feature_flags = data.get('feature_flags') or {}
+        feature_flags = data.get('feature_flags') or {}  # ???
 
         self.analytics_token = data.get('analytics_token')
         self.av_sf_protocol_floor = data.get('av_sf_protocol_floor', -1)
         self.scopes = tuple(data.get('scopes', ()))
         self.disabled_gateway_events = tuple(feature_flags.get('disabled_gateway_events', ()))
         self.disabled_functions = tuple(feature_flags.get('disabled_functions', ()))
+        self.user_settings._update(data.get('user_settings') or {}, from_ready=True)
 
         if self.application_id is None:
             try:
@@ -533,7 +536,7 @@ class ConnectionState(Generic[ClientT]):
 
         for game_relationship_data in data.get('game_relationships', ()):
             game_relationship = GameRelationship(data=game_relationship_data, state=self)
-            self._game_relationships[relationship.id] = game_relationship
+            self._game_relationships[game_relationship.id] = game_relationship
 
         for lobby_data in data.get('lobbies', ()):
             lobby = Lobby(data=lobby_data, state=self)
@@ -1884,6 +1887,12 @@ class ConnectionState(Generic[ClientT]):
             _log.warning('GAME_RELATIONSHIP_REMOVE referencing unknown game relationship ID: %s. Discarding.', r_id)
         else:
             self.dispatch('game_relationship_remove', old)
+
+    def parse_user_settings_update(self, data: gw.UserSettingsUpdateEvent) -> None:
+        old = copy(self.user_settings)
+        self.user_settings._update(data)
+        self.dispatch('settings_update', old, self.user_settings)
+        self.dispatch('internal_settings_update', old, self.user_settings)
 
     def _get_reaction_user(self, channel: MessageableChannel, user_id: int) -> Optional[Union[User, Member]]:
         if isinstance(channel, (TextChannel, Thread, VoiceChannel)):

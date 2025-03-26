@@ -71,6 +71,7 @@ from .presences import *
 
 from .lobby import *
 from .relationship import *
+from .settings import *
 
 
 class VersionInfo(NamedTuple):

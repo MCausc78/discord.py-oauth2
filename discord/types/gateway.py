@@ -471,3 +471,6 @@ class GameRelationshipRemoveEvent(TypedDict):
     since: str
     dm_access_type: int
     user_id: Snowflake
+
+
+UserSettingsUpdateEvent = GatewayUserSettings
