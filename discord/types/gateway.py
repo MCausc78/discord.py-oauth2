@@ -28,7 +28,7 @@ from typing import List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired, Required
 
 from .automod import AutoModerationAction, AutoModerationRuleTriggerType
-from .activity import PartialPresenceUpdate
+from .activity import StatusType, PartialPresenceUpdate, Activity
 from .sku import Entitlement
 from .voice import GuildVoiceState
 from .integration import BaseIntegration, IntegrationApplication
@@ -80,6 +80,7 @@ class ReadyEvent(TypedDict):
     users: List[User]
     user: User
     session_id: str
+    sessions: List[Session]
     scopes: List[str]
     resume_gateway_url: str
     relationships: NotRequired[List[Relationship]]
@@ -94,6 +95,20 @@ class ReadyEvent(TypedDict):
 
 class SupplementalGuild(TypedDict):
     id: int
+
+
+class ClientInfo(TypedDict):
+    version: int
+    os: Literal['windows', 'osx', 'linux', 'android', 'ios', 'playstation', 'unknown']
+    client: Literal['web', 'desktop', 'mobile', 'unknown']
+
+
+class Session(TypedDict):
+    session_id: str
+    active: NotRequired[bool]
+    client_info: ClientInfo
+    status: StatusType
+    activities: List[Activity]
 
 
 class MergedPresences(TypedDict):

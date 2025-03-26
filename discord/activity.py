@@ -25,10 +25,10 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import datetime
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, overload
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, overload
 
 from .asset import Asset
-from .enums import ActivityType, try_enum
+from .enums import try_enum, ActivityType, ClientType, OperatingSystem, Status
 from .colour import Colour
 from .partial_emoji import PartialEmoji
 from .utils import _get_as_snowflake, parse_time
@@ -98,6 +98,7 @@ if TYPE_CHECKING:
         ActivityParty,
         ActivityAssets,
     )
+    from .types.gateway import Session as SessionPayload
     from .types.settings import (
         UserSettingsCustomStatus as UserSettingsCustomStatusPayload,
     )
@@ -257,7 +258,7 @@ class Activity(BaseActivity):
         inner = ' '.join('%s=%r' % t for t in attrs)
         return f'<Activity {inner}>'
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> ActivityPayload:
         ret: Dict[str, Any] = {}
         for attr in self.__slots__:
             value = getattr(self, attr, None)
@@ -271,7 +272,7 @@ class Activity(BaseActivity):
         ret['type'] = int(self.type)
         if self.emoji:
             ret['emoji'] = self.emoji.to_dict()
-        return ret
+        return ret  # type: ignore
 
     @property
     def start(self) -> Optional[datetime.datetime]:
@@ -424,8 +425,8 @@ class Game(BaseActivity):
     def __repr__(self) -> str:
         return f'<Game name={self.name!r}>'
 
-    def to_dict(self) -> Dict[str, Any]:
-        timestamps: Dict[str, Any] = {}
+    def to_dict(self) -> ActivityPayload:
+        timestamps: ActivityTimestamps = {}
         if self._start:
             timestamps['start'] = self._start
 
@@ -438,7 +439,7 @@ class Game(BaseActivity):
             'timestamps': timestamps,
             'platform': str(self.platform) if self.platform else None,
             'assets': self.assets,
-        }
+        }  # type: ignore
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Game) and other.name == self.name
@@ -535,7 +536,7 @@ class Streaming(BaseActivity):
         else:
             return name[7:] if name[:7] == 'twitch:' else None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> ActivityPayload:
         ret: Dict[str, Any] = {
             'type': ActivityType.streaming.value,
             'name': str(self.name),
@@ -544,7 +545,7 @@ class Streaming(BaseActivity):
         }
         if self.details:
             ret['details'] = self.details
-        return ret
+        return ret  # type: ignore
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Streaming) and other.name == self.name and other.url == self.url
@@ -622,7 +623,7 @@ class Spotify:
         There is an alias for this named :attr:`colour`"""
         return self.colour
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> ActivityPayload:
         return {
             'flags': 48,  # SYNC | PLAY
             'name': 'Spotify',
@@ -633,7 +634,7 @@ class Spotify:
             'timestamps': self._timestamps,
             'details': self._details,
             'state': self._state,
-        }
+        }  # type: ignore
 
     @property
     def name(self) -> str:
@@ -844,7 +845,7 @@ class CustomActivity(BaseActivity):
 
         return payload  # type: ignore
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> ActivityPayload:
         o = {
             'type': ActivityType.custom.value,
             'state': self.name,
@@ -853,7 +854,7 @@ class CustomActivity(BaseActivity):
 
         if self.emoji:
             o['emoji'] = self.emoji.to_dict()
-        return o
+        return o  # type: ignore
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -879,6 +880,116 @@ class CustomActivity(BaseActivity):
 
     def __repr__(self) -> str:
         return f'<CustomActivity name={self.name!r} emoji={self.emoji!r}>'
+
+
+class Session:
+    """Represents a connected Discord gateway session.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two sessions are equal.
+
+        .. describe:: x != y
+
+            Checks if two sessions are not equal.
+
+        .. describe:: hash(x)
+
+            Returns the session's hash.
+
+    Attributes
+    ----------
+    id: :class:`str`
+        The session ID.
+    active: :class:`bool`
+        Whether the session is active.
+    os: :class:`OperatingSystem`
+        The operating system the session is running on.
+    client: :class:`ClientType`
+        The client the session is running on.
+    version: :class:`int`
+        The version of the client the session is running on (used for differentiating between e.g. PS4/PS5).
+    status: :class:`Status`
+        The status of the session.
+    activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
+        The activities the session is currently doing.
+    """
+
+    __slots__ = (
+        'id',
+        'active',
+        'os',
+        'client',
+        'version',
+        'status',
+        'activities',
+        '_state',
+    )
+
+    def __init__(self, *, data: SessionPayload, state: ConnectionState):
+        self._state = state
+        client_info = data['client_info']
+
+        self.id: str = data['session_id']
+        self.os: OperatingSystem = OperatingSystem.from_string(client_info['os'])
+        self.client: ClientType = try_enum(ClientType, client_info['client'])
+        self.version: int = client_info.get('version', 0)
+        self._update(data)
+
+    def _update(self, data: SessionPayload):
+        state = self._state
+
+        # Only these should ever change
+        self.active: bool = data.get('active', False)
+        self.status: Status = try_enum(Status, data['status'])
+        self.activities: Tuple[ActivityTypes, ...] = tuple(
+            create_activity(activity, state) for activity in data['activities']
+        )
+
+    def __repr__(self) -> str:
+        return f'<Session id={self.id!r} active={self.active!r} status={self.status!r} activities={self.activities!r}>'
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Session) and self.id == other.id
+
+    def __ne__(self, other: object) -> bool:
+        if isinstance(other, Session):
+            return self.id != other.id
+        return True
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    @classmethod
+    def _fake_all(cls, *, state: ConnectionState, data: SessionPayload) -> Self:
+        self = cls.__new__(cls)
+        self._state = state
+        self.id = 'all'
+        self.os = OperatingSystem.unknown
+        self.client = ClientType.unknown
+        self.version = 0
+        self._update(data)
+        return self
+
+    def is_overall(self) -> bool:
+        """:class:`bool`: Whether the session represents the overall presence across all platforms.
+
+        .. note::
+
+            If this is ``True``, then :attr:`id`, :attr:`os`, and :attr:`client` will not be real values.
+        """
+        return self.id == 'all'
+
+    def is_headless(self) -> bool:
+        """:class:`bool`: Whether the session is headless."""
+        return self.id.startswith('h:')
+
+    def is_current(self) -> bool:
+        """:class:`bool`: Whether the session is the current session."""
+        ws = self._state._get_websocket()
+        return False if ws is None else self.id == ws.session_id
 
 
 ActivityTypes = Union[Activity, Game, CustomActivity, Streaming, Spotify]

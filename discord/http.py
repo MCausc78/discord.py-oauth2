@@ -72,10 +72,11 @@ if TYPE_CHECKING:
         guild,
         invite,
         message,
+        settings,
+        sku,
         template,
         user,
         widget,
-        sku,
     )
     from .types.snowflake import Snowflake, SnowflakeList
     from .types.gateway import SessionStartLimit
@@ -853,6 +854,30 @@ class HTTPClient:
     def start_private_message(self, user_id: Snowflake) -> Response[channel.DMChannel]:
         return self.request(Route('GET', '/users/@me/dms/{user_id}', user_id=user_id))
 
+    def send_lobby_message(
+        self,
+        lobby_id: Snowflake,
+        *,
+        params: MultipartParameters,
+    ) -> Response[message.Message]:
+        r = Route('POST', '/lobbies/{lobby_id}/messages', lobby_id=lobby_id)
+        if params.files:
+            return self.request(r, files=params.files, form=params.multipart)
+        else:
+            return self.request(r, json=params.payload)
+
+    def send_user_message(
+        self,
+        user_id: Snowflake,
+        *,
+        params: MultipartParameters,
+    ) -> Response[message.Message]:
+        r = Route('POST', '/users/{user_id}/messages', user_id=user_id)
+        if params.files:
+            return self.request(r, files=params.files, form=params.multipart)
+        else:
+            return self.request(r, json=params.payload)
+
     def send_message(
         self,
         channel_id: Snowflake,
@@ -888,6 +913,36 @@ class HTTPClient:
             metadata=metadata,
         )
         return self.request(r, reason=reason)
+
+    def delete_user_message(
+        self, user_id: Snowflake, message_id: Snowflake, *, reason: Optional[str] = None
+    ) -> Response[None]:
+        # Special case certain sub-rate limits
+        # https://github.com/discord/discord-api-docs/issues/1092
+        # https://github.com/discord/discord-api-docs/issues/1295
+        difference = utils.utcnow() - utils.snowflake_time(int(message_id))
+        metadata: Optional[str] = None
+        if difference <= datetime.timedelta(seconds=10):
+            metadata = 'sub-10-seconds'
+        elif difference >= datetime.timedelta(days=14):
+            metadata = 'older-than-two-weeks'
+        r = Route(
+            'DELETE',
+            '/users/{user_id}/messages/{message_id}',
+            user_id=user_id,
+            message_id=message_id,
+            metadata=metadata,
+        )
+        return self.request(r, reason=reason)
+
+    def edit_user_message(
+        self, user_id: Snowflake, message_id: Snowflake, *, params: MultipartParameters
+    ) -> Response[message.Message]:
+        r = Route('PATCH', '/users/{user_id}/messages/{message_id}', user_id=user_id, message_id=message_id)
+        if params.files:
+            return self.request(r, files=params.files, form=params.multipart)
+        else:
+            return self.request(r, json=params.payload)
 
     def edit_message(
         self, channel_id: Snowflake, message_id: Snowflake, *, params: MultipartParameters
@@ -1282,6 +1337,9 @@ class HTTPClient:
         return self.request(Route('DELETE', '/users/@me/game-relationships/{user_id}', user_id=user_id))
 
     # Misc
+
+    def modify_user_settings(self, /, **payload) -> Response[settings.UserSettings]:
+        return self.request(Route('PATCH', '/users/@me/settings'), json=payload)
 
     async def get_bot_gateway(self) -> Tuple[int, str, SessionStartLimit]:
         try:

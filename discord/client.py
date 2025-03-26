@@ -56,12 +56,12 @@ from .widget import Widget
 from .guild import Guild
 from .emoji import Emoji
 from .channel import PartialMessageable
-from .enums import ChannelType, Status
+from .enums import ChannelType, Status, RelationshipType, ClientType
 from .mentions import AllowedMentions
 from .errors import *
 from .flags import ApplicationFlags, Intents
 from .gateway import *
-from .activity import ActivityTypes, BaseActivity, create_activity
+from .activity import BaseActivity, Spotify, ActivityTypes, create_activity
 from .voice_client import VoiceClient
 from .http import HTTPClient
 from .state import ConnectionState
@@ -84,6 +84,7 @@ if TYPE_CHECKING:
     from .automod import AutoModAction, AutoModRule
     from .channel import DMChannel, GroupChannel
     from .ext.commands import Bot, Context, CommandError
+    from .game_relationship import GameRelationship
     from .guild import GuildChannel
     from .integrations import Integration
     from .member import Member, VoiceState
@@ -105,6 +106,7 @@ if TYPE_CHECKING:
         RawPollVoteActionEvent,
     )
     from .reaction import Reaction
+    from .relationship import Relationship
     from .role import Role
     from .scheduled_event import ScheduledEvent
     from .threads import ThreadMember
@@ -112,6 +114,7 @@ if TYPE_CHECKING:
     from .voice_client import VoiceProtocol
     from .poll import PollAnswer
     from .subscription import Subscription
+    from .settings import UserSettings
 
 
 # fmt: off
@@ -407,6 +410,51 @@ class Client:
         return self._connection.private_channels
 
     @property
+    def relationships(self) -> Sequence[Relationship]:
+        """Sequence[:class:`.Relationship`]: Returns all the relationships that the connected client has."""
+        return utils.SequenceProxy(self._connection._relationships.values())
+
+    @property
+    def game_relationships(self) -> Sequence[GameRelationship]:
+        """Sequence[:class:`.GameRelationship`]: Returns all the game relationships that the connected client has."""
+        return utils.SequenceProxy(self._connection._game_relationships.values())
+
+    @property
+    def friends(self) -> List[Relationship]:
+        """List[:class:`.Relationship`]: Returns all the users that the connected client is friends with."""
+        return [r for r in self._connection._relationships.values() if r.type is RelationshipType.friend]
+
+    @property
+    def game_friends(self) -> List[GameRelationship]:
+        """List[:class:`.GameRelationship`]: Returns all the users that the connected client is friends with in-game."""
+        return [r for r in self._connection._game_relationships.values() if r.type is RelationshipType.friend]
+
+    @property
+    def blocked(self) -> List[Relationship]:
+        """List[:class:`.Relationship`]: Returns all the users that the connected client has blocked."""
+        return [r for r in self._connection._relationships.values() if r.type is RelationshipType.blocked]
+
+    def get_relationship(self, user_id: int, /) -> Optional[Relationship]:
+        """Retrieves the :class:`.Relationship`, if applicable.
+
+        Parameters
+        ----------
+        user_id: :class:`int`
+            The user ID to check if we have a relationship with them.
+
+        Returns
+        -------
+        Optional[:class:`.Relationship`]
+            The relationship, if available.
+        """
+        return self._connection._relationships.get(user_id)
+
+    @property
+    def settings(self) -> UserSettings:
+        """:class:`.UserSettings`: Returns the user's settings."""
+        return self._connection.settings
+
+    @property
     def voice_clients(self) -> List[VoiceProtocol]:
         """List[:class:`.VoiceProtocol`]: Represents a list of voice connections.
 
@@ -450,6 +498,11 @@ class Client:
         .. versionadded:: 2.0
         """
         return self._application
+
+    @property
+    def disclose(self) -> Sequence[str]:
+        """Sequence[:class:`str`]: Upcoming changes to the user's account."""
+        return utils.SequenceProxy(self._connection.disclose)
 
     def is_ready(self) -> bool:
         """:class:`bool`: Specifies if the client's internal cache is ready for use."""
@@ -887,41 +940,128 @@ class Client:
         return self._closing_task is not None
 
     @property
-    def activity(self) -> Optional[ActivityTypes]:
-        """Optional[:class:`.BaseActivity`]: The activity being used upon
-        logging in.
-        """
-        return create_activity(self._connection._activity, self._connection)
+    def initial_activity(self) -> Optional[ActivityTypes]:
+        """Optional[:class:`.BaseActivity`]: The primary activity set upon logging in.
 
-    @activity.setter
-    def activity(self, value: Optional[ActivityTypes]) -> None:
+        .. note::
+
+            The client may be setting multiple activities, these can be accessed under :attr:`initial_activities`.
+        """
+        state = self._connection
+        return create_activity(state._activities[0], state) if state._activities else None
+
+    @initial_activity.setter
+    def initial_activity(self, value: Optional[ActivityTypes]) -> None:
         if value is None:
-            self._connection._activity = None
+            self._connection._activities = []
         elif isinstance(value, BaseActivity):
-            # ConnectionState._activity is typehinted as ActivityPayload, we're passing Dict[str, Any]
-            self._connection._activity = value.to_dict()  # type: ignore
+            self._connection._activities = [value.to_dict()]
         else:
-            raise TypeError('activity must derive from BaseActivity.')
+            raise TypeError('activity must derive from BaseActivity')
 
     @property
-    def status(self) -> Status:
-        """:class:`.Status`:
-        The status being used upon logging on to Discord.
+    def initial_activities(self) -> List[ActivityTypes]:
+        """List[:class:`.BaseActivity`]: The activities set upon logging in."""
+        state = self._connection
+        return [create_activity(activity, state) for activity in state._activities]
 
-        .. versionadded: 2.0
-        """
-        if self._connection._status in set(state.value for state in Status):
+    @initial_activities.setter
+    def initial_activities(self, values: Sequence[ActivityTypes]) -> None:
+        if not values:
+            self._connection._activities = []
+        elif all(isinstance(value, (BaseActivity, Spotify)) for value in values):
+            self._connection._activities = [value.to_dict() for value in values]
+        else:
+            raise TypeError('activity must derive from BaseActivity')
+
+    @property
+    def initial_status(self) -> Optional[Status]:
+        """Optional[:class:`.Status`]: The status set upon logging in."""
+        if self._connection._status in {state.value for state in Status}:
             return Status(self._connection._status)
-        return Status.online
 
-    @status.setter
-    def status(self, value: Status) -> None:
+    @initial_status.setter
+    def initial_status(self, value: Status):
         if value is Status.offline:
             self._connection._status = 'invisible'
         elif isinstance(value, Status):
             self._connection._status = str(value)
         else:
-            raise TypeError('status must derive from Status.')
+            raise TypeError('status must derive from Status')
+
+    @property
+    def status(self) -> Status:
+        """:class:`.Status`: The user's overall status."""
+        status = getattr(self._connection.all_session, 'status', None)
+        if status is None and not self.is_closed():
+            status = getattr(self._connection.settings, 'status', status)
+        return status or Status.offline
+
+    @property
+    def raw_status(self) -> str:
+        """:class:`str`: The user's overall status as a string value."""
+        return str(self.status)
+
+    @property
+    def client_status(self) -> Status:
+        """:class:`.Status`: The library's status."""
+        status = getattr(self._connection.current_session, 'status', None)
+        if status is None and not self.is_closed():
+            status = getattr(self._connection.settings, 'status', status)
+        return status or Status.offline
+
+    def is_on_mobile(self) -> bool:
+        """:class:`bool`: A helper function that determines if the user is active on a mobile device."""
+        return any(session.client == ClientType.mobile for session in self._connection._sessions.values())
+
+    @property
+    def activities(self) -> Tuple[ActivityTypes, ...]:
+        """Tuple[Union[:class:`.BaseActivity`, :class:`.Spotify`], ...]: Returns the activities
+        the client is currently doing.
+
+        .. note::
+
+            Due to a Discord API limitation, this may be ``None`` if
+            the user is listening to a song on Spotify with a title longer
+            than 128 characters. See :issue:`1738` for more information.
+        """
+        state = self._connection
+        activities = state.all_session.activities if state.all_session else None
+        if activities is None and not self.is_closed():
+            activity = getattr(state.settings, 'custom_activity', None)
+            activities = (activity,) if activity else activities
+        return activities or ()
+
+    @property
+    def activity(self) -> Optional[ActivityTypes]:
+        """Optional[Union[:class:`.BaseActivity`, :class:`.Spotify`]]: Returns the primary
+        activity the client is currently doing. Could be ``None`` if no activity is being done.
+
+        .. note::
+
+            Due to a Discord API limitation, this may be ``None`` if
+            the user is listening to a song on Spotify with a title longer
+            than 128 characters. See :issue:`1738` for more information.
+
+        .. note::
+
+            The client may have multiple activities, these can be accessed under :attr:`activities`.
+        """
+        if activities := self.activities:
+            return activities[0]
+
+    @property
+    def client_activities(self) -> Tuple[ActivityTypes, ...]:
+        """Tuple[Union[:class:`.BaseActivity`, :class:`.Spotify`], ...]: Returns the activities
+        the client is currently doing through this library, if applicable.
+        """
+
+        state = self._connection
+        activities = state.current_session.activities if state.current_session else None
+        if activities is None and not self.is_closed():
+            activity = getattr(state.settings, 'custom_activity', None)
+            activities = (activity,) if activity else activities
+        return activities or ()
 
     @property
     def allowed_mentions(self) -> Optional[AllowedMentions]:

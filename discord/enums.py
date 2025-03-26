@@ -27,6 +27,9 @@ import types
 from collections import namedtuple
 from typing import Any, ClassVar, Dict, List, Optional, TYPE_CHECKING, Tuple, Type, TypeVar, Iterator, Mapping
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 __all__ = (
     'Enum',
     'ChannelType',
@@ -78,6 +81,9 @@ __all__ = (
     'VoiceChannelEffectAnimationType',
     'SubscriptionStatus',
     'MessageReferenceType',
+    'ClientType',
+    'ConnectionType',
+    'OperatingSystem',
 )
 
 
@@ -785,6 +791,85 @@ class AppCommandPermissionType(Enum):
     role = 1
     user = 2
     channel = 3
+
+
+class ConnectionType(Enum):
+    battle_net = 'battlenet'
+    contacts = 'contacts'
+    crunchyroll = 'crunchyroll'
+    ebay = 'ebay'
+    epic_games = 'epicgames'
+    facebook = 'facebook'
+    github = 'github'
+    instagram = 'instagram'
+    league_of_legends = 'leagueoflegends'
+    paypal = 'paypal'
+    playstation = 'playstation'
+    reddit = 'reddit'
+    riot_games = 'riotgames'
+    samsung = 'samsung'
+    spotify = 'spotify'
+    skype = 'skype'
+    steam = 'steam'
+    tiktok = 'tiktok'
+    twitch = 'twitch'
+    twitter = 'twitter'
+    youtube = 'youtube'
+    xbox = 'xbox'
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class ClientType(Enum):
+    web = 'web'
+    mobile = 'mobile'
+    desktop = 'desktop'
+    embedded = 'embedded'
+    unknown = 'unknown'
+
+    def __str__(self) -> str:
+        return self.value
+
+
+# There are tons of different operating system/client enums in the API,
+# so we try to unify them here
+# They're normalized as the numbered enum, and converted from the stringified enum(s)
+class OperatingSystem(Enum):
+    windows = 1
+    macos = 2
+    linux = 3
+
+    android = -1
+    ios = -2
+    playstation = -3
+    unknown = -99
+
+    @classmethod
+    def from_string(cls, value: str) -> Self:
+        lookup = {
+            'windows': cls.windows,
+            'win32': cls.windows,
+            'macos': cls.macos,
+            'darwin': cls.macos,
+            'osx': cls.macos,
+            'linux': cls.linux,
+            'android': cls.android,
+            'ios': cls.ios,
+            'playstation': cls.playstation,
+            'unknown': cls.unknown,
+        }
+        return lookup.get(value, create_unknown_value(cls, value))  # type: ignore
+
+    def to_string(self):
+        lookup = {
+            OperatingSystem.windows: 'win32',
+            OperatingSystem.macos: 'darwin',
+        }
+        return lookup.get(self, self.name)
+
+    def __str__(self):
+        return self.to_string()
 
 
 class AutoModRuleTriggerType(Enum):

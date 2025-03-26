@@ -47,7 +47,7 @@ import weakref
 import inspect
 
 from .guild import Guild
-from .activity import BaseActivity, create_activity
+from .activity import BaseActivity, Session, create_activity
 from .sku import Entitlement
 from .user import User, ClientUser
 from .emoji import Emoji
@@ -150,12 +150,16 @@ class ConnectionState(Generic[ClientT]):
 
         self.allowed_mentions: Optional[AllowedMentions] = allowed_mentions
 
-        activity = options.get('activity', None)
-        if activity:
-            if not isinstance(activity, BaseActivity):
-                raise TypeError('activity parameter must derive from BaseActivity.')
+        activities = options.get('activities', [])
+        if not activities:
+            activity = options.get('activity')
+            if activity is not None:
+                activities = [activity]
 
-            activity = activity.to_dict()
+        if not all(isinstance(activity, BaseActivity) for activity in activities):
+            raise TypeError('All activities must derive from BaseActivity')
+
+        activities = [activity.to_dict() for activity in activities]
 
         status = options.get('status', None)
         if status:
@@ -184,7 +188,7 @@ class ConnectionState(Generic[ClientT]):
             cache_flags._verify_intents(intents)
 
         self.member_cache_flags: MemberCacheFlags = cache_flags
-        self._activity: Optional[ActivityPayload] = activity
+        self._activities: List[ActivityPayload] = activities
         self._status: Optional[str] = status
         self._intents: Intents = intents
         self.raw_presence_flag: bool = options.get('enable_raw_presences', utils.MISSING)
@@ -226,13 +230,15 @@ class ConnectionState(Generic[ClientT]):
         self._lobbies: Dict[int, Lobby] = {}
         self._game_relationships: Dict[int, GameRelationship] = {}
         self._relationships: Dict[int, Relationship] = {}
+        self._sessions: Dict[str, Session] = {}
 
         self.analytics_token: Optional[str] = None
         self.av_sf_protocol_floor: int = -1
         self.disabled_gateway_events: Tuple[str, ...] = ()
         self.disabled_functions: Tuple[str, ...] = ()
+        self.disclose: List[str] = []
         self.scopes: Tuple[str, ...] = ()
-        self.user_settings: UserSettings = UserSettings(data={}, state=self)
+        self.settings: UserSettings = UserSettings(data={}, state=self)
 
         self._voice_clients: Dict[int, VoiceProtocol] = {}
 
@@ -509,7 +515,7 @@ class ConnectionState(Generic[ClientT]):
         self.scopes = tuple(data.get('scopes', ()))
         self.disabled_gateway_events = tuple(feature_flags.get('disabled_gateway_events', ()))
         self.disabled_functions = tuple(feature_flags.get('disabled_functions', ()))
-        self.user_settings._update(data.get('user_settings') or {}, from_ready=True)
+        self.settings._update(data.get('user_settings') or {}, from_ready=True)
 
         if self.application_id is None:
             try:
@@ -630,9 +636,12 @@ class ConnectionState(Generic[ClientT]):
 
             friend_presences.append(event)
 
+        disclose = data.get('disclose', [])
+        self.disclose = disclose
+
         raw = RawReadyEvent(
             state=self,
-            disclose=data.get('disclose', []),
+            disclose=disclose,
             friend_presences=friend_presences,
             guilds=guilds,
         )
@@ -1889,10 +1898,10 @@ class ConnectionState(Generic[ClientT]):
             self.dispatch('game_relationship_remove', old)
 
     def parse_user_settings_update(self, data: gw.UserSettingsUpdateEvent) -> None:
-        old = copy(self.user_settings)
-        self.user_settings._update(data)
-        self.dispatch('settings_update', old, self.user_settings)
-        self.dispatch('internal_settings_update', old, self.user_settings)
+        old = copy(self.settings)
+        self.settings._update(data)
+        self.dispatch('settings_update', old, self.settings)
+        self.dispatch('internal_settings_update', old, self.settings)
 
     def _get_reaction_user(self, channel: MessageableChannel, user_id: int) -> Optional[Union[User, Member]]:
         if isinstance(channel, (TextChannel, Thread, VoiceChannel)):
@@ -1946,3 +1955,11 @@ class ConnectionState(Generic[ClientT]):
             sound = guild._resolve_soundboard_sound(id)
             if sound is not None:
                 return sound
+
+    @property
+    def all_session(self) -> Optional[Session]:
+        return self._sessions.get('all')
+
+    @property
+    def current_session(self) -> Optional[Session]:
+        return self._sessions.get(self.session_id)  # type: ignore
