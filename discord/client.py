@@ -56,7 +56,7 @@ from .widget import Widget
 from .guild import Guild
 from .emoji import Emoji
 from .channel import PartialMessageable
-from .enums import ChannelType, Status, RelationshipType
+from .enums import ChannelType, Status
 from .mentions import AllowedMentions
 from .errors import *
 from .flags import ApplicationFlags, Intents
@@ -2437,7 +2437,7 @@ class Client:
         if len(args) == 1:
             user = args[0]
             if isinstance(user, int):
-                await self._connection.http.add_relationship(user, RelationshipType.outgoing_request.value)
+                await self._connection.http.add_relationship(user)
                 return
 
             if isinstance(user, _UserTag):
@@ -2509,7 +2509,7 @@ class Client:
         elif isinstance(user, str):
             username = user
         elif isinstance(user, int):
-            await state.http.add_game_relationship(user, RelationshipType.outgoing_request.value)
+            await state.http.add_game_relationship(user)
             return
 
         await state.http.send_game_friend_request(username)
