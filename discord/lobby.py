@@ -38,11 +38,54 @@ if TYPE_CHECKING:
 
     from .guild import GuildChannel
     from .state import ConnectionState
+    from .types.channel import LinkedLobby as LinkedLobbyPayload
     from .types.lobby import (
         LobbyMember as LobbyMemberPayload,
         LobbyVoiceState as LobbyVoiceStatePayload,
         Lobby as LobbyPayload,
     )
+    from .user import User
+
+
+class LinkedLobby:
+    """Represents channel link to a lobby.
+
+    Attributes
+    ----------
+    application_id: :class:`int`
+        The application's ID the lobby belongs to.
+    lobby_id: :class:`int`
+        The lobby's ID the channel was linked to.
+    linker_id: :class:`int`
+        The user's ID who linked channel to a lobby.
+    linked_at: :class:`~datetime.datetime`
+        When the channel was linked to a lobby.
+    """
+
+    __slots__ = (
+        '_state',
+        'application_id',
+        'lobby_id',
+        'linker_id',
+        'linked_at',
+    )
+
+    def __init__(self, *, data: LinkedLobbyPayload, state: ConnectionState) -> None:
+        self._state: ConnectionState = state
+        self.application_id: int = int(data['application_id'])
+        self.lobby_id: int = int(data['lobby_id'])
+        self.linker_id: int = int(data['linked_by'])
+        self.linked_at: datetime.datetime = parse_time(data['linked_at'])
+
+    @property
+    def lobby(self) -> Optional[Lobby]:
+        """Optional[:class:`Lobby`]: The lobby the channel was linked to."""
+        return self._state._get_lobby(self.lobby_id)
+
+    @property
+    def linker(self) -> Optional[User]:
+        """Optional[:class:`User`]: The user who linked channel to a lobby."""
+        return self._state.get_user(self.linker_id)
 
 
 class LobbyMember(Hashable):
@@ -297,12 +340,12 @@ class Lobby(Hashable):
         """Returns a member with the given ID.
 
         Parameters
-        -----------
+        ----------
         user_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`LobbyMember`]
             The member or ``None`` if not found.
         """
@@ -310,6 +353,7 @@ class Lobby(Hashable):
 
 
 __all__ = (
+    'LinkedLobby',
     'LobbyMember',
     'LobbyVoiceState',
     'Lobby',

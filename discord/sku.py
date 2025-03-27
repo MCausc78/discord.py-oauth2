@@ -135,29 +135,28 @@ class SKU:
         limit: Optional[int] = 50,
         before: Optional[SnowflakeTime] = None,
         after: Optional[SnowflakeTime] = None,
-        user: Snowflake,
     ) -> AsyncIterator[Subscription]:
         """Retrieves an :term:`asynchronous iterator` of the :class:`.Subscription` that SKU has.
 
         .. versionadded:: 2.5
 
         Examples
-        ---------
+        --------
 
         Usage ::
 
-            async for subscription in sku.subscriptions(limit=100, user=user):
+            async for subscription in sku.subscriptions(limit=100):
                 print(subscription.user_id, subscription.current_period_end)
 
         Flattening into a list ::
 
-            subscriptions = [subscription async for subscription in sku.subscriptions(limit=100, user=user)]
+            subscriptions = [subscription async for subscription in sku.subscriptions(limit=100)]
             # subscriptions is now a list of Subscription...
 
         All parameters are optional.
 
         Parameters
-        -----------
+        ----------
         limit: Optional[:class:`int`]
             The number of subscriptions to retrieve. If ``None``, it retrieves every subscription for this SKU.
             Note, however, that this would make it a slow operation. Defaults to ``100``.
@@ -169,11 +168,10 @@ class SKU:
             Retrieve subscriptions after this date or entitlement.
             If a datetime is provided, it is recommended to use a UTC aware datetime.
             If the datetime is naive, it is assumed to be local time.
-        user: :class:`~discord.abc.Snowflake`
-            The user to filter by.
+
 
         Raises
-        -------
+        ------
         HTTPException
             Fetching the subscriptions failed.
         TypeError
@@ -181,7 +179,7 @@ class SKU:
             support this type of pagination.
 
         Yields
-        --------
+        ------
         :class:`.Subscription`
             The subscription with the SKU.
         """
@@ -194,7 +192,7 @@ class SKU:
 
         async def _before_strategy(retrieve: int, before: Optional[Snowflake], limit: Optional[int]):
             before_id = before.id if before else None
-            data = await endpoint(self.id, before=before_id, limit=retrieve, user_id=user.id)
+            data = await endpoint(self.id, before=before_id, limit=retrieve)
 
             if data:
                 if limit is not None:
@@ -210,7 +208,6 @@ class SKU:
                 self.id,
                 after=after_id,
                 limit=retrieve,
-                user_id=user.id,
             )
 
             if data:
@@ -252,7 +249,7 @@ class Entitlement:
     .. versionadded:: 2.4
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The entitlement's ID.
     sku_id: :class:`int`
@@ -334,7 +331,7 @@ class Entitlement:
         Marks a one-time purchase entitlement as consumed.
 
         Raises
-        -------
+        ------
         NotFound
             The entitlement could not be found.
         HTTPException
@@ -349,7 +346,7 @@ class Entitlement:
         Deletes the entitlement.
 
         Raises
-        -------
+        ------
         NotFound
             The entitlement could not be found.
         HTTPException

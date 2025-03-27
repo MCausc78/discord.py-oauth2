@@ -57,9 +57,8 @@ __all__ = (
 class AppInfo:
     """Represents the application info for the bot provided by Discord.
 
-
     Attributes
-    -------------
+    ----------
     id: :class:`int`
         The application ID.
     name: :class:`str`
@@ -303,7 +302,7 @@ class PartialAppInfo:
     .. versionadded:: 2.0
 
     Attributes
-    -------------
+    ----------
     id: :class:`int`
         The application ID.
     name: :class:`str`

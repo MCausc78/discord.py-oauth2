@@ -88,7 +88,7 @@ class PartialInviteChannel:
             Returns the partial channel's name.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The partial channel's name.
     id: :class:`int`
@@ -146,7 +146,7 @@ class PartialInviteGuild:
             Returns the partial guild's name.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The partial guild's name.
     id: :class:`int`
@@ -295,7 +295,7 @@ class Invite(Hashable):
     If it's not in the table above then it is available by all methods.
 
     Attributes
-    -----------
+    ----------
     type: :class:`InviteType`
         The type of the invite.
 
@@ -534,7 +534,7 @@ class Invite(Hashable):
             The ID of the scheduled event.
 
         Returns
-        --------
+        -------
         :class:`Invite`
             The invite with the new scheduled event.
         """

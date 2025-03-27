@@ -101,7 +101,7 @@ class HTTPException(DiscordException):
     """Exception that's raised when an HTTP request operation fails.
 
     Attributes
-    ------------
+    ----------
     response: :class:`aiohttp.ClientResponse`
         The response of the failed HTTP request. This is an
         instance of :class:`aiohttp.ClientResponse`. In some cases
@@ -155,7 +155,7 @@ class RateLimited(DiscordException):
     .. versionadded:: 2.0
 
     Attributes
-    ------------
+    ----------
     retry_after: :class:`float`
         The amount of seconds that the client should wait before retrying
         the request.
@@ -217,7 +217,7 @@ class ConnectionClosed(ClientException):
     closed for reasons that could not be handled internally.
 
     Attributes
-    -----------
+    ----------
     code: :class:`int`
         The close code of the websocket.
     reason: :class:`str`

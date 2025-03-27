@@ -75,7 +75,7 @@ class Emoji(_EmojiTag, AssetMixin):
             Returns the emoji rendered for discord.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The name of the emoji.
     id: :class:`int`

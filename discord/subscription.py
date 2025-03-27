@@ -45,7 +45,7 @@ class Subscription(Hashable):
     .. versionadded:: 2.5
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The subscription's ID.
     user_id: :class:`int`

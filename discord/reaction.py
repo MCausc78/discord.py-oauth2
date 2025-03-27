@@ -66,7 +66,7 @@ class Reaction:
             Returns the string form of the reaction's emoji.
 
     Attributes
-    -----------
+    ----------
     emoji: Union[:class:`Emoji`, :class:`PartialEmoji`, :class:`str`]
         The reaction emoji. May be a custom emoji, or a unicode emoji.
     count: :class:`int`

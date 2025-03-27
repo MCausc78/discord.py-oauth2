@@ -267,7 +267,7 @@ class SystemChannelFlags(BaseFlags):
             .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. This value is a bit array field of a 53-bit integer
         representing the currently available flags. You should query
@@ -397,7 +397,7 @@ class MessageFlags(BaseFlags):
     .. versionadded:: 1.3
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. This value is a bit array field of a 53-bit integer
         representing the currently available flags. You should query
@@ -559,7 +559,7 @@ class PublicUserFlags(BaseFlags):
     .. versionadded:: 1.4
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. This value is a bit array field of a 53-bit integer
         representing the currently available flags. You should query
@@ -747,7 +747,7 @@ class Intents(BaseFlags):
             .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -1524,7 +1524,7 @@ class MemberCacheFlags(BaseFlags):
             .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -1587,12 +1587,12 @@ class MemberCacheFlags(BaseFlags):
         the currently selected :class:`Intents`.
 
         Parameters
-        ------------
+        ----------
         intents: :class:`Intents`
             The intents to select from.
 
         Returns
-        ---------
+        -------
         :class:`MemberCacheFlags`
             The resulting member cache flags.
         """
@@ -1673,7 +1673,7 @@ class ApplicationFlags(BaseFlags):
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -1812,7 +1812,7 @@ class ChannelFlags(BaseFlags):
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -1992,7 +1992,7 @@ class AutoModPresets(ArrayFlags):
             Returns whether any flag is set to ``True``.
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -2066,7 +2066,7 @@ class AppCommandContext(ArrayFlags):
             Returns whether any flag is set to ``True``.
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -2139,7 +2139,7 @@ class AppInstallationType(ArrayFlags):
             Returns whether any flag is set to ``True``.
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -2207,7 +2207,7 @@ class MemberFlags(BaseFlags):
 
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -2332,7 +2332,7 @@ class AttachmentFlags(BaseFlags):
 
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -2429,7 +2429,7 @@ class RoleFlags(BaseFlags):
 
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.
@@ -2492,7 +2492,7 @@ class SKUFlags(BaseFlags):
 
 
     Attributes
-    -----------
+    ----------
     value: :class:`int`
         The raw value. You should query flags via the properties
         rather than using this raw value.

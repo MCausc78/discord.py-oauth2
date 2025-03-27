@@ -52,7 +52,7 @@ class WelcomeChannel:
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     channel: :class:`abc.Snowflake`
         The guild channel that is being referenced.
     description: :class:`str`
@@ -114,7 +114,7 @@ class WelcomeScreen:
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     description: :class:`str`
         The description shown on the welcome screen.
     welcome_channels: List[:class:`WelcomeChannel`]

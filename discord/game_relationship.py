@@ -86,6 +86,7 @@ class GameRelationship(Hashable):
             Due to a Discord API limitation, a user's Spotify activity may not appear
             if they are listening to a song with a title longer
             than 128 characters. See :issue:`1738` for more information.
+
     since: :class:`~datetime.datetime`
         When the relationship was created.
     dm_access_type: :class:`int`

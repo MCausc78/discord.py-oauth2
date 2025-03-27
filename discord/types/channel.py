@@ -41,6 +41,13 @@ class PermissionOverwrite(TypedDict):
     deny: str
 
 
+class LinkedLobby(TypedDict):
+    application_id: Snowflake
+    lobby_id: Snowflake
+    linked_by: Snowflake
+    linked_at: str
+
+
 ChannelTypeWithoutThread = Literal[0, 1, 2, 3, 4, 5, 6, 13, 15, 16]
 ChannelType = Union[ChannelTypeWithoutThread, ThreadType]
 
@@ -56,6 +63,7 @@ class _BaseGuildChannel(_BaseChannel):
     permission_overwrites: List[PermissionOverwrite]
     nsfw: bool
     parent_id: Optional[Snowflake]
+    linked_lobby: Optional[LinkedLobby]
 
 
 class PartialChannel(_BaseChannel):

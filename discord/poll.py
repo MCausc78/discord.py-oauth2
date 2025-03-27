@@ -248,7 +248,7 @@ class Poll:
         The layout type of the poll. Defaults to :attr:`PollLayoutType.default`.
 
     Attributes
-    -----------
+    ----------
     duration: :class:`datetime.timedelta`
         The duration of the poll.
     multiple: :class:`bool`

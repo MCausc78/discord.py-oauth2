@@ -24,6 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
+import datetime
 from typing import (
     Any,
     Dict,
@@ -37,11 +38,11 @@ from typing import (
     TypeVar,
     Union,
 )
-import datetime
 
 import discord.abc
-from .scheduled_event import ScheduledEvent
-from .permissions import Permissions
+
+from . import utils
+from .asset import Asset
 from .enums import (
     ChannelType,
     ForumLayoutType,
@@ -51,15 +52,16 @@ from .enums import (
     EntityType,
     VoiceChannelEffectAnimationType,
 )
+from .flags import ChannelFlags
+from .lobby import LinkedLobby
 from .mixins import Hashable
-from . import utils
-from .asset import Asset
+from .object import Object
+from .partial_emoji import _EmojiTag, PartialEmoji
+from .permissions import Permissions
+from .scheduled_event import ScheduledEvent
+from .soundboard import BaseSoundboardSound
 from .stage_instance import StageInstance
 from .threads import Thread
-from .partial_emoji import _EmojiTag, PartialEmoji
-from .flags import ChannelFlags
-from .object import Object
-from .soundboard import BaseSoundboardSound
 
 __all__ = (
     'TextChannel',
@@ -83,14 +85,12 @@ __all__ = (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from .types.threads import ThreadArchiveDuration
-    from .role import Role
-    from .member import Member, VoiceState
     from .abc import Snowflake
-    from .message import Message, PartialMessage, EmojiInputType
-    from .state import ConnectionState
-    from .user import ClientUser, User, BaseUser
     from .guild import Guild, GuildChannel as GuildChannelType
+    from .member import Member, VoiceState
+    from .message import Message, PartialMessage, EmojiInputType
+    from .role import Role
+    from .state import ConnectionState
     from .types.channel import (
         TextChannel as TextChannelPayload,
         NewsChannel as NewsChannelPayload,
@@ -105,7 +105,9 @@ if TYPE_CHECKING:
         ForumTag as ForumTagPayload,
         VoiceChannelEffect as VoiceChannelEffectPayload,
     )
+    from .types.threads import ThreadArchiveDuration
     from .types.soundboard import BaseSoundboardSound as BaseSoundboardSoundPayload
+    from .user import ClientUser, User, BaseUser
 
     OverwriteKeyT = TypeVar('OverwriteKeyT', Role, BaseUser, Object, Union[Role, Member, Object])
 
@@ -140,7 +142,7 @@ class VoiceChannelSoundEffect(BaseSoundboardSound):
             Returns the sound effect's hash.
 
     Attributes
-    ------------
+    ----------
     id: :class:`int`
         The ID of the sound.
     volume: :class:`float`
@@ -180,7 +182,7 @@ class VoiceChannelEffect:
     .. versionadded:: 2.5
 
     Attributes
-    ------------
+    ----------
     channel: :class:`VoiceChannel`
         The channel in which the effect is sent.
     user: Optional[:class:`Member`]
@@ -252,7 +254,7 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
             Returns the channel's name.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The channel name.
     guild: :class:`Guild`
@@ -266,6 +268,8 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
     position: :class:`int`
         The position in the channel list. This is a number that starts at 0. e.g. the
         top channel is position 0.
+    linked_lobby: Optional[:class:`~discord.LinkedLobby`]
+        The lobby linked to the channel.
     last_message_id: Optional[:class:`int`]
         The last message ID of the message sent to this channel. It may
         *not* point to an existing or valid message.
@@ -287,18 +291,19 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
     """
 
     __slots__ = (
-        'name',
-        'id',
-        'guild',
-        'topic',
-        '_state',
-        'nsfw',
-        'category_id',
-        'position',
-        'slowmode_delay',
         '_overwrites',
+        '_state',
         '_type',
+        'name',
+        'guild',
+        'id',
+        'category_id',
+        'topic',
+        'position',
+        'linked_lobby',
         'last_message_id',
+        'slowmode_delay',
+        'nsfw',
         'default_auto_archive_duration',
         'default_thread_slowmode_delay',
     )
@@ -334,6 +339,13 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
         self.default_thread_slowmode_delay: int = data.get('default_thread_rate_limit_per_user', 0)
         self._type: Literal[0, 5] = data.get('type', self._type)
         self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
+
+        linked_lobby_data = data.get('linked_lobby')
+        if linked_lobby_data is None:
+            self.linked_lobby: Optional[LinkedLobby] = None
+        else:
+            self.linked_lobby = LinkedLobby(data=linked_lobby_data, state=self._state)
+
         self._fill_overwrites(data)
 
     async def _get_channel(self) -> Self:
@@ -400,7 +412,7 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
             attribute.
 
         Returns
-        ---------
+        -------
         Optional[:class:`Message`]
             The last message in this channel or ``None`` if not found.
         """
@@ -419,12 +431,12 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
             ``message_id`` parameter is now positional-only.
 
         Parameters
-        ------------
+        ----------
         message_id: :class:`int`
             The message ID to create a partial message for.
 
         Returns
-        ---------
+        -------
         :class:`PartialMessage`
             The partial message.
         """
@@ -444,12 +456,12 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         thread_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`Thread`]
             The returned thread or ``None`` if not found.
         """
@@ -536,7 +548,7 @@ class VocalGuildChannel(discord.abc.Messageable, discord.abc.Connectable, discor
             when the member cache is unavailable.
 
         Returns
-        --------
+        -------
         Mapping[:class:`int`, :class:`VoiceState`]
             The mapping of member ID to a voice state.
         """
@@ -586,7 +598,7 @@ class VocalGuildChannel(discord.abc.Messageable, discord.abc.Connectable, discor
             attribute.
 
         Returns
-        ---------
+        -------
         Optional[:class:`Message`]
             The last message in this channel or ``None`` if not found.
         """
@@ -601,12 +613,12 @@ class VocalGuildChannel(discord.abc.Messageable, discord.abc.Connectable, discor
         .. versionadded:: 2.0
 
         Parameters
-        ------------
+        ----------
         message_id: :class:`int`
             The message ID to create a partial message for.
 
         Returns
-        ---------
+        -------
         :class:`PartialMessage`
             The partial message.
         """
@@ -638,7 +650,7 @@ class VoiceChannel(VocalGuildChannel):
             Returns the channel's name.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The channel name.
     guild: :class:`Guild`
@@ -742,7 +754,7 @@ class StageChannel(VocalGuildChannel):
             Returns the channel's name.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The channel name.
     guild: :class:`Guild`
@@ -882,7 +894,7 @@ class CategoryChannel(discord.abc.GuildChannel, Hashable):
             Returns the category's name.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The category name.
     guild: :class:`Guild`
@@ -1009,7 +1021,7 @@ class ForumTag(Hashable):
 
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The ID of the tag. If this was manually created then the ID will be ``0``.
     name: :class:`str`
@@ -1097,7 +1109,7 @@ class ForumChannel(discord.abc.GuildChannel, Hashable):
             Returns the forum's name.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The forum name.
     guild: :class:`Guild`
@@ -1262,12 +1274,12 @@ class ForumChannel(discord.abc.GuildChannel, Hashable):
         .. versionadded:: 2.2
 
         Parameters
-        -----------
+        ----------
         thread_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`Thread`]
             The returned thread or ``None`` if not found.
         """
@@ -1494,13 +1506,13 @@ class DMChannel(discord.abc.Messageable, discord.abc.Connectable, discord.abc.Pr
             Thread related permissions are now set to ``False``.
 
         Parameters
-        -----------
+        ----------
         obj: :class:`User`
             The user to check permissions for. This parameter is ignored
             but kept for compatibility with other ``permissions_for`` methods.
 
         Returns
-        --------
+        -------
         :class:`Permissions`
             The resolved permissions.
         """
@@ -1519,12 +1531,12 @@ class DMChannel(discord.abc.Messageable, discord.abc.Connectable, discord.abc.Pr
             ``message_id`` parameter is now positional-only.
 
         Parameters
-        ------------
+        ----------
         message_id: :class:`int`
             The message ID to create a partial message for.
 
         Returns
-        ---------
+        -------
         :class:`PartialMessage`
             The partial message.
         """
@@ -1728,12 +1740,12 @@ class GroupChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable
             Thread related permissions are now set to ``False``.
 
         Parameters
-        -----------
+        ----------
         obj: :class:`~discord.abc.Snowflake`
             The user to check permissions for.
 
         Returns
-        --------
+        -------
         :class:`Permissions`
             The resolved permissions for the user.
         """
@@ -1772,7 +1784,7 @@ class PartialMessageable(discord.abc.Messageable, Hashable):
             Returns the partial messageable's hash.
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The channel ID associated with this partial messageable.
     guild_id: Optional[:class:`int`]
@@ -1819,13 +1831,13 @@ class PartialMessageable(discord.abc.Messageable, Hashable):
         permissions, this will always return :meth:`Permissions.none`.
 
         Parameters
-        -----------
+        ----------
         obj: :class:`User`
             The user to check permissions for. This parameter is ignored
             but kept for compatibility with other ``permissions_for`` methods.
 
         Returns
-        --------
+        -------
         :class:`Permissions`
             The resolved permissions.
         """
@@ -1847,12 +1859,12 @@ class PartialMessageable(discord.abc.Messageable, Hashable):
         doing an unnecessary API call.
 
         Parameters
-        ------------
+        ----------
         message_id: :class:`int`
             The message ID to create a partial message for.
 
         Returns
-        ---------
+        -------
         :class:`PartialMessage`
             The partial message.
         """

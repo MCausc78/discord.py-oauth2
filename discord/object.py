@@ -76,7 +76,7 @@ class Object(Hashable):
             Returns the object's hash.
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The ID of the object.
     type: Type[:class:`abc.Snowflake`]

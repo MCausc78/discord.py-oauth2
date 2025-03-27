@@ -72,7 +72,7 @@ class StickerPack(Hashable):
            Checks if the sticker pack is not equal to another sticker pack.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The name of the sticker pack.
     description: :class:`str`
@@ -182,7 +182,7 @@ class StickerItem(_StickerTag):
            Checks if the sticker item is not equal to another sticker item.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The sticker's name.
     id: :class:`int`
@@ -236,7 +236,7 @@ class Sticker(_StickerTag):
     name: :class:`str`
         The sticker's name.
     id: :class:`int`
-        The id of the sticker.
+        The ID of the sticker.
     description: :class:`str`
         The description of the sticker.
     format: :class:`StickerFormatType`
@@ -297,11 +297,11 @@ class StandardSticker(Sticker):
     name: :class:`str`
         The sticker's name.
     id: :class:`int`
-        The id of the sticker.
+        The ID of the sticker.
     description: :class:`str`
         The description of the sticker.
     pack_id: :class:`int`
-        The id of the sticker's pack.
+        The ID of the sticker's pack.
     format: :class:`StickerFormatType`
         The format for the sticker's image.
     tags: List[:class:`str`]
@@ -351,7 +351,7 @@ class GuildSticker(Sticker):
     name: :class:`str`
         The sticker's name.
     id: :class:`int`
-        The id of the sticker.
+        The ID of the sticker.
     description: :class:`str`
         The description of the sticker.
     format: :class:`StickerFormatType`

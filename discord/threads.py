@@ -83,7 +83,7 @@ class Thread(Messageable, Hashable):
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The thread name.
     guild: :class:`Guild`
@@ -289,7 +289,7 @@ class Thread(Messageable, Hashable):
         Note that the thread starter message ID is the same ID as the thread.
 
         Returns
-        --------
+        -------
         Optional[:class:`Message`]
             The thread starter message or ``None`` if not found.
         """
@@ -310,7 +310,7 @@ class Thread(Messageable, Hashable):
             attribute.
 
         Returns
-        ---------
+        -------
         Optional[:class:`Message`]
             The last message in this channel or ``None`` if not found.
         """
@@ -321,7 +321,7 @@ class Thread(Messageable, Hashable):
         """The category channel the parent channel belongs to, if applicable.
 
         Raises
-        -------
+        ------
         ClientException
             The parent channel was not cached and returned ``None``.
 
@@ -341,7 +341,7 @@ class Thread(Messageable, Hashable):
         """The category channel ID the parent channel belongs to, if applicable.
 
         Raises
-        -------
+        ------
         ClientException
             The parent channel was not cached and returned ``None``.
 
@@ -407,7 +407,7 @@ class Thread(Messageable, Hashable):
             are not computed.
 
         Raises
-        -------
+        ------
         ClientException
             The parent channel was not cached and returned ``None``
 
@@ -447,12 +447,12 @@ class Thread(Messageable, Hashable):
         .. versionadded:: 2.0
 
         Parameters
-        ------------
+        ----------
         message_id: :class:`int`
             The message ID to create a partial message for.
 
         Returns
-        ---------
+        -------
         :class:`PartialMessage`
             The partial message.
         """
@@ -492,7 +492,7 @@ class ThreadMember(Hashable):
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The thread member's ID.
     thread_id: :class:`int`

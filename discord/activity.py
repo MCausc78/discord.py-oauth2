@@ -154,7 +154,7 @@ class Activity(BaseActivity):
     - :class:`Streaming`
 
     Attributes
-    ------------
+    ----------
     application_id: Optional[:class:`int`]
         The application ID of the game.
     name: Optional[:class:`str`]
@@ -355,12 +355,12 @@ class Game(BaseActivity):
             Returns the game's name.
 
     Parameters
-    -----------
+    ----------
     name: :class:`str`
         The game's name.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The game's name.
     platform: Optional[:class:`str`]
@@ -475,7 +475,7 @@ class Streaming(BaseActivity):
             Returns the stream's name.
 
     Attributes
-    -----------
+    ----------
     platform: Optional[:class:`str`]
         Where the user is streaming from (ie. YouTube, Twitch).
 

@@ -94,7 +94,7 @@ class Template:
     .. versionadded:: 1.4
 
     Attributes
-    -----------
+    ----------
     code: :class:`str`
         The template code.
     uses: :class:`int`

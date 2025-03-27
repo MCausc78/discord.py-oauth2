@@ -499,6 +499,24 @@ class ConnectionState(Generic[ClientT]):
         if cached is not None and cached.poll:
             cached.poll._update_results_from_message(from_)
 
+    def _get_channel(
+        self,
+        channel_id: int,
+        *,
+        guild_id: Optional[int] = None,
+        type: Optional[ChannelType] = None,
+    ) -> Union[GuildChannel, PrivateChannel, Thread, PartialMessageable]:
+        channel = self._get_private_channel(channel_id)
+        if channel is not None:
+            return channel
+
+        for guild in self._guilds.values():
+            channel = guild._resolve_channel(channel)
+            if channel is not None:
+                return channel
+
+        return PartialMessageable(state=self, id=channel_id, guild_id=guild_id, type=type)
+
     def parse_ready(self, data: gw.ReadyEvent) -> None:
         self.clear()
 

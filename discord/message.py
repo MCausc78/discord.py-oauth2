@@ -61,7 +61,7 @@ from .utils import escape_mentions, MISSING, deprecated
 from .http import handle_message_parameters
 from .guild import Guild
 from .mixins import Hashable
-from .sticker import StickerItem, GuildSticker
+from .sticker import StickerItem
 from .threads import Thread
 from .channel import PartialMessageable
 from .poll import Poll
@@ -1250,7 +1250,7 @@ class PartialMessage(Hashable):
             Added the new ``delay`` keyword-only parameter.
 
         Parameters
-        -----------
+        ----------
         delay: Optional[:class:`float`]
             If provided, the number of seconds to wait in the background
             before deleting the message. If the deletion fails then it is silently ignored.
@@ -1277,42 +1277,13 @@ class PartialMessage(Hashable):
         else:
             await self._state.http.delete_message(self.channel.id, self.id)
 
-    @overload
-    async def edit(
-        self,
-        *,
-        content: Optional[str] = ...,
-        embed: Optional[Embed] = ...,
-        attachments: Sequence[Union[Attachment, File]] = ...,
-        delete_after: Optional[float] = ...,
-        allowed_mentions: Optional[AllowedMentions] = ...,
-        # view: Optional[View] = ...,
-    ) -> Message:
-        ...
-
-    @overload
-    async def edit(
-        self,
-        *,
-        content: Optional[str] = ...,
-        embeds: Sequence[Embed] = ...,
-        attachments: Sequence[Union[Attachment, File]] = ...,
-        delete_after: Optional[float] = ...,
-        allowed_mentions: Optional[AllowedMentions] = ...,
-        # view: Optional[View] = ...,
-    ) -> Message:
-        ...
-
     async def edit(
         self,
         *,
         content: Optional[str] = MISSING,
-        embed: Optional[Embed] = MISSING,
-        embeds: Sequence[Embed] = MISSING,
         attachments: Sequence[Union[Attachment, File]] = MISSING,
         delete_after: Optional[float] = None,
         allowed_mentions: Optional[AllowedMentions] = MISSING,
-        # view: Optional[View] = MISSING,
     ) -> Message:
         """|coro|
 
@@ -1328,18 +1299,10 @@ class PartialMessage(Hashable):
             ``InvalidArgument``.
 
         Parameters
-        -----------
+        ----------
         content: Optional[:class:`str`]
             The new content to replace the message with.
             Could be ``None`` to remove the content.
-        embed: Optional[:class:`Embed`]
-            The new embed to replace the original with.
-            Could be ``None`` to remove the embed.
-        embeds: List[:class:`Embed`]
-            The new embeds to replace the original with. Must be a maximum of 10.
-            To remove all embeds ``[]`` should be passed.
-
-            .. versionadded:: 2.0
         attachments: List[Union[:class:`Attachment`, :class:`File`]]
             A list of attachments to keep in the message as well as new files to upload. If ``[]`` is passed
             then all attachments are removed.
@@ -1362,12 +1325,9 @@ class PartialMessage(Hashable):
             are used instead.
 
             .. versionadded:: 1.4
-        view: Optional[:class:`~discord.ui.View`]
-            The updated view to update this message with. If ``None`` is passed then
-            the view is removed.
 
         Raises
-        -------
+        ------
         HTTPException
             Editing the message failed.
         Forbidden
@@ -1375,8 +1335,6 @@ class PartialMessage(Hashable):
             edited a message's content or embed that isn't yours.
         NotFound
             This message does not exist.
-        TypeError
-            You specified both ``embed`` and ``embeds``
 
         Returns
         --------
@@ -1389,147 +1347,19 @@ class PartialMessage(Hashable):
         else:
             previous_allowed_mentions = None
 
-        # if view is not MISSING:
-        #     self._state.prevent_view_updates_for(self.id)
-
         with handle_message_parameters(
             content=content,
-            embed=embed,
-            embeds=embeds,
             attachments=attachments,
-            # view=view,
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_allowed_mentions,
         ) as params:
             data = await self._state.http.edit_message(self.channel.id, self.id, params=params)
             message = Message(state=self._state, channel=self.channel, data=data)
 
-        # if view and not view.is_finished():
-        #     interaction: Optional[MessageInteraction] = getattr(self, 'interaction', None)
-        #     if interaction is not None:
-        #         self._state.store_view(view, self.id, interaction_id=interaction.id)
-        #     else:
-        #         self._state.store_view(view, self.id)
-
         if delete_after is not None:
             await self.delete(delay=delete_after)
 
         return message
-
-    @overload
-    async def reply(
-        self,
-        content: Optional[str] = ...,
-        *,
-        tts: bool = ...,
-        embed: Embed = ...,
-        file: File = ...,
-        stickers: Sequence[Union[GuildSticker, StickerItem]] = ...,
-        delete_after: float = ...,
-        nonce: Union[str, int] = ...,
-        allowed_mentions: AllowedMentions = ...,
-        reference: Union[Message, MessageReference, PartialMessage] = ...,
-        mention_author: bool = ...,
-        # view: View = ...,
-        suppress_embeds: bool = ...,
-        silent: bool = ...,
-        poll: Poll = ...,
-    ) -> Message:
-        ...
-
-    @overload
-    async def reply(
-        self,
-        content: Optional[str] = ...,
-        *,
-        tts: bool = ...,
-        embed: Embed = ...,
-        files: Sequence[File] = ...,
-        stickers: Sequence[Union[GuildSticker, StickerItem]] = ...,
-        delete_after: float = ...,
-        nonce: Union[str, int] = ...,
-        allowed_mentions: AllowedMentions = ...,
-        reference: Union[Message, MessageReference, PartialMessage] = ...,
-        mention_author: bool = ...,
-        # view: View = ...,
-        suppress_embeds: bool = ...,
-        silent: bool = ...,
-        poll: Poll = ...,
-    ) -> Message:
-        ...
-
-    @overload
-    async def reply(
-        self,
-        content: Optional[str] = ...,
-        *,
-        tts: bool = ...,
-        embeds: Sequence[Embed] = ...,
-        file: File = ...,
-        stickers: Sequence[Union[GuildSticker, StickerItem]] = ...,
-        delete_after: float = ...,
-        nonce: Union[str, int] = ...,
-        allowed_mentions: AllowedMentions = ...,
-        reference: Union[Message, MessageReference, PartialMessage] = ...,
-        mention_author: bool = ...,
-        # view: View = ...,
-        suppress_embeds: bool = ...,
-        silent: bool = ...,
-        poll: Poll = ...,
-    ) -> Message:
-        ...
-
-    @overload
-    async def reply(
-        self,
-        content: Optional[str] = ...,
-        *,
-        tts: bool = ...,
-        embeds: Sequence[Embed] = ...,
-        files: Sequence[File] = ...,
-        stickers: Sequence[Union[GuildSticker, StickerItem]] = ...,
-        delete_after: float = ...,
-        nonce: Union[str, int] = ...,
-        allowed_mentions: AllowedMentions = ...,
-        reference: Union[Message, MessageReference, PartialMessage] = ...,
-        mention_author: bool = ...,
-        # view: View = ...,
-        suppress_embeds: bool = ...,
-        silent: bool = ...,
-        poll: Poll = ...,
-    ) -> Message:
-        ...
-
-    async def reply(self, content: Optional[str] = None, **kwargs: Any) -> Message:
-        """|coro|
-
-        A shortcut method to :meth:`.abc.Messageable.send` to reply to the
-        :class:`.Message`.
-
-        .. versionadded:: 1.6
-
-        .. versionchanged:: 2.0
-            This function will now raise :exc:`TypeError` or
-            :exc:`ValueError` instead of ``InvalidArgument``.
-
-        Raises
-        --------
-        ~discord.HTTPException
-            Sending the message failed.
-        ~discord.Forbidden
-            You do not have the proper permissions to send the message.
-        ValueError
-            The ``files`` list is not of the appropriate size
-        TypeError
-            You specified both ``file`` and ``files``.
-
-        Returns
-        ---------
-        :class:`.Message`
-            The message that was sent.
-        """
-
-        return await self.channel.send(content, reference=self, **kwargs)
 
     def to_reference(
         self,
@@ -1560,43 +1390,6 @@ class PartialMessage(Hashable):
         """
 
         return MessageReference.from_message(self, fail_if_not_exists=fail_if_not_exists, type=type)
-
-    async def forward(
-        self,
-        destination: MessageableChannel,
-        *,
-        fail_if_not_exists: bool = True,
-    ) -> Message:
-        """|coro|
-
-        Forwards this message to a channel.
-
-        .. versionadded:: 2.5
-
-        Parameters
-        ----------
-        destination: :class:`~discord.abc.Messageable`
-            The channel to forward this message to.
-        fail_if_not_exists: :class:`bool`
-            Whether replying using the message reference should raise :class:`HTTPException`
-            if the message no longer exists or Discord could not fetch the message.
-
-        Raises
-        ------
-        ~discord.HTTPException
-            Forwarding the message failed.
-
-        Returns
-        -------
-        :class:`.Message`
-            The message sent to the channel.
-        """
-        reference = self.to_reference(
-            fail_if_not_exists=fail_if_not_exists,
-            type=MessageReferenceType.forward,
-        )
-        ret = await destination.send(reference=reference)
-        return ret
 
     def to_message_reference_dict(self) -> MessageReferencePayload:
         data: MessageReferencePayload = {
@@ -1629,7 +1422,7 @@ class Message(PartialMessage, Hashable):
             Returns the message's hash.
 
     Attributes
-    -----------
+    ----------
     tts: :class:`bool`
         Specifies if the message was done with text-to-speech.
         This can only be accurately received in :func:`on_message` due to

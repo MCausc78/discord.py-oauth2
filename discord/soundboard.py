@@ -67,7 +67,7 @@ class BaseSoundboardSound(Hashable, AssetMixin):
             Returns the sound's hash.
 
     Attributes
-    ------------
+    ----------
     id: :class:`int`
         The ID of the sound.
     volume: :class:`float`
@@ -118,7 +118,7 @@ class SoundboardDefaultSound(BaseSoundboardSound):
             Returns the sound's hash.
 
     Attributes
-    ------------
+    ----------
     id: :class:`int`
         The ID of the sound.
     volume: :class:`float`
@@ -167,7 +167,7 @@ class SoundboardSound(BaseSoundboardSound):
             Returns the sound's hash.
 
     Attributes
-    ------------
+    ----------
     id: :class:`int`
         The ID of the sound.
     volume: :class:`float`

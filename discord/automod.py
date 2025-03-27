@@ -64,7 +64,7 @@ class AutoModRuleAction:
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     type: :class:`AutoModRuleActionType`
         The type of action to take.
         Defaults to :attr:`~AutoModRuleActionType.block_message`.
@@ -214,7 +214,7 @@ class AutoModTrigger:
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     type: :class:`AutoModRuleTriggerType`
         The type of trigger.
     keyword_filter: List[:class:`str`]
@@ -346,7 +346,7 @@ class AutoModRule:
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The ID of the rule.
     guild: :class:`Guild`
@@ -449,12 +449,12 @@ class AutoModRule:
         """Check if an object is exempt from the automod rule.
 
         Parameters
-        -----------
+        ----------
         obj: :class:`abc.Snowflake`
             The role, channel, or thread to check.
 
         Returns
-        --------
+        -------
         :class:`bool`
             Whether the object is exempt from the automod rule.
         """
@@ -467,7 +467,7 @@ class AutoModAction:
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     action: :class:`AutoModRuleAction`
         The action that was taken.
     message_id: Optional[:class:`int`]

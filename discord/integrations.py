@@ -60,7 +60,7 @@ class IntegrationAccount:
     .. versionadded:: 1.4
 
     Attributes
-    -----------
+    ----------
     id: :class:`str`
         The account ID.
     name: :class:`str`
@@ -83,7 +83,7 @@ class Integration:
     .. versionadded:: 1.4
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The integration ID.
     name: :class:`str`
@@ -275,7 +275,7 @@ class PartialIntegration:
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The integration ID.
     name: :class:`str`

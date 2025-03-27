@@ -78,7 +78,7 @@ class VoiceState:
     """Represents a Discord user's voice state.
 
     Attributes
-    ------------
+    ----------
     deaf: :class:`bool`
         Indicates if the user is currently deafened by the guild.
     mute: :class:`bool`
@@ -669,7 +669,7 @@ class Member(discord.abc.Messageable, _UserTag):
         """Checks if the member is mentioned in the specified message.
 
         Parameters
-        -----------
+        ----------
         message: :class:`Message`
             The message to check if you're mentioned in.
 
@@ -765,12 +765,12 @@ class Member(discord.abc.Messageable, _UserTag):
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         role_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`Role`]
             The role or ``None`` if not found in the member's roles.
         """
@@ -782,7 +782,7 @@ class Member(discord.abc.Messageable, _UserTag):
         .. versionadded:: 2.0
 
         Returns
-        --------
+        -------
         :class:`bool`
             ``True`` if the member is timed out. ``False`` otherwise.
         """

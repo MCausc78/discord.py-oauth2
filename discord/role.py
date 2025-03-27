@@ -60,7 +60,7 @@ class RoleTags:
     .. versionadded:: 1.6
 
     Attributes
-    ------------
+    ----------
     bot_id: Optional[:class:`int`]
         The bot's user ID that manages this role.
     integration_id: Optional[:class:`int`]

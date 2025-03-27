@@ -25,6 +25,9 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import asyncio
+from base64 import b64encode
+from collections import deque
+import datetime
 import logging
 from typing import (
     Any,
@@ -43,17 +46,14 @@ from typing import (
     Union,
 )
 from urllib.parse import quote as _uriquote
-from collections import deque
-import datetime
-from base64 import b64encode
 
 import aiohttp
 
-from .errors import HTTPException, RateLimited, Forbidden, NotFound, LoginFailure, DiscordServerError, GatewayNotFound
-from .gateway import DiscordClientWebSocketResponse
-from .file import File
-from .mentions import AllowedMentions
 from . import __version__, utils
+from .errors import HTTPException, RateLimited, Forbidden, NotFound, LoginFailure, DiscordServerError, GatewayNotFound
+from .file import File
+from .gateway import DiscordClientWebSocketResponse
+from .mentions import AllowedMentions
 from .utils import MISSING
 
 _log = logging.getLogger(__name__)
@@ -62,8 +62,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .embeds import Embed
-    from .message import Attachment
     from .flags import MessageFlags
+    from .message import Attachment
     from .poll import Poll
 
     from .types import (
@@ -74,12 +74,13 @@ if TYPE_CHECKING:
         message,
         settings,
         sku,
+        subscription,
         template,
         user,
         widget,
     )
-    from .types.snowflake import Snowflake, SnowflakeList
     from .types.gateway import SessionStartLimit
+    from .types.snowflake import Snowflake, SnowflakeList
 
     from types import TracebackType
 
@@ -1281,7 +1282,48 @@ class HTTPClient:
             ),
         )
 
-    #
+    # Subscriptions
+
+    def list_sku_subscriptions(
+        self,
+        sku_id: Snowflake,
+        before: Optional[Snowflake] = None,
+        after: Optional[Snowflake] = None,
+        limit: Optional[int] = None,
+        user_id: Optional[Snowflake] = None,
+    ) -> Response[List[subscription.Subscription]]:
+        params = {}
+
+        if before is not None:
+            params['before'] = before
+
+        if after is not None:
+            params['after'] = after
+
+        if limit is not None:
+            params['limit'] = limit
+
+        if user_id is not None:
+            params['user_id'] = user_id
+
+        return self.request(
+            Route(
+                'GET',
+                '/skus/{sku_id}/subscriptions',
+                sku_id=sku_id,
+            ),
+            params=params,
+        )
+
+    def get_sku_subscription(self, sku_id: Snowflake, subscription_id: Snowflake) -> Response[subscription.Subscription]:
+        return self.request(
+            Route(
+                'GET',
+                '/skus/{sku_id}/subscriptions/{subscription_id}',
+                sku_id=sku_id,
+                subscription_id=subscription_id,
+            )
+        )
 
     # Relationships
 

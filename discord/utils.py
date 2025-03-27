@@ -340,7 +340,7 @@ def oauth_url(
         are now keyword-only.
 
     Parameters
-    -----------
+    ----------
     client_id: Union[:class:`int`, :class:`str`]
         The client ID for your bot.
     permissions: :class:`~discord.Permissions`
@@ -364,7 +364,7 @@ def oauth_url(
         .. versionadded:: 2.0
 
     Returns
-    --------
+    -------
     :class:`str`
         The OAuth2 URL for inviting the bot into guilds.
     """
@@ -391,12 +391,12 @@ def snowflake_time(id: int, /) -> datetime.datetime:
         The ``id`` parameter is now positional-only.
 
     Parameters
-    -----------
+    ----------
     id: :class:`int`
         The snowflake ID.
 
     Returns
-    --------
+    -------
     :class:`datetime.datetime`
         An aware datetime in UTC representing the creation time of the snowflake.
     """
@@ -418,7 +418,7 @@ def time_snowflake(dt: datetime.datetime, /, *, high: bool = False) -> int:
         positional-only.
 
     Parameters
-    -----------
+    ----------
     dt: :class:`datetime.datetime`
         A datetime object to convert to a snowflake.
         If naive, the timezone is assumed to be local time.
@@ -426,7 +426,7 @@ def time_snowflake(dt: datetime.datetime, /, *, high: bool = False) -> int:
         Whether or not to set the lower 22 bit to high or low.
 
     Returns
-    --------
+    -------
     :class:`int`
         The snowflake representing the time given.
     """
@@ -477,7 +477,7 @@ def find(predicate: Callable[[T], Any], iterable: _Iter[T], /) -> Union[Optional
         The ``iterable`` parameter supports :term:`asynchronous iterable`\s.
 
     Parameters
-    -----------
+    ----------
     predicate
         A function that returns a boolean-like result.
     iterable: Union[:class:`collections.abc.Iterable`, :class:`collections.abc.AsyncIterable`]
@@ -566,7 +566,7 @@ def get(iterable: _Iter[T], /, **attrs: Any) -> Union[Optional[T], Coro[Optional
         The ``iterable`` parameter supports :term:`asynchronous iterable`\s.
 
     Examples
-    ---------
+    --------
 
     Basic usage:
 
@@ -593,7 +593,7 @@ def get(iterable: _Iter[T], /, **attrs: Any) -> Union[Optional[T], Coro[Optional
         msg = await discord.utils.get(channel.history(), author__name='Dave')
 
     Parameters
-    -----------
+    ----------
     iterable: Union[:class:`collections.abc.Iterable`, :class:`collections.abc.AsyncIterable`]
         The iterable to search through. Using a :class:`collections.abc.AsyncIterable`,
         makes this function return a :term:`coroutine`.
@@ -1173,7 +1173,7 @@ def evaluate_annotation(
         args = tp.__args__
         if not hasattr(tp, '__origin__'):
             if PY_310 and tp.__class__ is types.UnionType:  # type: ignore
-                converted = Union[args]  # type: ignore
+                converted = Union[args]
                 return evaluate_annotation(converted, globals, locals, cache)
 
             return tp
@@ -1266,14 +1266,14 @@ def format_dt(dt: datetime.datetime, /, style: Optional[TimestampStyle] = None) 
     .. versionadded:: 2.0
 
     Parameters
-    -----------
+    ----------
     dt: :class:`datetime.datetime`
         The datetime to format.
     style: :class:`str`
         The style to format the datetime with.
 
     Returns
-    --------
+    -------
     :class:`str`
         The formatted string.
     """
@@ -1304,7 +1304,6 @@ def stream_supports_colour(stream: Any) -> bool:
 
 
 class _ColourFormatter(logging.Formatter):
-
     # ANSI codes are a bit weird to decipher if you're unfamiliar with them, so here's a refresher
     # It starts off with a format like \x1b[XXXm where XXX is a semicolon separated list of commands
     # The important ones here relate to colour.
@@ -1366,7 +1365,7 @@ def setup_logging(
     .. versionadded:: 2.0
 
     Parameters
-    -----------
+    ----------
     handler: :class:`logging.Handler`
         The log handler to use for the library's logger.
 
@@ -1451,7 +1450,7 @@ if _HAS_ZSTD:
             decompressor = zstandard.ZstdDecompressor()
             self.context = decompressor.decompressobj()
 
-        def decompress(self, data: bytes, /) -> str | None:
+        def decompress(self, data: bytes, /) -> Optional[str]:
             # Each WS message is a complete gateway message
             return self.context.decompress(data).decode('utf-8')
 
@@ -1467,7 +1466,7 @@ else:
             self.buffer: bytearray = bytearray()
             self.context = zlib.decompressobj()
 
-        def decompress(self, data: bytes, /) -> str | None:
+        def decompress(self, data: bytes, /) -> Optional[str]:
             self.buffer.extend(data)
 
             # Check whether ending is Z_SYNC_FLUSH

@@ -90,7 +90,7 @@ class RawMessageDeleteEvent(_RawReprMixin):
     """Represents the event payload for a :func:`on_raw_message_delete` event.
 
     Attributes
-    ------------
+    ----------
     channel_id: :class:`int`
         The channel ID where the deletion took place.
     guild_id: Optional[:class:`int`]
@@ -114,7 +114,7 @@ class RawBulkMessageDeleteEvent(_RawReprMixin):
     """Represents the event payload for a :func:`on_raw_bulk_message_delete` event.
 
     Attributes
-    -----------
+    ----------
     message_ids: Set[:class:`int`]
         A :class:`set` of the message IDs that were deleted.
     channel_id: :class:`int`
@@ -138,7 +138,7 @@ class RawMessageUpdateEvent(_RawReprMixin):
     """Represents the payload for a :func:`on_raw_message_edit` event.
 
     Attributes
-    -----------
+    ----------
     message_id: :class:`int`
         The message ID that got updated.
     channel_id: :class:`int`
@@ -178,7 +178,7 @@ class RawReactionActionEvent(_RawReprMixin):
     :func:`on_raw_reaction_remove` event.
 
     Attributes
-    -----------
+    ----------
     message_id: :class:`int`
         The message ID that got or lost a reaction.
     user_id: :class:`int`
@@ -258,7 +258,7 @@ class RawReactionClearEvent(_RawReprMixin):
     """Represents the payload for a :func:`on_raw_reaction_clear` event.
 
     Attributes
-    -----------
+    ----------
     message_id: :class:`int`
         The message ID that got its reactions cleared.
     channel_id: :class:`int`
@@ -285,7 +285,7 @@ class RawReactionClearEmojiEvent(_RawReprMixin):
     .. versionadded:: 1.3
 
     Attributes
-    -----------
+    ----------
     message_id: :class:`int`
         The message ID that got its reactions cleared.
     channel_id: :class:`int`
@@ -315,7 +315,7 @@ class RawIntegrationDeleteEvent(_RawReprMixin):
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     integration_id: :class:`int`
         The ID of the integration that got deleted.
     application_id: Optional[:class:`int`]

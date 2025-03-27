@@ -88,7 +88,7 @@ class VoiceProtocol:
     .. _Lavalink: https://github.com/freyacodes/Lavalink
 
     Parameters
-    ------------
+    ----------
     client: :class:`Client`
         The client (or its subclasses) that started the connection request.
     channel: :class:`abc.Connectable`
@@ -110,7 +110,7 @@ class VoiceProtocol:
             This method is not the same as the event. See: :func:`on_voice_state_update`
 
         Parameters
-        ------------
+        ----------
         data: :class:`dict`
             The raw :ddocs:`voice state payload <resources/voice#voice-state-object>`.
         """
@@ -123,7 +123,7 @@ class VoiceProtocol:
         This corresponds to ``VOICE_SERVER_UPDATE``.
 
         Parameters
-        ------------
+        ----------
         data: :class:`dict`
             The raw :ddocs:`voice server update payload <topics/gateway-events#voice-server-update>`.
         """
@@ -144,7 +144,7 @@ class VoiceProtocol:
         The order that these two are called is unspecified.
 
         Parameters
-        ------------
+        ----------
         timeout: :class:`float`
             The timeout for the connection.
         reconnect: :class:`bool`
@@ -168,7 +168,7 @@ class VoiceProtocol:
         See :meth:`cleanup`.
 
         Parameters
-        ------------
+        ----------
         force: :class:`bool`
             Whether the disconnection was forced.
         """
@@ -195,14 +195,14 @@ class VoiceClient(VoiceProtocol):
     e.g. :meth:`VoiceChannel.connect`.
 
     Warning
-    --------
+    -------
     In order to use PCM based AudioSources, you must have the opus library
     installed on your system and loaded through :func:`opus.load_opus`.
     Otherwise, your AudioSources must be opus encoded (e.g. using :class:`FFmpegOpusAudio`)
     or the library will not be able to transmit audio.
 
     Attributes
-    -----------
+    ----------
     session_id: :class:`str`
         The voice connection session ID.
     token: :class:`str`
@@ -347,7 +347,7 @@ class VoiceClient(VoiceProtocol):
         Moves you to a different voice channel.
 
         Parameters
-        -----------
+        ----------
         channel: Optional[:class:`abc.Snowflake`]
             The channel to move to. Must be a voice channel.
         timeout: Optional[:class:`float`]
@@ -356,7 +356,7 @@ class VoiceClient(VoiceProtocol):
             .. versionadded:: 2.4
 
         Raises
-        -------
+        ------
         asyncio.TimeoutError
             The move did not complete in time, but may still be ongoing.
         """
@@ -452,7 +452,7 @@ class VoiceClient(VoiceProtocol):
             Added encoder parameters as keyword arguments.
 
         Parameters
-        -----------
+        ----------
         source: :class:`AudioSource`
             The audio source we're reading from.
         after: Callable[[Optional[:class:`Exception`]], Any]
@@ -482,7 +482,7 @@ class VoiceClient(VoiceProtocol):
             Defaults to ``'auto'``.
 
         Raises
-        -------
+        ------
         ClientException
             Already playing audio or not connected.
         TypeError
@@ -570,7 +570,7 @@ class VoiceClient(VoiceProtocol):
             Indicates if ``data`` should be encoded into Opus.
 
         Raises
-        -------
+        ------
         ClientException
             You are not connected.
         opus.OpusError

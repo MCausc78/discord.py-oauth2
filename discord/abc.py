@@ -24,9 +24,8 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-import copy
-import secrets
 import asyncio
+import copy
 from datetime import datetime
 from typing import (
     Any,
@@ -34,9 +33,9 @@ from typing import (
     Dict,
     List,
     Optional,
-    TYPE_CHECKING,
     Protocol,
     Sequence,
+    TYPE_CHECKING,
     Tuple,
     TypeVar,
     Union,
@@ -44,17 +43,16 @@ from typing import (
     runtime_checkable,
 )
 
-from .object import Object
+from . import utils
 from .enums import ChannelType
 from .errors import ClientException
-from .mentions import AllowedMentions
-from .permissions import PermissionOverwrite, Permissions
-from .role import Role
 from .file import File
 from .http import handle_message_parameters
+from .mentions import AllowedMentions
+from .object import Object
+from .permissions import PermissionOverwrite, Permissions
+from .role import Role
 from .voice_client import VoiceClient, VoiceProtocol
-from .sticker import GuildSticker, StickerItem
-from . import utils
 
 __all__ = (
     'Snowflake',
@@ -68,15 +66,7 @@ __all__ = (
 T = TypeVar('T', bound=VoiceProtocol)
 
 if TYPE_CHECKING:
-    from .client import Client
-    from .user import ClientUser
     from .asset import Asset
-    from .state import ConnectionState
-    from .guild import Guild
-    from .member import Member
-    from .channel import CategoryChannel
-    from .embeds import Embed
-    from .message import Message, MessageReference, PartialMessage
     from .channel import (
         TextChannel,
         DMChannel,
@@ -84,31 +74,26 @@ if TYPE_CHECKING:
         PartialMessageable,
         VoiceChannel,
         StageChannel,
+        CategoryChannel,
     )
-    from .poll import Poll
+    from .client import Client
+    from .guild import Guild
+    from .member import Member
+    from .message import Message
     from .threads import Thread
     from .types.channel import (
         PermissionOverwrite as PermissionOverwritePayload,
         GuildChannel as GuildChannelPayload,
         OverwriteType,
     )
-    from .types.snowflake import (
-        SnowflakeList,
-    )
+    from .state import ConnectionState
+    from .user import ClientUser
 
     PartialMessageableChannel = Union[TextChannel, VoiceChannel, StageChannel, Thread, DMChannel, PartialMessageable]
     MessageableChannel = Union[PartialMessageableChannel, GroupChannel]
     SnowflakeTime = Union["Snowflake", datetime]
 
 MISSING = utils.MISSING
-
-
-class _Undefined:
-    def __repr__(self) -> str:
-        return 'see-below'
-
-
-_undefined: Any = _Undefined()
 
 
 @runtime_checkable
@@ -122,7 +107,7 @@ class Snowflake(Protocol):
     :class:`.Object`.
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The model's unique ID.
     """
@@ -143,7 +128,7 @@ class User(Snowflake, Protocol):
     This ABC must also implement :class:`~discord.abc.Snowflake`.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The user's username.
     discriminator: :class:`str`
@@ -212,7 +197,7 @@ class User(Snowflake, Protocol):
         """Checks if the user is mentioned in the specified message.
 
         Parameters
-        -----------
+        ----------
         message: :class:`~discord.Message`
             The message to check if you're mentioned in.
 
@@ -235,7 +220,7 @@ class PrivateChannel:
     This ABC must also implement :class:`~discord.abc.Snowflake`.
 
     Attributes
-    -----------
+    ----------
     me: :class:`~discord.ClientUser`
         The user presenting yourself.
     """
@@ -287,7 +272,7 @@ class GuildChannel:
     This ABC must also implement :class:`~discord.abc.Snowflake`.
 
     Attributes
-    -----------
+    ----------
     name: :class:`str`
         The channel name.
     guild: :class:`~discord.Guild`
@@ -386,12 +371,12 @@ class GuildChannel:
         """Returns the channel-specific overwrites for a member or a role.
 
         Parameters
-        -----------
+        ----------
         obj: Union[:class:`~discord.Role`, :class:`~discord.abc.User`, :class:`~discord.Object`]
             The role or user denoting whose overwrite to get.
 
         Returns
-        ---------
+        -------
         :class:`~discord.PermissionOverwrite`
             The permission overwrites for this object.
         """
@@ -423,7 +408,7 @@ class GuildChannel:
             Overwrites can now be type-aware :class:`~discord.Object` in case of cache lookup failure
 
         Returns
-        --------
+        -------
         Dict[Union[:class:`~discord.Role`, :class:`~discord.Member`, :class:`~discord.Object`], :class:`~discord.PermissionOverwrite`]
             The channel's permission overwrites.
         """
@@ -641,12 +626,10 @@ class Messageable:
     - :class:`~discord.VoiceChannel`
     - :class:`~discord.StageChannel`
     - :class:`~discord.DMChannel`
-    - :class:`~discord.GroupChannel`
     - :class:`~discord.PartialMessageable`
     - :class:`~discord.User`
     - :class:`~discord.Member`
     - :class:`~discord.ext.commands.Context`
-    - :class:`~discord.Thread`
     """
 
     __slots__ = ()
@@ -660,19 +643,9 @@ class Messageable:
         self,
         content: Optional[str] = ...,
         *,
-        tts: bool = ...,
-        embed: Embed = ...,
         file: File = ...,
-        stickers: Sequence[Union[GuildSticker, StickerItem]] = ...,
         delete_after: float = ...,
-        nonce: Union[str, int] = ...,
         allowed_mentions: AllowedMentions = ...,
-        reference: Union[Message, MessageReference, PartialMessage] = ...,
-        mention_author: bool = ...,
-        # view: View = ...,
-        suppress_embeds: bool = ...,
-        silent: bool = ...,
-        poll: Poll = ...,
     ) -> Message:
         ...
 
@@ -681,61 +654,9 @@ class Messageable:
         self,
         content: Optional[str] = ...,
         *,
-        tts: bool = ...,
-        embed: Embed = ...,
         files: Sequence[File] = ...,
-        stickers: Sequence[Union[GuildSticker, StickerItem]] = ...,
         delete_after: float = ...,
-        nonce: Union[str, int] = ...,
         allowed_mentions: AllowedMentions = ...,
-        reference: Union[Message, MessageReference, PartialMessage] = ...,
-        mention_author: bool = ...,
-        # view: View = ...,
-        suppress_embeds: bool = ...,
-        silent: bool = ...,
-        poll: Poll = ...,
-    ) -> Message:
-        ...
-
-    @overload
-    async def send(
-        self,
-        content: Optional[str] = ...,
-        *,
-        tts: bool = ...,
-        embeds: Sequence[Embed] = ...,
-        file: File = ...,
-        stickers: Sequence[Union[GuildSticker, StickerItem]] = ...,
-        delete_after: float = ...,
-        nonce: Union[str, int] = ...,
-        allowed_mentions: AllowedMentions = ...,
-        reference: Union[Message, MessageReference, PartialMessage] = ...,
-        mention_author: bool = ...,
-        # view: View = ...,
-        suppress_embeds: bool = ...,
-        silent: bool = ...,
-        poll: Poll = ...,
-    ) -> Message:
-        ...
-
-    @overload
-    async def send(
-        self,
-        content: Optional[str] = ...,
-        *,
-        tts: bool = ...,
-        embeds: Sequence[Embed] = ...,
-        files: Sequence[File] = ...,
-        stickers: Sequence[Union[GuildSticker, StickerItem]] = ...,
-        delete_after: float = ...,
-        nonce: Union[str, int] = ...,
-        allowed_mentions: AllowedMentions = ...,
-        reference: Union[Message, MessageReference, PartialMessage] = ...,
-        mention_author: bool = ...,
-        # view: View = ...,
-        suppress_embeds: bool = ...,
-        silent: bool = ...,
-        poll: Poll = ...,
     ) -> Message:
         ...
 
@@ -743,21 +664,10 @@ class Messageable:
         self,
         content: Optional[str] = None,
         *,
-        tts: bool = False,
-        embed: Optional[Embed] = None,
-        embeds: Optional[Sequence[Embed]] = None,
         file: Optional[File] = None,
         files: Optional[Sequence[File]] = None,
-        stickers: Optional[Sequence[Union[GuildSticker, StickerItem]]] = None,
         delete_after: Optional[float] = None,
-        nonce: Optional[Union[str, int]] = None,
         allowed_mentions: Optional[AllowedMentions] = None,
-        reference: Optional[Union[Message, MessageReference, PartialMessage]] = None,
-        mention_author: Optional[bool] = None,
-        # view: Optional[View] = None,
-        suppress_embeds: bool = False,
-        silent: bool = False,
-        poll: Optional[Poll] = None,
     ) -> Message:
         """|coro|
 
@@ -772,34 +682,18 @@ class Messageable:
         parameter should be used with a :class:`list` of :class:`~discord.File` objects.
         **Specifying both parameters will lead to an exception**.
 
-        To upload a single embed, the ``embed`` parameter should be used with a
-        single :class:`~discord.Embed` object. To upload multiple embeds, the ``embeds``
-        parameter should be used with a :class:`list` of :class:`~discord.Embed` objects.
-        **Specifying both parameters will lead to an exception**.
-
         .. versionchanged:: 2.0
             This function will now raise :exc:`TypeError` or
             :exc:`ValueError` instead of ``InvalidArgument``.
 
         Parameters
-        ------------
+        ----------
         content: Optional[:class:`str`]
             The content of the message to send.
-        tts: :class:`bool`
-            Indicates if the message should be sent using text-to-speech.
-        embed: :class:`~discord.Embed`
-            The rich embed for the content.
-        embeds: List[:class:`~discord.Embed`]
-            A list of embeds to upload. Must be a maximum of 10.
-
-            .. versionadded:: 2.0
         file: :class:`~discord.File`
             The file to upload.
         files: List[:class:`~discord.File`]
             A list of files to upload. Must be a maximum of 10.
-        nonce: :class:`int`
-            The nonce to use for sending this message. If the message was successfully sent,
-            then the message will have a nonce with this value.
         delete_after: :class:`float`
             If provided, the number of seconds to wait in the background
             before deleting the message we just sent. If the deletion fails,
@@ -814,43 +708,8 @@ class Messageable:
 
             .. versionadded:: 1.4
 
-        reference: Union[:class:`~discord.Message`, :class:`~discord.MessageReference`, :class:`~discord.PartialMessage`]
-            A reference to the :class:`~discord.Message` to which you are referencing, this can be created using
-            :meth:`~discord.Message.to_reference` or passed directly as a :class:`~discord.Message`.
-            In the event of a replying reference, you can control whether this mentions the author of the referenced
-            message using the :attr:`~discord.AllowedMentions.replied_user` attribute of ``allowed_mentions`` or by
-            setting ``mention_author``.
-
-            .. versionadded:: 1.6
-
-        mention_author: Optional[:class:`bool`]
-            If set, overrides the :attr:`~discord.AllowedMentions.replied_user` attribute of ``allowed_mentions``.
-
-            .. versionadded:: 1.6
-        view: :class:`discord.ui.View`
-            A Discord UI View to add to the message.
-
-            .. versionadded:: 2.0
-        stickers: Sequence[Union[:class:`~discord.GuildSticker`, :class:`~discord.StickerItem`]]
-            A list of stickers to upload. Must be a maximum of 3.
-
-            .. versionadded:: 2.0
-        suppress_embeds: :class:`bool`
-            Whether to suppress embeds for the message. This sends the message without any embeds if set to ``True``.
-
-            .. versionadded:: 2.0
-        silent: :class:`bool`
-            Whether to suppress push and desktop notifications for the message. This will increment the mention counter
-            in the UI, but will not actually send a notification.
-
-            .. versionadded:: 2.2
-        poll: :class:`~discord.Poll`
-            The poll to send with this message.
-
-            .. versionadded:: 2.4
-
         Raises
-        --------
+        ------
         ~discord.HTTPException
             Sending the message failed.
         ~discord.Forbidden
@@ -859,15 +718,12 @@ class Messageable:
             You sent a message with the same nonce as one that has been explicitly
             deleted shortly earlier.
         ValueError
-            The ``files`` or ``embeds`` list is not of the appropriate size.
+            The ``files`` list is not of the appropriate size.
         TypeError
-            You specified both ``file`` and ``files``,
-            or you specified both ``embed`` and ``embeds``,
-            or the ``reference`` object is not a :class:`~discord.Message`,
-            :class:`~discord.MessageReference` or :class:`~discord.PartialMessage`.
+            You specified both ``file`` and ``files``.
 
         Returns
-        ---------
+        -------
         :class:`~discord.Message`
             The message that was sent.
         """
@@ -877,59 +733,16 @@ class Messageable:
         content = str(content) if content is not None else None
         previous_allowed_mention = state.allowed_mentions
 
-        if stickers is not None:
-            sticker_ids: SnowflakeList = [sticker.id for sticker in stickers]
-        else:
-            sticker_ids = MISSING
-
-        if reference is not None:
-            try:
-                reference_dict = reference.to_message_reference_dict()
-            except AttributeError:
-                raise TypeError('reference parameter must be Message, MessageReference, or PartialMessage') from None
-        else:
-            reference_dict = MISSING
-
-        # if view and not hasattr(view, '__discord_ui_view__'):
-        #     raise TypeError(f'view parameter must be View not {view.__class__.__name__}')
-
-        if suppress_embeds or silent:
-            from .message import MessageFlags  # circular import
-
-            flags = MessageFlags._from_value(0)
-            flags.suppress_embeds = suppress_embeds
-            flags.suppress_notifications = silent
-        else:
-            flags = MISSING
-
-        if nonce is None:
-            nonce = secrets.randbits(64)
-
         with handle_message_parameters(
             content=content,
-            tts=tts,
             file=file if file is not None else MISSING,
             files=files if files is not None else MISSING,
-            embed=embed if embed is not None else MISSING,
-            embeds=embeds if embeds is not None else MISSING,
-            nonce=nonce,
             allowed_mentions=allowed_mentions,
-            message_reference=reference_dict,
             previous_allowed_mentions=previous_allowed_mention,
-            mention_author=mention_author,
-            stickers=sticker_ids,
-            # view=view,
-            flags=flags,
-            poll=poll,
         ) as params:
             data = await state.http.send_message(channel.id, params=params)
 
         ret = state.create_message(channel=channel, data=data)
-        # if view and not view.is_finished():
-        #     state.store_view(view, ret.id)
-
-        if poll:
-            poll._update(ret)
 
         if delete_after is not None:
             await ret.delete(delay=delete_after)
@@ -972,7 +785,7 @@ class Connectable(Protocol):
         This requires :attr:`~discord.Intents.voice_states`.
 
         Parameters
-        -----------
+        ----------
         timeout: :class:`float`
             The timeout in seconds to wait the connection to complete.
         reconnect: :class:`bool`
@@ -992,7 +805,7 @@ class Connectable(Protocol):
             .. versionadded:: 2.0
 
         Raises
-        -------
+        ------
         asyncio.TimeoutError
             Could not connect to the voice channel in time.
         ~discord.ClientException
@@ -1001,7 +814,7 @@ class Connectable(Protocol):
             The opus library has not been loaded.
 
         Returns
-        --------
+        -------
         :class:`~discord.VoiceProtocol`
             A voice client that is fully connected to the voice server.
         """

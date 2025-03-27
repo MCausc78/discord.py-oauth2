@@ -735,7 +735,7 @@ class Guild(Hashable):
         ``None``.
 
         Returns
-        --------
+        -------
         List[Tuple[Optional[:class:`CategoryChannel`], List[:class:`abc.GuildChannel`]]]:
             The categories and their associated channels.
         """
@@ -773,12 +773,12 @@ class Guild(Hashable):
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         channel_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[Union[:class:`Thread`, :class:`.abc.GuildChannel`]]
             The returned channel or thread or ``None`` if not found.
         """
@@ -796,12 +796,12 @@ class Guild(Hashable):
             ``channel_id`` parameter is now positional-only.
 
         Parameters
-        -----------
+        ----------
         channel_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`.abc.GuildChannel`]
             The returned channel or ``None`` if not found.
         """
@@ -818,12 +818,12 @@ class Guild(Hashable):
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         thread_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`Thread`]
             The returned thread or ``None`` if not found.
         """
@@ -840,7 +840,7 @@ class Guild(Hashable):
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`Emoji`]
             The returned Emoji or ``None`` if not found.
         """
@@ -958,12 +958,12 @@ class Guild(Hashable):
             ``user_id`` parameter is now positional-only.
 
         Parameters
-        -----------
+        ----------
         user_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`Member`]
             The member or ``None`` if not found.
         """
@@ -991,12 +991,12 @@ class Guild(Hashable):
             ``role_id`` parameter is now positional-only.
 
         Parameters
-        -----------
+        ----------
         role_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`Role`]
             The role or ``None`` if not found.
         """
@@ -1047,12 +1047,12 @@ class Guild(Hashable):
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         stage_instance_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`StageInstance`]
             The stage instance or ``None`` if not found.
         """
@@ -1072,12 +1072,12 @@ class Guild(Hashable):
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         scheduled_event_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`ScheduledEvent`]
             The scheduled event or ``None`` if not found.
         """
@@ -1097,12 +1097,12 @@ class Guild(Hashable):
         .. versionadded:: 2.5
 
         Parameters
-        -----------
+        ----------
         sound_id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`SoundboardSound`]
             The soundboard sound or ``None`` if not found.
         """
@@ -1204,12 +1204,12 @@ class Guild(Hashable):
             Looking up users via discriminator due to Discord API change.
 
         Parameters
-        -----------
+        ----------
         name: :class:`str`
             The name of the member to lookup.
 
         Returns
-        --------
+        -------
         Optional[:class:`Member`]
             The member in this guild with the associated name. If not found
             then ``None`` is returned.
@@ -1251,14 +1251,14 @@ class Guild(Hashable):
             The guild must have the widget enabled to get this information.
 
         Raises
-        -------
+        ------
         Forbidden
             The widget for this guild is disabled.
         HTTPException
             Retrieving the widget failed.
 
         Returns
-        --------
+        -------
         :class:`Widget`
             The guild's widget.
         """

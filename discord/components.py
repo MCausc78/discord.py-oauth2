@@ -113,7 +113,7 @@ class ActionRow(Component):
     .. versionadded:: 2.0
 
     Attributes
-    ------------
+    ----------
     children: List[Union[:class:`Button`, :class:`SelectMenu`, :class:`TextInput`]]
         The children components that this holds, if any.
     """
@@ -156,7 +156,7 @@ class Button(Component):
     .. versionadded:: 2.0
 
     Attributes
-    -----------
+    ----------
     style: :class:`.ButtonStyle`
         The style of the button.
     custom_id: Optional[:class:`str`]
@@ -249,7 +249,7 @@ class SelectMenu(Component):
     .. versionadded:: 2.0
 
     Attributes
-    ------------
+    ----------
     type: :class:`ComponentType`
         The type of component.
     custom_id: Optional[:class:`str`]
@@ -325,7 +325,7 @@ class SelectOption:
     .. versionadded:: 2.0
 
     Parameters
-    -----------
+    ----------
     label: :class:`str`
         The label of the option. This is displayed to users.
         Can only be up to 100 characters.
@@ -342,7 +342,7 @@ class SelectOption:
         Whether this option is selected by default.
 
     Attributes
-    -----------
+    ----------
     label: :class:`str`
         The label of the option. This is displayed to users.
     value: :class:`str`
@@ -453,7 +453,7 @@ class TextInput(Component):
     .. versionadded:: 2.0
 
     Attributes
-    ------------
+    ----------
     custom_id: Optional[:class:`str`]
         The ID of the text input that gets received during an interaction.
     label: :class:`str`
@@ -540,7 +540,7 @@ class SelectDefaultValue:
     .. versionadded:: 2.4
 
     Parameters
-    -----------
+    ----------
     id: :class:`int`
         The id of a role, user, or channel.
     type: :class:`SelectDefaultValueType`
@@ -589,12 +589,12 @@ class SelectDefaultValue:
         """Creates a :class:`SelectDefaultValue` with the type set to :attr:`~SelectDefaultValueType.channel`.
 
         Parameters
-        -----------
+        ----------
         channel: :class:`~discord.abc.Snowflake`
             The channel to create the default value for.
 
         Returns
-        --------
+        -------
         :class:`SelectDefaultValue`
             The default value created with the channel.
         """
@@ -608,12 +608,12 @@ class SelectDefaultValue:
         """Creates a :class:`SelectDefaultValue` with the type set to :attr:`~SelectDefaultValueType.role`.
 
         Parameters
-        -----------
+        ----------
         role: :class:`~discord.abc.Snowflake`
             The role to create the default value for.
 
         Returns
-        --------
+        -------
         :class:`SelectDefaultValue`
             The default value created with the role.
         """
@@ -627,12 +627,12 @@ class SelectDefaultValue:
         """Creates a :class:`SelectDefaultValue` with the type set to :attr:`~SelectDefaultValueType.user`.
 
         Parameters
-        -----------
+        ----------
         user: :class:`~discord.abc.Snowflake`
             The user to create the default value for.
 
         Returns
-        --------
+        -------
         :class:`SelectDefaultValue`
             The default value created with the user.
         """

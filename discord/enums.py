@@ -223,6 +223,8 @@ class ChannelType(Enum):
     stage_voice = 13
     forum = 15
     media = 16
+    lobby = 17
+    ephemeral_dm = 18
 
     def __str__(self) -> str:
         return self.name

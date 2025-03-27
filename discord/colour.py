@@ -110,7 +110,7 @@ class Colour:
         versions should the Discord client's representation of that colour also change.
 
     Attributes
-    ------------
+    ----------
     value: :class:`int`
         The raw integer colour value.
     """
@@ -191,7 +191,7 @@ class Colour:
         .. versionadded:: 2.0
 
         Raises
-        -------
+        ------
         ValueError
             The string could not be converted into a colour.
         """
@@ -235,7 +235,7 @@ class Colour:
         .. versionadded:: 1.6
 
         Parameters
-        ------------
+        ----------
         seed: Optional[Union[:class:`int`, :class:`str`, :class:`float`, :class:`bytes`, :class:`bytearray`]]
             The seed to initialize the RNG with. If ``None`` is passed the default RNG is used.
 

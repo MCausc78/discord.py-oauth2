@@ -661,7 +661,7 @@ class Client:
 
 
         Parameters
-        -----------
+        ----------
         token: :class:`str`
             The authentication token. Do not prefix this token with
             anything as the library will do it for you.
@@ -698,7 +698,7 @@ class Client:
         is not resumed until the WebSocket connection is terminated.
 
         Parameters
-        -----------
+        ----------
         reconnect: :class:`bool`
             If we should attempt reconnecting, either due to internet
             failure or a specific failure on Discord's part. Certain
@@ -706,7 +706,7 @@ class Client:
             invalid intents or bad tokens).
 
         Raises
-        -------
+        ------
         GatewayNotFound
             If the gateway to connect to Discord is not found. Usually if this
             is thrown then there is a Discord API outage.
@@ -828,7 +828,7 @@ class Client:
         A shorthand coroutine for :meth:`login` + :meth:`connect`.
 
         Parameters
-        -----------
+        ----------
         token: :class:`str`
             The authentication token. Do not prefix this token with
             anything as the library will do it for you.
@@ -839,7 +839,7 @@ class Client:
             invalid intents or bad tokens).
 
         Raises
-        -------
+        ------
         TypeError
             An unexpected keyword argument was received.
         """
@@ -875,7 +875,7 @@ class Client:
             called after this function call will not execute until it returns.
 
         Parameters
-        -----------
+        ----------
         token: :class:`str`
             The authentication token. Do not prefix this token with
             anything as the library will do it for you.
@@ -1101,12 +1101,12 @@ class Client:
             ``id`` parameter is now positional-only.
 
         Parameters
-        -----------
+        ----------
         id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[Union[:class:`.abc.GuildChannel`, :class:`.Thread`, :class:`.abc.PrivateChannel`]]
             The returned channel or ``None`` if not found.
         """
@@ -1123,7 +1123,7 @@ class Client:
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         id: :class:`int`
             The channel ID to create a partial messageable for.
         guild_id: Optional[:class:`int`]
@@ -1136,7 +1136,7 @@ class Client:
             The underlying channel type for the partial messageable.
 
         Returns
-        --------
+        -------
         :class:`.PartialMessageable`
             The partial messageable
         """
@@ -1148,12 +1148,12 @@ class Client:
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`.StageInstance`]
             The stage instance or ``None`` if not found.
         """
@@ -1172,12 +1172,12 @@ class Client:
             ``id`` parameter is now positional-only.
 
         Parameters
-        -----------
+        ----------
         id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`.Guild`]
             The guild or ``None`` if not found.
         """
@@ -1191,12 +1191,12 @@ class Client:
             ``id`` parameter is now positional-only.
 
         Parameters
-        -----------
+        ----------
         id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`~discord.User`]
             The user or ``None`` if not found.
         """
@@ -1210,12 +1210,12 @@ class Client:
             ``id`` parameter is now positional-only.
 
         Parameters
-        -----------
+        ----------
         id: :class:`int`
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`.Emoji`]
             The custom emoji or ``None`` if not found.
         """
@@ -1232,7 +1232,7 @@ class Client:
             or :meth:`.fetch_premium_sticker_packs`.
 
         Returns
-        --------
+        -------
         Optional[:class:`.GuildSticker`]
             The sticker or ``None`` if not found.
         """
@@ -1249,7 +1249,7 @@ class Client:
             The ID to search for.
 
         Returns
-        --------
+        -------
         Optional[:class:`.SoundboardSound`]
             The soundboard sound or ``None`` if not found.
         """
@@ -2047,7 +2047,7 @@ class Client:
         This function returns the **first event that meets the requirements**.
 
         Examples
-        ---------
+        --------
 
         Waiting for a user reply: ::
 
@@ -2087,7 +2087,7 @@ class Client:
 
 
         Parameters
-        ------------
+        ----------
         event: :class:`str`
             The event name, similar to the :ref:`event reference <discord-api-events>`,
             but without the ``on_`` prefix, to wait for.
@@ -2099,12 +2099,12 @@ class Client:
             :exc:`asyncio.TimeoutError`.
 
         Raises
-        -------
+        ------
         asyncio.TimeoutError
             If a timeout is provided and it was reached.
 
         Returns
-        --------
+        -------
         Any
             Returns no arguments, a single argument, or a :class:`tuple` of multiple
             arguments that mirrors the parameters passed in the
@@ -2139,7 +2139,7 @@ class Client:
         The events must be a :ref:`coroutine <coroutine>`, if not, :exc:`TypeError` is raised.
 
         Example
-        ---------
+        -------
 
         .. code-block:: python3
 
@@ -2152,7 +2152,7 @@ class Client:
             ``coro`` parameter is now positional-only.
 
         Raises
-        --------
+        ------
         TypeError
             The coroutine passed is not actually a coroutine.
         """
@@ -2175,7 +2175,7 @@ class Client:
         Changes the client's presence.
 
         Example
-        ---------
+        -------
 
         .. code-block:: python3
 
@@ -2249,7 +2249,7 @@ class Client:
             This method is an API call. For general usage, consider :attr:`guilds` instead.
 
         Examples
-        ---------
+        --------
 
         Usage ::
 
@@ -2264,7 +2264,7 @@ class Client:
         All parameters are optional.
 
         Parameters
-        -----------
+        ----------
         limit: Optional[:class:`int`]
             The number of guilds to retrieve.
             If ``None``, it retrieves every guild you have access to. Note, however,
@@ -2296,7 +2296,7 @@ class Client:
             Getting the guilds failed.
 
         Yields
-        --------
+        ------
         :class:`.Guild`
             The guild with the guild data parsed.
         """
@@ -2364,19 +2364,19 @@ class Client:
         Gets a :class:`.Template` from a discord.new URL or code.
 
         Parameters
-        -----------
+        ----------
         code: Union[:class:`.Template`, :class:`str`]
             The Discord Template Code or URL (must be a discord.new URL).
 
         Raises
-        -------
+        ------
         NotFound
             The template is invalid.
         HTTPException
             Getting the template failed.
 
         Returns
-        --------
+        -------
         :class:`.Template`
             The template from the URL/code.
         """
@@ -2405,7 +2405,7 @@ class Client:
             :class:`.PartialInviteChannel` respectively.
 
         Parameters
-        -----------
+        ----------
         url: Union[:class:`.Invite`, :class:`str`]
             The Discord invite ID or URL (must be a discord.gg URL).
         with_counts: :class:`bool`
@@ -2428,7 +2428,7 @@ class Client:
             .. versionadded:: 2.0
 
         Raises
-        -------
+        ------
         ValueError
             The url contains an ``event_id``, but ``scheduled_event_id`` has also been provided.
         NotFound
@@ -2437,7 +2437,7 @@ class Client:
             Getting the invite failed.
 
         Returns
-        --------
+        -------
         :class:`.Invite`
             The invite from the URL/ID.
         """
@@ -2473,19 +2473,19 @@ class Client:
             ``guild_id`` parameter is now positional-only.
 
         Parameters
-        -----------
+        ----------
         guild_id: :class:`int`
             The ID of the guild.
 
         Raises
-        -------
+        ------
         Forbidden
             The widget for this guild is disabled.
         HTTPException
             Retrieving the widget failed.
 
         Returns
-        --------
+        -------
         :class:`.Widget`
             The guild's widget.
         """
@@ -2504,7 +2504,7 @@ class Client:
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         user: :class:`~discord.abc.Snowflake`
             The user to create a DM with.
 
