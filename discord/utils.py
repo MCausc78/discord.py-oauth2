@@ -26,6 +26,21 @@ from __future__ import annotations
 
 import array
 import asyncio
+from base64 import b64encode, b64decode
+from bisect import bisect_left
+import datetime
+import functools
+from inspect import isawaitable as _isawaitable, signature as _signature
+import json
+import logging
+from operator import attrgetter
+import os
+import re
+import sys
+import types
+import typing
+import warnings
+
 from textwrap import TextWrapper
 from typing import (
     Any,
@@ -56,24 +71,9 @@ from typing import (
     TYPE_CHECKING,
 )
 import unicodedata
-from base64 import b64encode, b64decode
-from bisect import bisect_left
-import datetime
-import functools
-from inspect import isawaitable as _isawaitable, signature as _signature
-from operator import attrgetter
 from urllib.parse import urlencode
-import json
-import re
-import os
-import sys
-import types
-import typing
-import warnings
-import logging
-import zlib
-
 import yarl
+import zlib
 
 try:
     import orjson  # type: ignore

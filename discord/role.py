@@ -23,14 +23,14 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
-from typing import Any, List, Optional, Union, TYPE_CHECKING
+from typing import Any, List, Optional, TYPE_CHECKING, Union
 
 from .asset import Asset
-from .permissions import Permissions
 from .colour import Colour
-from .mixins import Hashable
-from .utils import snowflake_time, _get_as_snowflake, MISSING
 from .flags import RoleFlags
+from .mixins import Hashable
+from .permissions import Permissions
+from .utils import snowflake_time, _get_as_snowflake, MISSING
 
 __all__ = (
     'RoleTags',
@@ -39,13 +39,14 @@ __all__ = (
 
 if TYPE_CHECKING:
     import datetime
+
+    from .guild import Guild
+    from .member import Member
+    from .state import ConnectionState
     from .types.role import (
         Role as RolePayload,
         RoleTags as RoleTagPayload,
     )
-    from .guild import Guild
-    from .member import Member
-    from .state import ConnectionState
 
 
 class RoleTags:

@@ -36,6 +36,7 @@ from typing import (
 
 if TYPE_CHECKING:
     import datetime
+
     from . import abc
 
     SupportsIntCast = Union[SupportsInt, str, bytes, bytearray]

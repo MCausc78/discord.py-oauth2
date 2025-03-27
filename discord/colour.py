@@ -27,7 +27,7 @@ import colorsys
 import random
 import re
 
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import Optional, TYPE_CHECKING, Tuple, Union
 
 if TYPE_CHECKING:
     from typing_extensions import Self

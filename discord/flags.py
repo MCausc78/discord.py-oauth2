@@ -27,7 +27,6 @@ from __future__ import annotations
 from functools import reduce
 from operator import or_
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
@@ -36,6 +35,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    TYPE_CHECKING,
     Tuple,
     Type,
     TypeVar,

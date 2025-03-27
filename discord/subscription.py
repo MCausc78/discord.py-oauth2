@@ -28,8 +28,8 @@ import datetime
 from typing import List, Optional, TYPE_CHECKING
 
 from . import utils
-from .mixins import Hashable
 from .enums import try_enum, SubscriptionStatus
+from .mixins import Hashable
 
 if TYPE_CHECKING:
     from .state import ConnectionState
@@ -86,9 +86,12 @@ class Subscription(Hashable):
     )
 
     def __init__(self, *, state: ConnectionState, data: SubscriptionPayload):
-        self._state = state
+        self._state: ConnectionState = state
 
         self.id: int = int(data['id'])
+        self._update(data)
+
+    def _update(self, data: SubscriptionPayload) -> None:
         self.user_id: int = int(data['user_id'])
         self.sku_ids: List[int] = list(map(int, data['sku_ids']))
         self.entitlement_ids: List[int] = list(map(int, data['entitlement_ids']))

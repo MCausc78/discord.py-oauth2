@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import Dict, Optional, TYPE_CHECKING, Union
 
 from .asset import Asset
 from .enums import EventStatus, EntityType, PrivacyLevel, try_enum
@@ -33,15 +33,14 @@ from .mixins import Hashable
 from .utils import parse_time, _get_as_snowflake
 
 if TYPE_CHECKING:
+    from .guild import Guild
+    from .channel import VoiceChannel, StageChannel
+    from .state import ConnectionState
     from .types.scheduled_event import (
         GuildScheduledEvent as BaseGuildScheduledEventPayload,
         GuildScheduledEventWithUserCount as GuildScheduledEventWithUserCountPayload,
         EntityMetadata,
     )
-
-    from .guild import Guild
-    from .channel import VoiceChannel, StageChannel
-    from .state import ConnectionState
     from .user import User
 
     GuildScheduledEventPayload = Union[BaseGuildScheduledEventPayload, GuildScheduledEventWithUserCountPayload]

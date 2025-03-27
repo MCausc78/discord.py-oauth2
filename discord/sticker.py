@@ -25,10 +25,10 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 from typing import Literal, TYPE_CHECKING, List, Optional, Tuple, Type, Union
 
-from .mixins import Hashable
 from .asset import Asset, AssetMixin
-from .utils import cached_slot_property, snowflake_time, get, _get_as_snowflake
 from .enums import StickerType, StickerFormatType, try_enum
+from .mixins import Hashable
+from .utils import cached_slot_property, snowflake_time, get, _get_as_snowflake
 
 __all__ = (
     'StickerPack',
@@ -40,9 +40,9 @@ __all__ = (
 
 if TYPE_CHECKING:
     import datetime
-    from .state import ConnectionState
-    from .user import User
+
     from .guild import Guild
+    from .state import ConnectionState
     from .types.sticker import (
         StickerPack as StickerPackPayload,
         StickerItem as StickerItemPayload,
@@ -50,6 +50,7 @@ if TYPE_CHECKING:
         StandardSticker as StandardStickerPayload,
         GuildSticker as GuildStickerPayload,
     )
+    from .user import User
 
 
 class StickerPack(Hashable):
@@ -78,7 +79,7 @@ class StickerPack(Hashable):
     description: :class:`str`
         The description of the sticker pack.
     id: :class:`int`
-        The id of the sticker pack.
+        The ID of the sticker pack.
     stickers: List[:class:`StandardSticker`]
         The stickers of this sticker pack.
     sku_id: :class:`int`
@@ -186,7 +187,7 @@ class StickerItem(_StickerTag):
     name: :class:`str`
         The sticker's name.
     id: :class:`int`
-        The id of the sticker.
+        The ID of the sticker.
     format: :class:`StickerFormatType`
         The format for the sticker's image.
     url: :class:`str`

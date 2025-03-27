@@ -25,13 +25,13 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 
-from typing import Optional, List, TYPE_CHECKING, Union, Dict
+from typing import Dict, List, Optional, TYPE_CHECKING, Union
 
 import datetime
 
-from .enums import PollLayoutType, try_enum, MessageType
 from . import utils
 from .emoji import PartialEmoji, Emoji
+from .enums import PollLayoutType, try_enum, MessageType
 from .errors import ClientException
 
 if TYPE_CHECKING:
@@ -39,7 +39,6 @@ if TYPE_CHECKING:
 
     from .message import Message
     from .state import ConnectionState
-
     from .types.poll import (
         PollCreate as PollCreatePayload,
         PollMedia as PollMediaPayload,

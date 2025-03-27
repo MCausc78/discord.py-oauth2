@@ -27,25 +27,26 @@ import datetime
 
 from typing import TYPE_CHECKING, Any, Dict, Optional, List, Set, Union, overload, Literal
 
+from . import utils
 from .enums import AutoModRuleTriggerType, AutoModRuleActionType, AutoModRuleEventType, try_enum
 from .flags import AutoModPresets
-from . import utils
 from .utils import cached_slot_property
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
     from .abc import Snowflake, GuildChannel
-    from .threads import Thread
     from .guild import Guild
     from .member import Member
+    from .role import Role
     from .state import ConnectionState
+    from .threads import Thread
     from .types.automod import (
         AutoModerationRule as AutoModerationRulePayload,
         AutoModerationTriggerMetadata as AutoModerationTriggerMetadataPayload,
         AutoModerationAction as AutoModerationActionPayload,
         AutoModerationActionExecution as AutoModerationActionExecutionPayload,
     )
-    from .role import Role
 
 __all__ = (
     'AutoModRuleAction',

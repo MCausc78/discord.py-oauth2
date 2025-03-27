@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Literal, Optional, Set, List, Union
+from typing import List, Literal, Optional, Set, TYPE_CHECKING, Union
 
 from .colour import Colour
 from .enums import ChannelType, try_enum, ReactionType

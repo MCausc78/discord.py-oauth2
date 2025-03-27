@@ -24,14 +24,15 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Optional, Union, TYPE_CHECKING
-from .asset import Asset
-from .utils import parse_time, snowflake_time, _get_as_snowflake
-from .object import Object
-from .mixins import Hashable
-from .enums import ChannelType, NSFWLevel, VerificationLevel, InviteTarget, InviteType, try_enum
+from typing import List, Optional, TYPE_CHECKING, Union
+
 from .appinfo import PartialAppInfo
+from .asset import Asset
+from .enums import ChannelType, NSFWLevel, VerificationLevel, InviteTarget, InviteType, try_enum
+from .mixins import Hashable
+from .object import Object
 from .scheduled_event import ScheduledEvent
+from .utils import parse_time, snowflake_time, _get_as_snowflake
 
 __all__ = (
     'PartialInviteChannel',
@@ -40,27 +41,25 @@ __all__ = (
 )
 
 if TYPE_CHECKING:
+    import datetime
     from typing_extensions import Self
 
+    from .abc import Snowflake, GuildChannel
+    from .guild import Guild
+    from .state import ConnectionState
+    from .types.guild import GuildFeature
+    from .types.channel import (
+        PartialChannel as InviteChannelPayload,
+    )
     from .types.invite import (
         Invite as InvitePayload,
         InviteGuild as InviteGuildPayload,
         GatewayInvite as GatewayInvitePayload,
     )
-    from .types.guild import GuildFeature
-    from .types.channel import (
-        PartialChannel as InviteChannelPayload,
-    )
-    from .state import ConnectionState
-    from .guild import Guild
-    from .abc import GuildChannel
     from .user import User
-    from .abc import Snowflake
 
     InviteGuildType = Union[Guild, 'PartialInviteGuild', Object]
     InviteChannelType = Union[GuildChannel, 'PartialInviteChannel', Object]
-
-    import datetime
 
 
 class PartialInviteChannel:

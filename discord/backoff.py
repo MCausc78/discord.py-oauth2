@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import time
 import random
-from typing import Callable, Generic, Literal, TypeVar, overload, Union
+from typing import Callable, Generic, Literal, TypeVar, Union, overload
 
 T = TypeVar('T', bool, Literal[True], Literal[False])
 

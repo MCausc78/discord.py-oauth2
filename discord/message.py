@@ -26,49 +26,63 @@ from __future__ import annotations
 
 import asyncio
 import datetime
-import re
 import io
 from os import PathLike
+import re
 from typing import (
-    Dict,
-    TYPE_CHECKING,
-    Literal,
-    Sequence,
-    Union,
-    List,
-    Optional,
     Any,
     Callable,
-    Tuple,
     ClassVar,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    TYPE_CHECKING,
+    Tuple,
     Type,
+    Union,
     overload,
 )
 
 from . import utils
 from .asset import Asset
-from .reaction import Reaction
-from .emoji import Emoji
-from .partial_emoji import PartialEmoji
-from .enums import InteractionType, MessageReferenceType, MessageType, ChannelType, try_enum
-from .errors import HTTPException
+from .channel import PartialMessageable
 from .components import _component_factory
 from .embeds import Embed
-from .member import Member
-from .flags import MessageFlags, AttachmentFlags
+from .emoji import Emoji
+from .enums import InteractionType, MessageReferenceType, MessageType, ChannelType, try_enum
+from .errors import HTTPException
 from .file import File
-from .utils import escape_mentions, MISSING, deprecated
-from .http import handle_message_parameters
+from .flags import MessageFlags, AttachmentFlags
 from .guild import Guild
+from .http import handle_message_parameters
+from .member import Member
 from .mixins import Hashable
+from .partial_emoji import PartialEmoji
+from .poll import Poll
+from .reaction import Reaction
 from .sticker import StickerItem
 from .threads import Thread
-from .channel import PartialMessageable
-from .poll import Poll
+from .utils import escape_mentions, MISSING, deprecated
+
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .abc import GuildChannel, MessageableChannel
+    from .components import ActionRow, ActionRowChildComponentType
+    from .mentions import AllowedMentions
+    from .state import ConnectionState
+    from .role import Role
+    from .types.components import Component as ComponentPayload
+    from .types.embed import Embed as EmbedPayload
+    from .types.gateway import MessageReactionRemoveEvent, MessageUpdateEvent
+    from .types.interactions import MessageInteraction as MessageInteractionPayload
+    from .types.member import (
+        Member as MemberPayload,
+        UserWithMember as UserWithMemberPayload,
+    )
     from .types.message import (
         Message as MessagePayload,
         Attachment as AttachmentPayload,
@@ -82,23 +96,8 @@ if TYPE_CHECKING:
         PurchaseNotificationResponse as PurchaseNotificationResponsePayload,
         GuildProductPurchase as GuildProductPurchasePayload,
     )
-
-    from .types.interactions import MessageInteraction as MessageInteractionPayload
-
-    from .types.components import Component as ComponentPayload
-    from .types.member import (
-        Member as MemberPayload,
-        UserWithMember as UserWithMemberPayload,
-    )
     from .types.user import User as UserPayload
-    from .types.embed import Embed as EmbedPayload
-    from .types.gateway import MessageReactionRemoveEvent, MessageUpdateEvent
-    from .abc import GuildChannel, MessageableChannel
-    from .components import ActionRow, ActionRowChildComponentType
-    from .state import ConnectionState
-    from .mentions import AllowedMentions
     from .user import User
-    from .role import Role
 
     EmojiInputType = Union[Emoji, PartialEmoji, str]
     MessageComponentType = Union[ActionRow, ActionRowChildComponentType]

@@ -25,15 +25,14 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from . import utils
-from .user import BaseUser
 from .asset import Asset
 from .enums import TeamMemberRole, TeamMembershipState, try_enum
+from .user import BaseUser
 
 from typing import TYPE_CHECKING, Optional, List
 
 if TYPE_CHECKING:
     from .state import ConnectionState
-
     from .types.team import (
         Team as TeamPayload,
         TeamMember as TeamMemberPayload,

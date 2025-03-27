@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Generator, Optional, Type, TypeVar
+from typing import Generator, Optional, TYPE_CHECKING, Type, TypeVar
 
 if TYPE_CHECKING:
     from .abc import Messageable, MessageableChannel

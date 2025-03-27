@@ -32,8 +32,8 @@ from typing import (
     Literal,
     NamedTuple,
     Optional,
-    TYPE_CHECKING,
     Sequence,
+    TYPE_CHECKING,
     Tuple,
     TypeVar,
     Union,
@@ -105,8 +105,8 @@ if TYPE_CHECKING:
         ForumTag as ForumTagPayload,
         VoiceChannelEffect as VoiceChannelEffectPayload,
     )
-    from .types.threads import ThreadArchiveDuration
     from .types.soundboard import BaseSoundboardSound as BaseSoundboardSoundPayload
+    from .types.threads import ThreadArchiveDuration
     from .user import ClientUser, User, BaseUser
 
     OverwriteKeyT = TypeVar('OverwriteKeyT', Role, BaseUser, Object, Union[Role, Member, Object])

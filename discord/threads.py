@@ -24,15 +24,15 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Dict, List, Literal, Optional, Union, TYPE_CHECKING
-from datetime import datetime
 import array
+from datetime import datetime
+from typing import Dict, List, Literal, Optional, TYPE_CHECKING, Union
 
-from .mixins import Hashable
 from .abc import Messageable, GuildChannel
-from .enums import ChannelType, try_enum
 from .errors import ClientException
+from .enums import ChannelType, try_enum
 from .flags import ChannelFlags
+from .mixins import Hashable
 from .permissions import Permissions
 from .utils import parse_time, _get_as_snowflake
 
@@ -44,17 +44,17 @@ __all__ = (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .channel import TextChannel, CategoryChannel, ForumChannel, ForumTag
+    from .guild import Guild
+    from .member import Member
+    from .message import Message, PartialMessage
+    from .role import Role
+    from .state import ConnectionState
     from .types.threads import (
         Thread as ThreadPayload,
         ThreadMember as ThreadMemberPayload,
         ThreadMetadata,
     )
-    from .guild import Guild
-    from .channel import TextChannel, CategoryChannel, ForumChannel, ForumTag
-    from .member import Member
-    from .message import Message, PartialMessage
-    from .role import Role
-    from .state import ConnectionState
 
     ThreadChannelType = Literal[ChannelType.news_thread, ChannelType.public_thread, ChannelType.private_thread]
 

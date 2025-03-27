@@ -28,8 +28,8 @@ import datetime
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, overload
 
 from .asset import Asset
-from .enums import try_enum, ActivityType, ClientType, OperatingSystem, Status
 from .colour import Colour
+from .enums import try_enum, ActivityType, ClientType, OperatingSystem, Status
 from .partial_emoji import PartialEmoji
 from .utils import _get_as_snowflake, parse_time
 

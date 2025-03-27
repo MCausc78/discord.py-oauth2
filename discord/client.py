@@ -48,32 +48,34 @@ from typing import (
 
 import aiohttp
 
-from .sku import Entitlement
-from .user import _UserTag, User, ClientUser
-from .invite import Invite
-from .template import Template
-from .widget import Widget
-from .guild import Guild
-from .emoji import Emoji
+from . import utils
+
+from .activity import BaseActivity, Spotify, ActivityTypes, create_activity
+from .appinfo import AppInfo
+from .backoff import ExponentialBackoff
 from .channel import PartialMessageable
+from .emoji import Emoji
 from .enums import ChannelType, Status, RelationshipType, ClientType
-from .mentions import AllowedMentions
 from .errors import *
 from .flags import ApplicationFlags, Intents
 from .gateway import *
-from .activity import BaseActivity, Spotify, ActivityTypes, create_activity
-from .voice_client import VoiceClient
+from .guild import Guild
 from .http import HTTPClient
-from .state import ConnectionState
-from . import utils
-from .utils import MISSING, time_snowflake
+from .invite import Invite
+from .mentions import AllowedMentions
 from .object import Object
-from .backoff import ExponentialBackoff
-from .appinfo import AppInfo
-from .stage_instance import StageInstance
-from .threads import Thread
-from .sticker import GuildSticker
+from .sku import Entitlement
 from .soundboard import SoundboardSound
+from .stage_instance import StageInstance
+from .state import ConnectionState
+from .sticker import GuildSticker
+from .threads import Thread
+from .template import Template
+from .user import _UserTag, User, ClientUser
+from .utils import MISSING, time_snowflake
+from .voice_client import VoiceClient
+from .widget import Widget
+
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -111,10 +113,10 @@ if TYPE_CHECKING:
     from .scheduled_event import ScheduledEvent
     from .threads import ThreadMember
     from .types.guild import Guild as GuildPayload
-    from .voice_client import VoiceProtocol
     from .poll import PollAnswer
-    from .subscription import Subscription
     from .settings import UserSettings
+    from .subscription import Subscription
+    from .voice_client import VoiceProtocol
 
 
 # fmt: off

@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 from collections import deque, OrderedDict
 from copy import copy
+import inspect
 import logging
 from typing import (
     Dict,
@@ -44,60 +45,59 @@ from typing import (
     Deque,
 )
 import weakref
-import inspect
 
-from .guild import Guild
+from . import utils
+from ._types import ClientT
 from .activity import BaseActivity, Session, create_activity
-from .sku import Entitlement
-from .user import User, ClientUser
-from .emoji import Emoji
-from .mentions import AllowedMentions
-from .partial_emoji import PartialEmoji
-from .message import Message
+from .automod import AutoModRule, AutoModAction
 from .channel import *
 from .channel import _private_channel_factory, _channel_factory
-from .raw_models import *
-from .presences import RawPresenceUpdateEvent
-from .member import Member
-from .role import Role
+from .emoji import Emoji
 from .enums import ChannelType, try_enum, Status
-from . import utils
 from .flags import ApplicationFlags, Intents, MemberCacheFlags
-from .invite import Invite
-from .integrations import _integration_factory
-from .scheduled_event import ScheduledEvent
-from .stage_instance import StageInstance
-from .threads import Thread, ThreadMember
-from .sticker import GuildSticker
-from .automod import AutoModRule, AutoModAction
-from ._types import ClientT
-from .soundboard import SoundboardSound
-from .lobby import LobbyMember, Lobby
-from .presences import ClientStatus
-from .relationship import Relationship
 from .game_relationship import GameRelationship
+from .guild import Guild
+from .integrations import _integration_factory
+from .invite import Invite
+from .lobby import LobbyMember, Lobby
+from .member import Member
+from .mentions import AllowedMentions
+from .message import Message
 from .object import Object
+from .partial_emoji import PartialEmoji
+from .presences import ClientStatus, RawPresenceUpdateEvent
+from .raw_models import *
+from .relationship import Relationship
+from .role import Role
+from .scheduled_event import ScheduledEvent
 from .settings import UserSettings
+from .sku import Entitlement
+from .soundboard import SoundboardSound
+from .stage_instance import StageInstance
+from .sticker import GuildSticker
+from .subscription import Subscription
+from .threads import Thread, ThreadMember
+from .user import User, ClientUser
 
 if TYPE_CHECKING:
     from .abc import PrivateChannel
-    from .message import MessageableChannel
+    from .gateway import DiscordWebSocket
     from .guild import GuildChannel
     from .http import HTTPClient
-    from .voice_client import VoiceProtocol
-    from .gateway import DiscordWebSocket
+    from .message import MessageableChannel
     from .poll import Poll
+    from .voice_client import VoiceProtocol
 
-    from .types.automod import AutoModerationRule, AutoModerationActionExecution
+    from .types import gateway as gw
     from .types.activity import Activity as ActivityPayload
+    from .types.automod import AutoModerationRule, AutoModerationActionExecution
     from .types.channel import DMChannel as DMChannelPayload
-    from .types.user import User as UserPayload, PartialUser as PartialUserPayload
+    from .types.command import GuildApplicationCommandPermissions as GuildApplicationCommandPermissionsPayload
     from .types.emoji import Emoji as EmojiPayload, PartialEmoji as PartialEmojiPayload
-    from .types.sticker import GuildSticker as GuildStickerPayload
     from .types.guild import Guild as GuildPayload
     from .types.message import Message as MessagePayload, PartialMessage as PartialMessagePayload
-    from .types import gateway as gw
-    from .types.command import GuildApplicationCommandPermissions as GuildApplicationCommandPermissionsPayload
+    from .types.sticker import GuildSticker as GuildStickerPayload
+    from .types.user import User as UserPayload, PartialUser as PartialUserPayload
 
     T = TypeVar('T')
     Channel = Union[GuildChannel, PrivateChannel, PartialMessageable]
@@ -231,6 +231,7 @@ class ConnectionState(Generic[ClientT]):
         self._game_relationships: Dict[int, GameRelationship] = {}
         self._relationships: Dict[int, Relationship] = {}
         self._sessions: Dict[str, Session] = {}
+        self._subscriptions: Dict[int, Subscription] = {}
 
         self.analytics_token: Optional[str] = None
         self.av_sf_protocol_floor: int = -1
@@ -1920,6 +1921,37 @@ class ConnectionState(Generic[ClientT]):
         self.settings._update(data)
         self.dispatch('settings_update', old, self.settings)
         self.dispatch('internal_settings_update', old, self.settings)
+
+    def parse_subscription_create(self, data: gw.SubscriptionCreateEvent) -> None:
+        subscription = Subscription(data=data, state=self)
+        self._subscriptions[subscription.id] = subscription
+        self.dispatch('subscription_create', subscription)
+
+    def parse_subscription_update(self, data: gw.SubscriptionUpdateEvent) -> None:
+        subscription_id = int(data['id'])
+
+        try:
+            new = self._subscriptions[subscription_id]
+        except KeyError:
+            old = None
+            new = Subscription(data=data, state=self)
+        else:
+            old = copy(new)
+            new._update(data)
+
+        self.dispatch('subscription_update', old, new)
+
+    def parse_subscription_delete(self, data: gw.SubscriptionDeleteEvent) -> None:
+        subscription_id = int(data['id'])
+
+        try:
+            subscription = self._subscriptions.pop(subscription_id)
+        except KeyError:
+            subscription = Subscription(data=data, state=self)
+        else:
+            subscription._update(data)
+
+        self.dispatch('subscription_delete', subscription)
 
     def _get_reaction_user(self, channel: MessageableChannel, user_id: int) -> Optional[Union[User, Member]]:
         if isinstance(channel, (TextChannel, Thread, VoiceChannel)):

@@ -59,6 +59,8 @@ from .utils import MISSING
 _log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from typing_extensions import Self
 
     from .embeds import Embed
@@ -81,8 +83,6 @@ if TYPE_CHECKING:
     )
     from .types.gateway import SessionStartLimit
     from .types.snowflake import Snowflake, SnowflakeList
-
-    from types import TracebackType
 
     T = TypeVar('T')
     BE = TypeVar('BE', bound=BaseException)

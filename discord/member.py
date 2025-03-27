@@ -34,12 +34,12 @@ import discord.abc
 
 from . import utils
 from .asset import Asset
-from .user import BaseUser, ClientUser, User, _UserTag
-from .permissions import Permissions
-from .enums import Status
 from .colour import Colour
+from .enums import Status
 from .flags import MemberFlags
+from .permissions import Permissions
 from .presences import ClientStatus
+from .user import BaseUser, ClientUser, User, _UserTag
 
 __all__ = (
     'VoiceState',
@@ -51,21 +51,21 @@ T = TypeVar('T', bound=type)
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .activity import ActivityTypes
     from .channel import DMChannel, VoiceChannel, StageChannel
     from .flags import PublicUserFlags
     from .guild import Guild
-    from .activity import ActivityTypes
+    from .message import Message
     from .presences import RawPresenceUpdateEvent
+    from .role import Role
+    from .state import ConnectionState
+    from .types.gateway import GuildMemberUpdateEvent
     from .types.member import (
         MemberWithUser as MemberWithUserPayload,
         Member as MemberPayload,
         UserWithMember as UserWithMemberPayload,
     )
-    from .types.gateway import GuildMemberUpdateEvent
     from .types.user import User as UserPayload, AvatarDecorationData
-    from .state import ConnectionState
-    from .message import Message
-    from .role import Role
     from .types.voice import (
         GuildVoiceState as GuildVoiceStatePayload,
         VoiceState as VoiceStatePayload,

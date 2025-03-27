@@ -27,6 +27,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
 
 import discord.abc
+
 from .asset import Asset
 from .colour import Colour
 from .enums import DefaultAvatar

@@ -27,8 +27,9 @@ from __future__ import annotations
 import io
 import os
 from typing import Any, Literal, Optional, TYPE_CHECKING, Tuple, Union
-from .errors import DiscordException
+
 from . import utils
+from .errors import DiscordException
 from .file import File
 
 import yarl

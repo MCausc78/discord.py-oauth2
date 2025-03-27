@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Tuple, TypedDict, Any, TYPE_CHECKING, Callable, TypeVar, Literal, Optional, overload
+from typing import Any, Callable, List, Literal, Optional, TYPE_CHECKING, Tuple, TypeVar, TypedDict, overload
 
 import array
 import ctypes

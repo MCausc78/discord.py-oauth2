@@ -26,9 +26,10 @@ from __future__ import annotations
 
 import datetime
 from typing import Optional, TYPE_CHECKING, Type, Tuple
-from .utils import _get_as_snowflake, parse_time
-from .user import User
+
 from .enums import try_enum, ExpireBehaviour
+from .user import User
+from .utils import _get_as_snowflake, parse_time
 
 __all__ = (
     'IntegrationAccount',

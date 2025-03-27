@@ -27,8 +27,8 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, TYPE_CHECKING, Union
 import re
 
-from .asset import Asset, AssetMixin
 from . import utils
+from .asset import Asset, AssetMixin
 
 # fmt: off
 __all__ = (
@@ -37,12 +37,12 @@ __all__ = (
 # fmt: on
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from typing_extensions import Self
 
     from .state import ConnectionState
-    from datetime import datetime
-    from .types.emoji import Emoji as EmojiPayload, PartialEmoji as PartialEmojiPayload
     from .types.activity import ActivityEmoji
+    from .types.emoji import Emoji as EmojiPayload, PartialEmoji as PartialEmojiPayload
 
 
 class _EmojiTag:

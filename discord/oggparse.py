@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import struct
 
-from typing import TYPE_CHECKING, ClassVar, IO, Generator, Tuple, Optional
+from typing import ClassVar, Generator, IO, Optional, TYPE_CHECKING, Tuple
 
 from .errors import DiscordException
 

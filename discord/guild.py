@@ -32,20 +32,19 @@ from typing import (
     Dict,
     List,
     NamedTuple,
+    Optional,
     Sequence,
     Set,
-    Optional,
     TYPE_CHECKING,
     Tuple,
     Union,
 )
 
 from . import utils
-from .role import Role
-from .member import Member, VoiceState
-from .emoji import Emoji
+from .asset import Asset
 from .channel import *
 from .channel import _guild_channel_factory
+from .emoji import Emoji
 from .enums import (
     try_enum,
     VerificationLevel,
@@ -55,19 +54,21 @@ from .enums import (
     MFALevel,
     Locale,
 )
-from .mixins import Hashable
-from .user import User
-from .invite import Invite
-from .widget import Widget
-from .asset import Asset
 from .flags import SystemChannelFlags
-from .scheduled_event import ScheduledEvent
-from .stage_instance import StageInstance
-from .threads import Thread
-from .sticker import GuildSticker
+from .invite import Invite
+from .role import Role
+from .member import Member, VoiceState
+from .mixins import Hashable
 from .object import Object
-from .soundboard import SoundboardSound
 from .presences import RawPresenceUpdateEvent
+from .scheduled_event import ScheduledEvent
+from .soundboard import SoundboardSound
+from .stage_instance import StageInstance
+from .sticker import GuildSticker
+from .threads import Thread
+from .user import User
+from .widget import Widget
+
 
 __all__ = (
     'Guild',
@@ -79,6 +80,7 @@ MISSING = utils.MISSING
 
 if TYPE_CHECKING:
     from .abc import Snowflake
+    from .channel import VoiceChannel, StageChannel, TextChannel, ForumChannel, CategoryChannel
     from .types.guild import (
         Guild as GuildPayload,
         GuildPreview as GuildPreviewPayload,
@@ -89,7 +91,6 @@ if TYPE_CHECKING:
         Thread as ThreadPayload,
     )
     from .types.voice import GuildVoiceState
-    from .channel import VoiceChannel, StageChannel, TextChannel, ForumChannel, CategoryChannel
     from .state import ConnectionState
     from .voice_client import VoiceProtocol
 

@@ -25,8 +25,9 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from typing import Any, Optional, TYPE_CHECKING, List
-from .utils import parse_time
+
 from .guild import Guild
+from .utils import parse_time
 
 # fmt: off
 __all__ = (
@@ -36,8 +37,9 @@ __all__ = (
 
 if TYPE_CHECKING:
     import datetime
-    from .types.template import Template as TemplatePayload
+
     from .state import ConnectionState
+    from .types.template import Template as TemplatePayload
     from .user import User
 
 

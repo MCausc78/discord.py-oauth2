@@ -27,21 +27,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from . import utils
+from .asset import Asset, AssetMixin
 from .mixins import Hashable
 from .partial_emoji import PartialEmoji
 from .user import User
-from .asset import Asset, AssetMixin
 
 if TYPE_CHECKING:
     import datetime
 
+    from .guild import Guild
+    from .state import ConnectionState
     from .types.soundboard import (
         BaseSoundboardSound as BaseSoundboardSoundPayload,
         SoundboardDefaultSound as SoundboardDefaultSoundPayload,
         SoundboardSound as SoundboardSoundPayload,
     )
-    from .state import ConnectionState
-    from .guild import Guild
 
 
 __all__ = ('BaseSoundboardSound', 'SoundboardDefaultSound', 'SoundboardSound')

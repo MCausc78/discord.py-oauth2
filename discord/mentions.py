@@ -23,7 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
-from typing import Union, Sequence, TYPE_CHECKING, Any
+from typing import Any, Sequence, TYPE_CHECKING, Union
 
 # fmt: off
 __all__ = (
@@ -34,8 +34,8 @@ __all__ = (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from .types.message import AllowedMentions as AllowedMentionsPayload
     from .abc import Snowflake
+    from .types.message import AllowedMentions as AllowedMentionsPayload
 
 
 class _FakeBool:
