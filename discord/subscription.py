@@ -54,6 +54,8 @@ class Subscription(Hashable):
         The IDs of the SKUs that the user subscribed to.
     entitlement_ids: List[:class:`int`]
         The IDs of the entitlements granted for this subscription.
+    renewal_sku_ids: List[:class:`int`]
+        The IDs of the SKUs that the user is going to be subscribed to when renewing.
     current_period_start: :class:`datetime.datetime`
         When the current billing period started.
     current_period_end: :class:`datetime.datetime`
@@ -63,8 +65,10 @@ class Subscription(Hashable):
     canceled_at: Optional[:class:`datetime.datetime`]
         When the subscription was canceled.
         This is only available for subscriptions with a :attr:`status` of :attr:`SubscriptionStatus.inactive`.
-    renewal_sku_ids: List[:class:`int`]
-        The IDs of the SKUs that the user is going to be subscribed to when renewing.
+    country: Optional[:class:`str`]
+        The ISO3166-1 alpha-2 country code of the payment source used to purchase the subscription.
+
+        Only present if :attr:`Client.scopes` contains ``payment_sources.country_code`` OAuth2 scope.
     """
 
     __slots__ = (
@@ -73,11 +77,12 @@ class Subscription(Hashable):
         'user_id',
         'sku_ids',
         'entitlement_ids',
+        'renewal_sku_ids',
         'current_period_start',
         'current_period_end',
         'status',
         'canceled_at',
-        'renewal_sku_ids',
+        'country',
     )
 
     def __init__(self, *, state: ConnectionState, data: SubscriptionPayload):
@@ -87,11 +92,12 @@ class Subscription(Hashable):
         self.user_id: int = int(data['user_id'])
         self.sku_ids: List[int] = list(map(int, data['sku_ids']))
         self.entitlement_ids: List[int] = list(map(int, data['entitlement_ids']))
+        self.renewal_sku_ids: List[int] = list(map(int, data['renewal_sku_ids'] or []))
         self.current_period_start: datetime.datetime = utils.parse_time(data['current_period_start'])
         self.current_period_end: datetime.datetime = utils.parse_time(data['current_period_end'])
         self.status: SubscriptionStatus = try_enum(SubscriptionStatus, data['status'])
         self.canceled_at: Optional[datetime.datetime] = utils.parse_time(data['canceled_at'])
-        self.renewal_sku_ids: List[int] = list(map(int, data['renewal_sku_ids'] or []))
+        self.country: Optional[str] = data.get('country')
 
     def __repr__(self) -> str:
         return f'<Subscription id={self.id} user_id={self.user_id} status={self.status!r}>'

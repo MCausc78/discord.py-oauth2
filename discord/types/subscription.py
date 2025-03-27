@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from typing import List, Literal, Optional, TypedDict
+from typing_extensions import NotRequired
 
 from .snowflake import Snowflake
 
@@ -36,8 +37,9 @@ class Subscription(TypedDict):
     user_id: Snowflake
     sku_ids: List[Snowflake]
     entitlement_ids: List[Snowflake]
+    renewal_sku_ids: Optional[List[Snowflake]]
     current_period_start: str
     current_period_end: str
     status: SubscriptionStatus
     canceled_at: Optional[str]
-    renewal_sku_ids: Optional[List[Snowflake]]
+    country: NotRequired[str]
