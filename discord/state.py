@@ -876,25 +876,41 @@ class ConnectionState(Generic[ClientT]):
         self.dispatch('invite_delete', invite)
 
     def parse_channel_delete(self, data: gw.ChannelDeleteEvent) -> None:
-        guild = self._get_guild(utils._get_as_snowflake(data, 'guild_id'))
         channel_id = int(data['id'])
-        if guild is not None:
-            channel = guild.get_channel(channel_id)
-            if channel is not None:
-                guild._remove_channel(channel)
-                self.dispatch('guild_channel_delete', channel)
+        guild_id = utils._get_as_snowflake(data, 'guild_id')
 
-                if channel.type in (ChannelType.voice, ChannelType.stage_voice):
-                    for s in guild.scheduled_events:
-                        if s.channel_id == channel.id:
-                            guild._scheduled_events.pop(s.id)
-                            self.dispatch('scheduled_event_delete', s)
+        if guild_id is None:
+            try:
+                channel = self._private_channels.pop(channel_id)
+            except KeyError:
+                _log.debug('CHANNEL_DELETE referencing an unknown channel ID: %s. Discarding.', channel_id)
+            else:
+                if isinstance(channel, DMChannel) and channel.recipient is not None:
+                    self._private_channels_by_user.pop(channel.recipient.id, None)
+                self.dispatch('private_channel_delete', channel)
+            return
 
-                threads = guild._remove_threads_by_channel(channel_id)
+        guild = self._get_guild(guild_id)
+        if guild is None:
+            _log.debug('CHANNEL_DELETE referencing an unknown guild ID: %s. Discarding.', guild_id)
+            return
 
-                for thread in threads:
-                    self.dispatch('thread_delete', thread)
-                    self.dispatch('raw_thread_delete', RawThreadDeleteEvent._from_thread(thread))
+        channel = guild.get_channel(channel_id)
+        if channel is not None:
+            guild._remove_channel(channel)
+            self.dispatch('guild_channel_delete', channel)
+
+            if channel.type in (ChannelType.voice, ChannelType.stage_voice):
+                for s in guild.scheduled_events:
+                    if s.channel_id == channel.id:
+                        guild._scheduled_events.pop(s.id)
+                        self.dispatch('scheduled_event_delete', s)
+
+            threads = guild._remove_threads_by_channel(channel_id)
+
+            for thread in threads:
+                self.dispatch('thread_delete', thread)
+                self.dispatch('raw_thread_delete', RawThreadDeleteEvent._from_thread(thread))
 
     def parse_channel_update(self, data: gw.ChannelUpdateEvent) -> None:
         channel_type = try_enum(ChannelType, data.get('type'))
@@ -946,15 +962,21 @@ class ConnectionState(Generic[ClientT]):
             return
 
         guild_id = utils._get_as_snowflake(data, 'guild_id')
+        if guild_id is None:
+            channel = factory(me=self.user, state=self, data=data)  # type: ignore
+            self._add_private_channel(channel)  # type: ignore
+            self.dispatch('private_channel_create', channel)
+            return
+
         guild = self._get_guild(guild_id)
-        if guild is not None:
-            # the factory can't be a DMChannel or GroupChannel here
-            channel = factory(guild=guild, state=self, data=data)  # type: ignore
-            guild._add_channel(channel)  # type: ignore
-            self.dispatch('guild_channel_create', channel)
-        else:
+        if guild is None:
             _log.debug('CHANNEL_CREATE referencing an unknown guild ID: %s. Discarding.', guild_id)
             return
+
+        # The factory can't be a DMChannel or GroupChannel here
+        channel = factory(guild=guild, state=self, data=data)  # type: ignore
+        guild._add_channel(channel)  # type: ignore
+        self.dispatch('guild_channel_create', channel)
 
     def parse_channel_pins_update(self, data: gw.ChannelPinsUpdateEvent) -> None:
         channel_id = int(data['channel_id'])
@@ -1867,6 +1889,7 @@ class ConnectionState(Generic[ClientT]):
         else:
             old = copy(new)
             new._update(data)
+            old.user = new.user
             self.dispatch('relationship_update', old, new)
 
     def parse_relationship_update(self, data: gw.RelationshipEvent) -> None:
@@ -1880,6 +1903,7 @@ class ConnectionState(Generic[ClientT]):
         else:
             old = copy(new)
             new._update(data)
+            old.user = new.user
             self.dispatch('relationship_update', old, new)
 
     def parse_relationship_remove(self, data: gw.RelationshipEvent) -> None:

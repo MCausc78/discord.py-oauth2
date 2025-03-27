@@ -28,7 +28,7 @@ from copy import copy
 import datetime
 from typing import Dict, List, Optional, TYPE_CHECKING, Tuple
 
-from .channel import _guild_channel_factory
+
 from .flags import LobbyMemberFlags
 from .mixins import Hashable
 from .utils import MISSING, _from_json, _get_as_snowflake, find, parse_time, snowflake_time
@@ -293,6 +293,8 @@ class Lobby(Hashable):
 
         linked_channel_data = data.get('linked_channel')
         if linked_channel_data is not None:
+            from .channel import _guild_channel_factory
+
             cls, _ = _guild_channel_factory(linked_channel_data['type'])
             if cls is not None:
                 guild_id = int(linked_channel_data['guild_id'])

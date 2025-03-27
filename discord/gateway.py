@@ -461,7 +461,7 @@ class DiscordWebSocket:
             'd': {
                 'seq': self.sequence,
                 'session_id': self.session_id,
-                'token': self.token,
+                'token': 'Bearer ' + (self.token or ''),
             },
         }
 

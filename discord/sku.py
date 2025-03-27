@@ -57,7 +57,7 @@ class SKU:
     .. versionadded:: 2.4
 
     Attributes
-    -----------
+    ----------
     id: :class:`int`
         The SKU's ID.
     type: :class:`SKUType`
@@ -110,19 +110,19 @@ class SKU:
         .. versionadded:: 2.5
 
         Parameters
-        -----------
+        ----------
         subscription_id: :class:`int`
             The subscription's ID to fetch from.
 
         Raises
-        -------
+        ------
         NotFound
             An subscription with this ID does not exist.
         HTTPException
             Fetching the subscription failed.
 
         Returns
-        --------
+        -------
         :class:`.Subscription`
             The subscription you requested.
         """
