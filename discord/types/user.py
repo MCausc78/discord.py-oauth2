@@ -38,7 +38,7 @@ class PartialUser(TypedDict):
     discriminator: str
     avatar: Optional[str]
     global_name: Optional[str]
-    avatar_decoration_data: NotRequired[AvatarDecorationData]
+    avatar_decoration_data: NotRequired[Optional[AvatarDecorationData]]
 
 
 PremiumType = Literal[0, 1, 2, 3]
