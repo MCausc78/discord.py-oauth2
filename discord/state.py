@@ -717,18 +717,14 @@ class ConnectionState(Generic[ClientT]):
             raw.cached_message = older_message
             self.dispatch('raw_message_edit', raw)
             cached_message._update(data)
+
             # Coerce the `after` parameter to take the new updated Member
             # ref: #5999
             older_message.author = updated_message.author
+            updated_message.metadata = older_message.metadata
             self.dispatch('message_edit', older_message, updated_message)
         else:
             self.dispatch('raw_message_edit', raw)
-
-        if 'components' in data:
-            try:
-                entity_id = int(data['interaction']['id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
-            except (KeyError, ValueError):
-                entity_id = raw.message_id
 
     def parse_message_reaction_add(self, data: gw.MessageReactionAddEvent) -> None:
         emoji = PartialEmoji.from_dict(data['emoji'])
