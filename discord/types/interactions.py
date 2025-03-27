@@ -24,21 +24,18 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Literal, TypedDict, Union
+from typing import Dict, List, Literal, TypedDict, Union
 from typing_extensions import NotRequired
 
-from .channel import ChannelTypeWithoutThread, ThreadMetadata, GuildChannel, InteractionDMChannel, GroupDMChannel
-from .sku import Entitlement
-from .threads import ThreadType
-from .member import Member
-from .message import Attachment
-from .role import Role
-from .snowflake import Snowflake
-from .user import User
+from .channel import ChannelTypeWithoutThread, ThreadMetadata, GuildChannel, DMChannel, GroupDMChannel
 from .guild import GuildFeature
-
-if TYPE_CHECKING:
-    from .message import Message
+from .member import Member
+from .message import Attachment, Message
+from .role import Role
+from .sku import Entitlement
+from .snowflake import Snowflake
+from .threads import ThreadType
+from .user import User
 
 
 InteractionType = Literal[1, 2, 3, 4, 5]
@@ -225,7 +222,7 @@ class _BaseInteraction(TypedDict):
     guild_id: NotRequired[Snowflake]
     guild: NotRequired[PartialInteractionGuild]
     channel_id: NotRequired[Snowflake]
-    channel: Union[GuildChannel, InteractionDMChannel, GroupDMChannel]
+    channel: Union[GuildChannel, DMChannel, GroupDMChannel]
     app_permissions: NotRequired[str]
     locale: NotRequired[str]
     guild_locale: NotRequired[str]

@@ -25,14 +25,12 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 
-from typing import List, TypedDict, Optional, Literal, TYPE_CHECKING
+from typing import List, Literal, TypedDict, Optional
 from typing_extensions import NotRequired
 
+from .emoji import PartialEmoji
 from .snowflake import Snowflake
-
-if TYPE_CHECKING:
-    from .user import User
-    from .emoji import PartialEmoji
+from .user import User
 
 
 LayoutType = Literal[1]  # 1 = Default

@@ -25,10 +25,10 @@ DEALINGS IN THE SOFTWARE.
 from typing import List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired
 
-from .user import PartialUser
+from .emoji import PartialEmoji
 from .snowflake import Snowflake
 from .threads import ThreadMetadata, ThreadMember, ThreadArchiveDuration, ThreadType
-from .emoji import PartialEmoji
+from .user import PartialUser
 
 
 OverwriteType = Literal[0, 1]

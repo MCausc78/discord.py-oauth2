@@ -27,8 +27,8 @@ from __future__ import annotations
 from typing import List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
-from .snowflake import Snowflake
 from .message import Message
+from .snowflake import Snowflake
 
 ThreadType = Literal[10, 11, 12]
 ThreadArchiveDuration = Literal[60, 1440, 4320, 10080]

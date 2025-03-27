@@ -28,8 +28,8 @@ from typing import Dict, List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired, Required
 
 from .channel import ChannelType
-from .snowflake import Snowflake
 from .interactions import InteractionContextType
+from .snowflake import Snowflake
 
 ApplicationCommandType = Literal[1, 2, 3]
 ApplicationCommandOptionType = Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]

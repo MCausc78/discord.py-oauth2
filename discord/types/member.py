@@ -23,9 +23,10 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from typing import Optional, TypedDict
+from typing_extensions import NotRequired
+
 from .snowflake import SnowflakeList
 from .user import User, AvatarDecorationData
-from typing_extensions import NotRequired
 
 
 class Nickname(TypedDict):

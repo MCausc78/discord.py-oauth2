@@ -27,30 +27,30 @@ from __future__ import annotations
 from typing import List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired, Required
 
-from .automod import AutoModerationAction, AutoModerationRuleTriggerType
 from .activity import StatusType, PartialPresenceUpdate, Activity
-from .sku import Entitlement
-from .voice import GuildVoiceState
-from .integration import BaseIntegration, IntegrationApplication
-from .role import Role
+from .appinfo import GatewayAppInfo, PartialAppInfo
+from .audit_log import AuditLogEntry
+from .automod import AutoModerationAction, AutoModerationRuleTriggerType
 from .channel import ChannelType, DMChannel, GroupDMChannel, StageInstance, VoiceChannelEffect
+from .emoji import Emoji, PartialEmoji
+from .guild import Guild, UnavailableGuild
+from .integration import BaseIntegration, IntegrationApplication
 from .interactions import Interaction
 from .invite import InviteTargetType
-from .emoji import Emoji, PartialEmoji
-from .member import MemberWithUser
-from .snowflake import Snowflake
-from .message import Message, ReactionType
-from .sticker import GuildSticker
-from .appinfo import GatewayAppInfo, PartialAppInfo
-from .guild import Guild, UnavailableGuild
-from .user import User, AvatarDecorationData, RelationshipType, Relationship, GameRelationshipType, GameRelationship
-from .threads import Thread, ThreadMember
-from .scheduled_event import GuildScheduledEvent
-from .audit_log import AuditLogEntry
-from .soundboard import SoundboardSound
-from .subscription import Subscription
 from .lobby import LobbyMember, LobbyVoiceState, Lobby
+from .member import MemberWithUser
+from .message import Message, ReactionType
+from .role import Role
+from .scheduled_event import GuildScheduledEvent
 from .settings import GatewayUserSettings
+from .sku import Entitlement
+from .snowflake import Snowflake
+from .soundboard import SoundboardSound
+from .sticker import GuildSticker
+from .subscription import Subscription
+from .threads import Thread, ThreadMember
+from .user import User, AvatarDecorationData, RelationshipType, Relationship, GameRelationshipType, GameRelationship
+from .voice import GuildVoiceState
 
 
 class SessionStartLimit(TypedDict):

@@ -32,7 +32,7 @@ from .asset import Asset
 from .colour import Colour
 from .enums import DefaultAvatar
 from .flags import PublicUserFlags
-from .utils import snowflake_time, _bytes_to_base64_data, MISSING, _get_as_snowflake
+from .utils import snowflake_time, MISSING, _get_as_snowflake
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -399,20 +399,10 @@ class ClientUser(BaseUser):
         self._flags = data.get('flags', 0)
         self.mfa_enabled = data.get('mfa_enabled', False)
 
-    async def edit(
-        self, *, username: str = MISSING, avatar: Optional[bytes] = MISSING, banner: Optional[bytes] = MISSING
-    ) -> ClientUser:
+    async def edit(self, *, global_name: Optional[str] = MISSING) -> ClientUser:
         """|coro|
 
         Edits the current profile of the client.
-
-        .. note::
-
-            To upload an avatar, a :term:`py:bytes-like object` must be passed in that
-            represents the image being uploaded. If this is done through a file
-            then the file must be opened via ``open('some_filename', 'rb')`` and
-            the :term:`py:bytes-like object` is given through the use of ``fp.read()``.
-
 
         .. versionchanged:: 2.0
             The edit is no longer in-place, instead the newly edited client user is returned.
@@ -423,25 +413,13 @@ class ClientUser(BaseUser):
 
         Parameters
         ----------
-        username: :class:`str`
-            The new username you wish to change to.
-        avatar: Optional[:class:`bytes`]
-            A :term:`py:bytes-like object` representing the image to upload.
-            Could be ``None`` to denote no avatar.
-            Only image formats supported for uploading are JPEG, PNG, GIF, and WEBP.
-        banner: Optional[:class:`bytes`]
-            A :term:`py:bytes-like object` representing the image to upload.
-            Could be ``None`` to denote no banner.
-            Only image formats supported for uploading are JPEG, PNG, GIF and WEBP.
-
-            .. versionadded:: 2.4
+        global_name: :class:`str`
+            The new global name you wish to change to.
 
         Raises
         ------
         HTTPException
             Editing your profile failed.
-        ValueError
-            Wrong image format passed for ``avatar``.
 
         Returns
         -------
@@ -449,20 +427,8 @@ class ClientUser(BaseUser):
             The newly edited client user.
         """
         payload: Dict[str, Any] = {}
-        if username is not MISSING:
-            payload['username'] = username
-
-        if avatar is not MISSING:
-            if avatar is not None:
-                payload['avatar'] = _bytes_to_base64_data(avatar)
-            else:
-                payload['avatar'] = None
-
-        if banner is not MISSING:
-            if banner is not None:
-                payload['banner'] = _bytes_to_base64_data(banner)
-            else:
-                payload['banner'] = None
+        if global_name is not MISSING:
+            payload['global_name'] = global_name
 
         data: UserPayload = await self._state.http.edit_profile(payload)
         return ClientUser(state=self._state, data=data)
@@ -547,7 +513,8 @@ class User(BaseUser, discord.abc.Messageable):
 
         .. versionadded:: 1.7
         """
-        return [guild for guild in self._state._guilds.values() if guild.get_member(self.id)]
+        user_id = self.id
+        return [guild for guild in self._state._guilds.values() if user_id in guild._members]
 
     async def create_dm(self) -> DMChannel:
         """|coro|

@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from typing import TypedDict, Optional, Union
+from typing import Optional, TypedDict
 from typing_extensions import NotRequired
 
 from .snowflake import Snowflake
@@ -30,7 +30,7 @@ from .user import User
 
 
 class BaseSoundboardSound(TypedDict):
-    sound_id: Union[Snowflake, str]  # basic string number when it's a default sound
+    sound_id: Snowflake  # basic string number when it's a default sound
     volume: float
 
 

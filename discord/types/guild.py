@@ -25,19 +25,19 @@ DEALINGS IN THE SOFTWARE.
 from typing import List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
-from .scheduled_event import GuildScheduledEvent
-from .sticker import GuildSticker
-from .snowflake import Snowflake
+from .activity import PartialPresenceUpdate
 from .channel import GuildChannel, StageInstance
+from .emoji import Emoji
+from .member import Member
+from .role import Role
+from .scheduled_event import GuildScheduledEvent
+from .snowflake import Snowflake
+from .sticker import GuildSticker
+from .soundboard import SoundboardSound
+from .threads import Thread
+from .user import User
 from .voice import GuildVoiceState
 from .welcome_screen import WelcomeScreen
-from .activity import PartialPresenceUpdate
-from .role import Role
-from .member import Member
-from .emoji import Emoji
-from .user import User
-from .threads import Thread
-from .soundboard import SoundboardSound
 
 
 class Ban(TypedDict):
