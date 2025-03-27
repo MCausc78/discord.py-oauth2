@@ -222,8 +222,8 @@ class ConnectionState(Generic[ClientT]):
 
     def clear(self) -> None:
         self.user: Optional[ClientUser] = None
-        # self._users: weakref.WeakValueDictionary[int, User] = weakref.WeakValueDictionary()
-        self._users: Dict[int, User] = {}
+        self._users: weakref.WeakValueDictionary[int, User] = weakref.WeakValueDictionary()
+        # self._users: Dict[int, User] = {}
         self._emojis: Dict[int, Emoji] = {}
         self._stickers: Dict[int, GuildSticker] = {}
         self._guilds: Dict[int, Guild] = {}
@@ -574,14 +574,14 @@ class ConnectionState(Generic[ClientT]):
         # It has initial presence cache, as well omitted private channels
 
     def parse_ready_supplemental(self, data: gw.ReadySupplementalEvent) -> None:
-        merged_presences = data['merged_presences']
+        merged_presences = data.get('merged_presences') or {}
 
         guilds = []
 
         for guild_data, guild_members_data, guild_presences_data in zip(
             data.get('guilds', ()),
             data.get('merged_members', ()),
-            merged_presences['guilds'],
+            merged_presences.get('guilds', ()),
         ):
             guild_id = int(guild_data['id'])
             guild = self._get_guild(guild_id)
@@ -641,18 +641,22 @@ class ConnectionState(Generic[ClientT]):
             event.guild_id = None
             event.guild = None
 
+            relationship: Union[Relationship, GameRelationship]
             try:
                 relationship = self._relationships[event.user_id]
             except KeyError:
-                if len(user_data) > 1:
-                    user = self.store_user(user_data, dispatch=True)  # type: ignore
-                else:
-                    user = self.get_user(event.user_id) or Object(id=event.user_id)
-                relationship = Relationship._from_implicit(
-                    state=self,
-                    user=user,  # type: ignore
-                )
-                self._relationships[relationship.id] = relationship
+                try:
+                    relationship = self._game_relationships[event.user_id]
+                except KeyError:
+                    if len(user_data) > 1:
+                        user = self.store_user(user_data, dispatch=True)  # type: ignore
+                    else:
+                        user = self.get_user(event.user_id) or Object(id=event.user_id)
+                    relationship = Relationship._from_implicit(
+                        state=self,
+                        user=user,  # type: ignore
+                    )
+                    self._relationships[relationship.id] = relationship
             relationship._presence_update(event, user_data)  # type: ignore
             friend_presences.append(event)
 
@@ -805,14 +809,16 @@ class ConnectionState(Generic[ClientT]):
 
         if raw.guild_id is None:
             old: Union[Relationship, GameRelationship]
+            relationship: Union[Relationship, GameRelationship]
             user_update: Optional[Tuple[User, User]] = None
 
-            relationship: Optional[Union[Relationship, GameRelationship]] = self._relationships.get(raw.user_id)
-
-            user_data = data['user']
-            if relationship is None:
-                relationship = self._game_relationships.get(raw.user_id)
-                if relationship is None:
+            try:
+                relationship = self._relationships[raw.user_id]
+            except KeyError:
+                try:
+                    relationship = self._game_relationships[raw.user_id]
+                except KeyError:
+                    user_data = data['user']
                     if len(user_data) > 1:
                         user = self.store_user(user_data)
                     else:
@@ -820,13 +826,13 @@ class ConnectionState(Generic[ClientT]):
 
                     relationship = Relationship._from_implicit(state=self, user=user)  # type: ignore
                     old = Relationship._copy(relationship, ClientStatus(), ())
-                    self._relationships[relationship.id] = relationship
                 else:
                     old = copy(relationship)
-                    user_update = relationship._presence_update(raw, user_data)
+                    user_update = relationship._presence_update(raw, data['user'])
+
             else:
                 old = copy(relationship)
-                user_update = relationship._presence_update(raw, user_data)
+                user_update = relationship._presence_update(raw, data['user'])
 
             if user_update:
                 self.dispatch('user_update', user_update[0], user_update[1])
