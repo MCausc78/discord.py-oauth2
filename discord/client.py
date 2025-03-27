@@ -176,7 +176,7 @@ class Client:
         An object that represents proxy HTTP Basic Authorization.
     application_id: :class:`int`
         The client's application ID.
-    intents: :class:`Intents`
+    intents: Optional[:class:`Intents`]
         The intents that you want to enable for the session. This is a way of
         disabling and enabling certain Gateway events from triggering and being sent.
 
@@ -210,11 +210,6 @@ class Client:
         WebSocket in the case of not receiving a HEARTBEAT_ACK. Useful if
         processing the initial packets take too long to the point of disconnecting
         you. The default timeout is 60 seconds.
-    guild_ready_timeout: :class:`float`
-        The maximum number of seconds to wait for the GUILD_CREATE stream to end before
-        preparing the member cache and firing READY. The default timeout is 2 seconds.
-
-        .. versionadded:: 1.4
     assume_unsync_clock: :class:`bool`
         Whether to assume the system clock is unsynced. This applies to the ratelimit handling
         code. If this is set to ``True``, the default, then the library uses the time to reset
@@ -266,7 +261,7 @@ class Client:
         The websocket gateway the client is currently connected to. Could be ``None``.
     """
 
-    def __init__(self, *, intents: Intents, **options: Any) -> None:
+    def __init__(self, *, intents: Optional[Intents] = None, **options: Any) -> None:
         self.loop: asyncio.AbstractEventLoop = _loop
         # self.ws is set in the connect method
         self.ws: DiscordWebSocket = None  # type: ignore
@@ -476,7 +471,12 @@ class Client:
 
         .. versionadded:: 2.0
         """
-        return self._connection.application_id
+        return self._connection.application_id or 0
+
+    @property
+    def application_name(self) -> str:
+        """:class:`str`: The client's application name."""
+        return self._connection.application_name or ''
 
     @property
     def application_flags(self) -> ApplicationFlags:
@@ -484,7 +484,7 @@ class Client:
 
         .. versionadded:: 2.0
         """
-        return self._connection.application_flags
+        return self._connection.application_flags or ApplicationFlags()
 
     @property
     def application(self) -> Optional[AppInfo]:

@@ -229,6 +229,10 @@ class Message(PartialMessage):
     purchase_notification: NotRequired[PurchaseNotificationResponse]
 
 
+class LobbyMessage(Message):
+    lobby_id: Snowflake
+
+
 AllowedMentionType = Literal['roles', 'users', 'everyone']
 
 

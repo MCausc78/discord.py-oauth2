@@ -62,7 +62,7 @@ from .invite import Invite
 from .lobby import LobbyMember, Lobby
 from .member import Member
 from .mentions import AllowedMentions
-from .message import Message
+from .message import Message, LobbyMessage
 from .object import Object
 from .partial_emoji import PartialEmoji
 from .presences import ClientStatus, RawPresenceUpdateEvent
@@ -135,6 +135,10 @@ class ConnectionState(Generic[ClientT]):
         if self.max_messages is not None and self.max_messages <= 0:
             self.max_messages = 1000
 
+        self.max_lobby_messages: Optional[int] = options.get('max_lobby_messages', 1000)
+        if self.max_lobby_messages is not None and self.max_lobby_messages <= 0:
+            self.max_lobby_messages = 1000
+
         self.dispatch: Callable[..., Any] = dispatch
         self.handlers: Dict[str, Callable[..., Any]] = handlers
         self.hooks: Dict[str, Callable[..., Coroutine[Any, Any, Any]]] = hooks
@@ -168,32 +172,31 @@ class ConnectionState(Generic[ClientT]):
             else:
                 status = str(status)
 
-        intents = options.get('intents', None)
+        intents = options.get('intents')
         if intents is not None:
             if not isinstance(intents, Intents):
                 raise TypeError(f'intents parameter must be Intent not {type(intents)!r}')
-        else:
-            intents = Intents.default()
 
-        if not intents.guilds:
+        if intents is not None and not intents.guilds:
             _log.warning('Guilds intent seems to be disabled. This may cause state related issues.')
 
-        cache_flags = options.get('member_cache_flags', None)
+        cache_flags = options.get('member_cache_flags')
         if cache_flags is None:
-            cache_flags = MemberCacheFlags.from_intents(intents)
-        else:
-            if not isinstance(cache_flags, MemberCacheFlags):
-                raise TypeError(f'member_cache_flags parameter must be MemberCacheFlags not {type(cache_flags)!r}')
-
-            cache_flags._verify_intents(intents)
+            if intents is None:
+                cache_flags = MemberCacheFlags.none()
+            else:
+                cache_flags = MemberCacheFlags.from_intents(intents)
+        elif not isinstance(cache_flags, MemberCacheFlags):
+            raise TypeError(f'member_cache_flags parameter must be MemberCacheFlags not {type(cache_flags)!r}')
+        # else: cache_flags._verify_intents(intents)
 
         self.member_cache_flags: MemberCacheFlags = cache_flags
         self._activities: List[ActivityPayload] = activities
         self._status: Optional[str] = status
-        self._intents: Intents = intents
+        self._intents: Optional[Intents] = intents
         self.raw_presence_flag: bool = options.get('enable_raw_presences', utils.MISSING)
         if self.raw_presence_flag is utils.MISSING:
-            self.raw_presence_flag = not intents.members and intents.presences
+            self.raw_presence_flag = intents is None or ((not intents.members) and intents.presences)
 
         self.parsers: Dict[str, Callable[[Any], None]]
         self.parsers = parsers = {}
@@ -208,7 +211,10 @@ class ConnectionState(Generic[ClientT]):
     # So this is checked instead, it's a small penalty to pay
     @property
     def cache_guild_expressions(self) -> bool:
-        return self._intents.emojis_and_stickers
+        intents = self._intents
+        if intents is None:
+            return True
+        return intents.emojis_and_stickers
 
     async def close(self) -> None:
         for voice in self.voice_clients:
@@ -254,6 +260,11 @@ class ConnectionState(Generic[ClientT]):
         else:
             self._messages: Optional[Deque[Message]] = None
 
+        if self.max_lobby_messages is not None:
+            self._lobby_messages: Optional[Deque[LobbyMessage]] = deque(maxlen=self.max_lobby_messages)
+        else:
+            self._lobby_messages: Optional[Deque[LobbyMessage]] = None
+
     def call_handlers(self, key: str, *args: Any, **kwargs: Any) -> None:
         try:
             func = self.handlers[key]
@@ -278,7 +289,8 @@ class ConnectionState(Generic[ClientT]):
     @property
     def intents(self) -> Intents:
         ret = Intents.none()
-        ret.value = self._intents.value
+        if self._intents is not None:
+            ret.value = self._intents.value
         return ret
 
     @property
@@ -1848,6 +1860,47 @@ class ConnectionState(Generic[ClientT]):
             removed._update(member_data)
 
         self.dispatch('lobby_member_remove', removed)
+
+    def parse_lobby_message_create(self, data: gw.LobbyMessageCreateEvent) -> None:
+        channel, _ = self._get_guild_channel(data)
+        # channel would be the correct type here
+        message = LobbyMessage(channel=channel, data=data, state=self)  # type: ignore
+        self.dispatch('lobby_message', message)
+        if self._lobby_messages is not None:
+            self._lobby_messages.append(message)
+        # we ensure that the channel is either a TextChannel, VoiceChannel, or Thread
+        if channel and channel.__class__ in (TextChannel, VoiceChannel, Thread, StageChannel):
+            channel.last_message_id = message.id  # type: ignore
+
+    def parse_lobby_message_delete(self, data: gw.LobbyMessageDeleteEvent) -> None:
+        raw = RawLobbyMessageDeleteEvent(data)
+        found = self._get_message(raw.message_id)
+        raw.cached_message = found
+        self.dispatch('raw_lobby_message_delete', raw)
+        if self._messages is not None and found is not None:
+            self.dispatch('lobby_message_delete', found)
+            self._messages.remove(found)
+
+    def parse_lobby_message_update(self, data: gw.LobbyMessageUpdateEvent) -> None:
+        channel, _ = self._get_guild_channel(data)
+        # channel would be the correct type here
+        updated_message = LobbyMessage(channel=channel, data=data, state=self)  # type: ignore
+
+        raw = RawLobbyMessageUpdateEvent(data=data, message=updated_message)
+        cached_message = self._get_message(updated_message.id)
+        if cached_message is not None:
+            older_message = copy(cached_message)
+            raw.cached_message = older_message
+            self.dispatch('raw_lobby_message_edit', raw)
+            cached_message._update(data)
+
+            # Coerce the `after` parameter to take the new updated Member
+            # ref: #5999
+            older_message.author = updated_message.author
+            updated_message.metadata = older_message.metadata
+            self.dispatch('lobby_message_edit', older_message, updated_message)
+        else:
+            self.dispatch('raw_lobby_message_edit', raw)
 
     def parse_lobby_voice_state_update(self, data: gw.LobbyVoiceStateUpdateEvent) -> None:
         lobby_id = int(data['lobby_id'])

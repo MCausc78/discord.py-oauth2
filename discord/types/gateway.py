@@ -39,7 +39,7 @@ from .interactions import Interaction
 from .invite import InviteTargetType
 from .lobby import LobbyMember, LobbyVoiceState, Lobby
 from .member import MemberWithUser
-from .message import Message, ReactionType
+from .message import Message, LobbyMessage, ReactionType
 from .role import Role
 from .scheduled_event import GuildScheduledEvent
 from .settings import GatewayUserSettings
@@ -463,6 +463,15 @@ class _LobbyMembersEvent(TypedDict):
 
 
 LobbyMemberAddEvent = LobbyMemberUpdateEvent = LobbyMemberRemoveEvent = _LobbyMembersEvent
+LobbyMessageCreateEvent = LobbyMessage
+
+
+class LobbyMessageDeleteEvent(TypedDict):
+    id: Snowflake
+    lobby_id: Snowflake
+
+
+LobbyMessageUpdateEvent = LobbyMessageCreateEvent
 LobbyVoiceStateUpdateEvent = LobbyVoiceState
 
 

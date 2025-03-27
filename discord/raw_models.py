@@ -35,6 +35,13 @@ from .utils import _get_as_snowflake, MISSING, _RawReprMixin
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .guild import Guild
+    from .member import Member
+    from .message import Message, LobbyMessage
+    from .partial_emoji import PartialEmoji
+    from .state import ConnectionState
+    from .threads import Thread
+    from .types.command import GuildApplicationCommandPermissions
     from .types.gateway import (
         MessageDeleteEvent,
         MessageDeleteBulkEvent as BulkMessageDeleteEvent,
@@ -51,15 +58,10 @@ if TYPE_CHECKING:
         GuildMemberRemoveEvent,
         PollVoteActionEvent,
         VoiceChannelStatusUpdateEvent,
+        LobbyMessageDeleteEvent,
+        LobbyMessageUpdateEvent,
     )
-    from .types.command import GuildApplicationCommandPermissions
-    from .message import Message
-    from .partial_emoji import PartialEmoji
-    from .member import Member
-    from .threads import Thread
     from .user import User
-    from .state import ConnectionState
-    from .guild import Guild
 
     ReactionActionEvent = Union[MessageReactionAddEvent, MessageReactionRemoveEvent]
     ReactionActionType = Literal['REACTION_ADD', 'REACTION_REMOVE']
@@ -67,8 +69,10 @@ if TYPE_CHECKING:
 
 __all__ = (
     'RawMessageDeleteEvent',
+    'RawLobbyMessageDeleteEvent',
     'RawBulkMessageDeleteEvent',
     'RawMessageUpdateEvent',
+    'RawLobbyMessageUpdateEvent',
     'RawReactionActionEvent',
     'RawReactionClearEvent',
     'RawReactionClearEmojiEvent',
@@ -108,6 +112,27 @@ class RawMessageDeleteEvent(_RawReprMixin):
         self.channel_id: int = int(data['channel_id'])
         self.cached_message: Optional[Message] = None
         self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
+
+
+class RawLobbyMessageDeleteEvent(_RawReprMixin):
+    """Represents the event payload for a :func:`on_raw_lobby_message_delete` event.
+
+    Attributes
+    ----------
+    lobby_id: :class:`int`
+        The lobby ID where the deletion took place.
+    message_id: :class:`int`
+        The message ID that got deleted.
+    cached_message: Optional[:class:`LobbyMessage`]
+        The cached message, if found in the internal lobby message cache.
+    """
+
+    __slots__ = ('message_id', 'lobby_id', 'cached_message')
+
+    def __init__(self, data: LobbyMessageDeleteEvent) -> None:
+        self.message_id: int = int(data['id'])
+        self.cached_message: Optional[LobbyMessage] = None
+        self.lobby_id: int = int(data['lobby_id'])
 
 
 class RawBulkMessageDeleteEvent(_RawReprMixin):
@@ -171,6 +196,37 @@ class RawMessageUpdateEvent(_RawReprMixin):
         self.cached_message: Optional[Message] = None
 
         self.guild_id: Optional[int] = message.guild.id if message.guild else None
+
+
+class RawLobbyMessageUpdateEvent(_RawReprMixin):
+    """Represents the payload for a :func:`on_raw_lobby_message_edit` event.
+
+    Attributes
+    ----------
+    message_id: :class:`int`
+        The message ID that got updated.
+    channel_id: :class:`int`
+        The channel ID where the update took place.
+    lobby_id: :class:`int
+        The lobby ID where the message got updated.
+    data: :class:`dict`
+        The raw data given by the :ddocs:`gateway <topics/gateway-events#lobby-message-update>`
+    cached_message: Optional[:class:`LobbyMessage`]
+        The cached message, if found in the internal message cache. Represents the message before
+        it is modified by the data in :attr:`RawLobbyMessageUpdateEvent.data`.
+    message: :class:`LobbyMessage`
+        The updated message.
+    """
+
+    __slots__ = ('message_id', 'channel_id', 'lobby_id', 'data', 'cached_message', 'message')
+
+    def __init__(self, data: LobbyMessageUpdateEvent, message: LobbyMessage) -> None:
+        self.message_id: int = message.id
+        self.channel_id: int = message.channel.id
+        self.data: LobbyMessageUpdateEvent = data
+        self.message: LobbyMessage = message
+        self.cached_message: Optional[LobbyMessage] = None
+        self.lobby_id: int = message.lobby_id
 
 
 class RawReactionActionEvent(_RawReprMixin):

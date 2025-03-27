@@ -42,7 +42,6 @@ from typing import (
     Tuple,
     Type,
     Union,
-    overload,
 )
 
 from . import utils
@@ -85,6 +84,7 @@ if TYPE_CHECKING:
     )
     from .types.message import (
         Message as MessagePayload,
+        LobbyMessage as LobbyMessagePayload,
         Attachment as AttachmentPayload,
         MessageReference as MessageReferencePayload,
         MessageSnapshot as MessageSnapshotPayload,
@@ -106,6 +106,7 @@ if TYPE_CHECKING:
 __all__ = (
     'Attachment',
     'Message',
+    'LobbyMessage',
     'PartialMessage',
     'MessageInteraction',
     'MessageReference',
@@ -606,16 +607,16 @@ class MessageReference:
 
         .. versionadded:: 2.5
     message_id: Optional[:class:`int`]
-        The id of the message referenced.
+        The ID of the message referenced.
         This can be ``None`` when this message reference was retrieved from
         a system message of one of the following types:
 
         - :attr:`MessageType.channel_follow_add`
         - :attr:`MessageType.thread_created`
     channel_id: :class:`int`
-        The channel id of the message referenced.
+        The channel ID of the message referenced.
     guild_id: Optional[:class:`int`]
-        The guild id of the message referenced.
+        The guild ID of the message referenced.
     fail_if_not_exists: :class:`bool`
         Whether the referenced message should raise :class:`HTTPException`
         if the message no longer exists or Discord could not fetch the message.
@@ -2282,45 +2283,13 @@ class Message(PartialMessage, Hashable):
         # Fallback for unknown message types
         return ''
 
-    @overload
-    async def edit(
-        self,
-        *,
-        content: Optional[str] = ...,
-        embed: Optional[Embed] = ...,
-        attachments: Sequence[Union[Attachment, File]] = ...,
-        suppress: bool = ...,
-        delete_after: Optional[float] = ...,
-        allowed_mentions: Optional[AllowedMentions] = ...,
-        # view: Optional[View] = ...,
-    ) -> Message:
-        ...
-
-    @overload
-    async def edit(
-        self,
-        *,
-        content: Optional[str] = ...,
-        embeds: Sequence[Embed] = ...,
-        attachments: Sequence[Union[Attachment, File]] = ...,
-        suppress: bool = ...,
-        delete_after: Optional[float] = ...,
-        allowed_mentions: Optional[AllowedMentions] = ...,
-        # view: Optional[View] = ...,
-    ) -> Message:
-        ...
-
     async def edit(
         self,
         *,
         content: Optional[str] = MISSING,
-        embed: Optional[Embed] = MISSING,
-        embeds: Sequence[Embed] = MISSING,
         attachments: Sequence[Union[Attachment, File]] = MISSING,
-        suppress: bool = False,
         delete_after: Optional[float] = None,
         allowed_mentions: Optional[AllowedMentions] = MISSING,
-        # view: Optional[View] = MISSING,
     ) -> Message:
         """|coro|
 
@@ -2343,14 +2312,6 @@ class Message(PartialMessage, Hashable):
         content: Optional[:class:`str`]
             The new content to replace the message with.
             Could be ``None`` to remove the content.
-        embed: Optional[:class:`Embed`]
-            The new embed to replace the original with.
-            Could be ``None`` to remove the embed.
-        embeds: List[:class:`Embed`]
-            The new embeds to replace the original with. Must be a maximum of 10.
-            To remove all embeds ``[]`` should be passed.
-
-            .. versionadded:: 2.0
         attachments: List[Union[:class:`Attachment`, :class:`File`]]
             A list of attachments to keep in the message as well as new files to upload. If ``[]`` is passed
             then all attachments are removed.
@@ -2360,11 +2321,6 @@ class Message(PartialMessage, Hashable):
                 New files will always appear after current attachments.
 
             .. versionadded:: 2.0
-        suppress: :class:`bool`
-            Whether to suppress embeds for the message. This removes
-            all the embeds if set to ``True``. If set to ``False``
-            this brings the embeds back if they were suppressed.
-            Using this parameter requires :attr:`~.Permissions.manage_messages`.
         delete_after: Optional[:class:`float`]
             If provided, the number of seconds to wait in the background
             before deleting the message we just edited. If the deletion fails,
@@ -2378,12 +2334,10 @@ class Message(PartialMessage, Hashable):
             are used instead.
 
             .. versionadded:: 1.4
-        view: Optional[:class:`~discord.ui.View`]
-            The updated view to update this message with. If ``None`` is passed then
-            the view is removed.
+
 
         Raises
-        -------
+        ------
         HTTPException
             Editing the message failed.
         Forbidden
@@ -2391,11 +2345,9 @@ class Message(PartialMessage, Hashable):
             edited a message's content or embed that isn't yours.
         NotFound
             This message does not exist.
-        TypeError
-            You specified both ``embed`` and ``embeds``
 
         Returns
-        --------
+        -------
         :class:`Message`
             The newly edited message.
         """
@@ -2405,30 +2357,14 @@ class Message(PartialMessage, Hashable):
         else:
             previous_allowed_mentions = None
 
-        if suppress is not MISSING:
-            flags = MessageFlags._from_value(self.flags.value)
-            flags.suppress_embeds = suppress
-        else:
-            flags = MISSING
-
-        # if view is not MISSING:
-        #     self._state.prevent_view_updates_for(self.id)
-
         with handle_message_parameters(
             content=content,
-            flags=flags,
-            embed=embed,
-            embeds=embeds,
             attachments=attachments,
-            # view=view,
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_allowed_mentions,
         ) as params:
             data = await self._state.http.edit_message(self.channel.id, self.id, params=params)
             message = Message(state=self._state, channel=self.channel, data=data)
-
-        # if view and not view.is_finished():
-        #     self._state.store_view(view, self.id)
 
         if delete_after is not None:
             await self.delete(delay=delete_after)
@@ -2443,7 +2379,7 @@ class Message(PartialMessage, Hashable):
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         \*files: :class:`File`
             New files to add to the message.
 
@@ -2455,7 +2391,7 @@ class Message(PartialMessage, Hashable):
             Tried to edit a message that isn't yours.
 
         Returns
-        --------
+        -------
         :class:`Message`
             The newly edited message.
         """
@@ -2469,12 +2405,12 @@ class Message(PartialMessage, Hashable):
         .. versionadded:: 2.0
 
         Parameters
-        -----------
+        ----------
         \*attachments: :class:`Attachment`
             Attachments to remove from the message.
 
         Raises
-        -------
+        ------
         HTTPException
             Editing the message failed.
         Forbidden
@@ -2486,3 +2422,44 @@ class Message(PartialMessage, Hashable):
             The newly edited message.
         """
         return await self.edit(attachments=[a for a in self.attachments if a not in attachments])
+
+
+@flatten_handlers
+class LobbyMessage(Message):
+    r"""Represents a lobby message from Discord.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two messages are equal.
+
+        .. describe:: x != y
+
+            Checks if two messages are not equal.
+
+        .. describe:: hash(x)
+
+            Returns the message's hash.
+
+    Attributes
+    ----------
+    lobby_id: :class:`int`
+       The lobby ID that the message was sent from.
+    channel: Union[:class:`TextChannel`, :class:`PartialMessageable`]
+        The :class:`TextChannel` that the message was sent from.
+    """
+
+    # TODO make LobbyChannel class in future to replace PartialMessageable
+
+    __slots__ = ('lobby_id',)
+
+    def __init__(
+        self,
+        *,
+        state: ConnectionState,
+        channel: MessageableChannel,
+        data: LobbyMessagePayload,
+    ) -> None:
+        super().__init__(state=state, channel=channel, data=data)
+        self.lobby_id: int = int(data['lobby_id'])
