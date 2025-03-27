@@ -36,6 +36,7 @@ from .utils import MISSING, _from_json, _get_as_snowflake, find, parse_time, sno
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .abc import Snowflake
     from .guild import GuildChannel
     from .state import ConnectionState
     from .types.channel import LinkedLobby as LinkedLobbyPayload
@@ -352,6 +353,71 @@ class Lobby(Hashable):
             The member or ``None`` if not found.
         """
         return find(lambda member, /: member.id == user_id, self.members)
+
+    async def leave(self) -> None:
+        """|coro|
+
+        Leaves the lobby.
+
+        Raises
+        ------
+        HTTPException
+            Leaving failed.
+        """
+        await self._state.http.leave_lobby(self.id)
+
+    async def link(self, to: Snowflake) -> Lobby:
+        """|coro|
+
+        Links the lobby to a channel.
+
+        You must have :attr:`~LobbyMemberFlags.can_link_lobby` to do this.
+
+        Parameters
+        ----------
+        to: :class:`TextChannel`
+            The channel to link the lobby to.
+
+        Raises
+        ------
+        Forbidden
+            You do not have permissions to link lobby to a channel.
+        HTTPException
+            Linking the lobby failed.
+
+        Returns
+        -------
+        :class:`Lobby`
+            The newly updated lobby.
+        """
+
+        state = self._state
+        data = await state.http.set_linked_lobby(self.id, channel_id=to.id)
+        return Lobby(data=data, state=state)
+
+    async def unlink(self) -> Lobby:
+        """|coro|
+
+        Unlinks the lobby from a channel.
+
+        You must have :attr:`~LobbyMemberFlags.can_link_lobby` to do this.
+
+        Raises
+        ------
+        Forbidden
+            You do not have permissions to unlink lobby to a channel.
+        HTTPException
+            Unlinking the lobby failed.
+
+        Returns
+        -------
+        :class:`Lobby`
+            The newly updated lobby.
+        """
+
+        state = self._state
+        data = await state.http.set_linked_lobby(self.id, channel_id=None)
+        return Lobby(data=data, state=state)
 
 
 __all__ = (

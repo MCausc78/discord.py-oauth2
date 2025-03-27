@@ -73,6 +73,7 @@ if TYPE_CHECKING:
         command,
         guild,
         invite,
+        lobby,
         message,
         settings,
         sku,
@@ -1325,6 +1326,36 @@ class HTTPClient:
             )
         )
 
+    # Lobbies
+    def create_or_join_lobby(
+        self,
+        *,
+        secret: str,
+        lobby_metadata: Optional[Dict[str, str]] = None,
+        member_metadata: Optional[Dict[str, str]] = None,
+        idle_timeout_seconds: Optional[int] = None,
+    ) -> Response[lobby.Lobby]:
+        payload = {
+            'secret': secret,
+            'lobby_metadata': lobby_metadata,
+            'member_metadata': member_metadata,
+        }
+        if idle_timeout_seconds is not None:
+            payload['idle_timeout_seconds'] = idle_timeout_seconds
+
+        return self.request(Route('PUT', '/lobbies'), json=payload)
+
+    def leave_lobby(self, lobby_id: Snowflake) -> Response[None]:
+        return self.request(Route('DELETE', '/lobbies/{lobby_id}/members/@me', lobby_id=lobby_id))
+
+    def set_linked_lobby(self, lobby_id: Snowflake, *, channel_id: Optional[Snowflake]) -> Response[lobby.Lobby]:
+        payload = {
+            'channel_id': channel_id,
+        }
+        route = Route('PATCH', '/lobbies/{lobby_id}/channel-linking', lobby_id=lobby_id)
+
+        return self.request(route, json=payload)
+
     # Relationships
 
     def get_relationships(self) -> Response[List[user.Relationship]]:
@@ -1351,9 +1382,12 @@ class HTTPClient:
 
         return self.request(Route('PUT', '/users/@me/relationships/{user_id}', user_id=user_id), json=payload)
 
-    # Currently broken, throws 80000 Incoming friend requests are disabled
     def send_friend_request(self, username: str, discriminator: Optional[Union[int, str]] = None) -> Response[None]:
-        payload = {'username': username, 'discriminator': None if discriminator is None else int(discriminator) or None}
+        payload = {
+            'username': username,
+            'discriminator': None if discriminator is None else int(discriminator) or None,
+        }
+        # This endpoint throws 400/403 and 80000 code if target user didn't authorize app the friend request coming from?
         return self.request(Route('POST', '/users/@me/relationships'), json=payload)
 
     # Game Relationships
@@ -1379,6 +1413,16 @@ class HTTPClient:
         return self.request(Route('DELETE', '/users/@me/game-relationships/{user_id}', user_id=user_id))
 
     # Misc
+
+    def science(self, properties: Dict[str, Any], *, token: str, type: str) -> Response[None]:
+        payload = {
+            'properties': properties,
+            'token': token,
+            'type': type,
+        }
+
+        # TODO: POST /external/science
+        return self.request(Route('POST', '/science'), json=payload)
 
     def modify_user_settings(self, /, **payload) -> Response[settings.UserSettings]:
         return self.request(Route('PATCH', '/users/@me/settings'), json=payload)

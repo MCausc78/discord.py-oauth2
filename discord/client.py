@@ -62,6 +62,7 @@ from .gateway import *
 from .guild import Guild
 from .http import HTTPClient
 from .invite import Invite
+from .lobby import Lobby
 from .mentions import AllowedMentions
 from .object import Object
 from .sku import Entitlement
@@ -2522,6 +2523,54 @@ class Client:
 
         data = await state.http.start_private_message(user.id)
         return state.add_dm_channel(data)
+
+    async def create_or_join_lobby(
+        self,
+        secret: str,
+        *,
+        lobby_metadata: Optional[Dict[str, str]] = None,
+        member_metadata: Optional[Dict[str, str]] = None,
+        idle_timeout: Optional[int] = None,
+    ) -> Lobby:
+        """|coro|
+
+        Creates or joins an existing lobby by secret.
+
+        Parameters
+        ----------
+        secret: :class:`str`
+            The secret for joining/creating a lobby.
+        lobby_metadata: Optional[Dict[:class:`str`, :class:`str`]]
+            The lobby's metadata. Must be 1000 characters in total (length of keys + values).
+        member_metadata: Optional[Dict[:class:`str`, :class:`str`]]
+            The member's metadata to assign to yourself. Must be 1000 characters in total (length of keys + values).
+        idle_timeout: Optional[:class:`int`]
+            The seconds to wait before shutting down a lobby after it becomes idle. Must be between 5 seconds and 1 week.
+
+            Defaults to 5 minutes if not provided.
+
+        Raises
+        ------
+        Forbidden
+            You do not have permissions to join lobby.
+        HTTPException
+            Creating/joining the lobby failed.
+
+        Returns
+        -------
+        :class:`Lobby`
+            The joined or created lobby.
+        """
+
+        state = self._connection
+        data = await state.http.create_or_join_lobby(
+            secret=secret,
+            lobby_metadata=lobby_metadata,
+            member_metadata=member_metadata,
+            idle_timeout_seconds=idle_timeout,
+        )
+
+        return Lobby(data=data, state=state)
 
     @overload
     async def send_friend_request(self, user: _UserTag, /) -> None:
