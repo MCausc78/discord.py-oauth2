@@ -226,7 +226,7 @@ class RawLobbyMessageUpdateEvent(_RawReprMixin):
         self.data: LobbyMessageUpdateEvent = data
         self.message: LobbyMessage = message
         self.cached_message: Optional[LobbyMessage] = None
-        self.lobby_id: int = message.lobby_id
+        self.lobby_id: int = message.lobby_id  # type: ignore # ??? it's literally a LobbyMessage not Message
 
 
 class RawReactionActionEvent(_RawReprMixin):

@@ -71,9 +71,10 @@ if TYPE_CHECKING:
 
     from .abc import GuildChannel, MessageableChannel
     from .components import ActionRow, ActionRowChildComponentType
+    from .lobby import Lobby
     from .mentions import AllowedMentions
-    from .state import ConnectionState
     from .role import Role
+    from .state import ConnectionState
     from .types.components import Component as ComponentPayload
     from .types.embed import Embed as EmbedPayload
     from .types.gateway import MessageReactionRemoveEvent, MessageUpdateEvent
@@ -1012,14 +1013,16 @@ class CallMessage:
     .. versionadded:: 2.5
 
     Attributes
-    -----------
+    ----------
     ended_timestamp: Optional[:class:`datetime.datetime`]
         The timestamp the call has ended.
     participants: List[:class:`User`]
         A list of users that participated in the call.
+    participant_ids: List[:class:`int`]
+        A list of IDs of users that participated in the call.
     """
 
-    __slots__ = ('_message', 'ended_timestamp', 'participants')
+    __slots__ = ('_message', 'ended_timestamp', 'participants', 'participant_ids')
 
     def __repr__(self) -> str:
         return f'<CallMessage participants={self.participants!r}>'
@@ -1028,9 +1031,9 @@ class CallMessage:
         self._message: Message = message
         self.ended_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('ended_timestamp'))
         self.participants: List[User] = []
+        self.participant_ids: List[int] = list(map(int, data['participants']))
 
-        for user_id in data['participants']:
-            user_id = int(user_id)
+        for user_id in self.participant_ids:
             if user_id == self._message.author.id:
                 self.participants.append(self._message.author)  # type: ignore # can't be a Member here
             else:
@@ -2452,6 +2455,9 @@ class LobbyMessage(Message):
 
     # TODO make LobbyChannel class in future to replace PartialMessageable
 
+    if TYPE_CHECKING:
+        lobby_id: int
+
     __slots__ = ('lobby_id',)
 
     def __init__(
@@ -2463,3 +2469,9 @@ class LobbyMessage(Message):
     ) -> None:
         super().__init__(state=state, channel=channel, data=data)
         self.lobby_id: int = int(data['lobby_id'])
+
+    @property
+    def lobby(self) -> Optional[Lobby]:
+        """Optional[:class:`Lobby`]: The lobby that the message was sent from, or ``None`` if lobby is not in cache."""
+
+        return self._state._get_lobby(self.lobby_id)

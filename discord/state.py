@@ -89,12 +89,16 @@ if TYPE_CHECKING:
     from .voice_client import VoiceProtocol
 
     from .types import gateway as gw
-    from .types.activity import Activity as ActivityPayload
+    from .types.activity import (
+        PartialPresenceUpdate as PartialPresenceUpdatePayload,
+        Activity as ActivityPayload,
+    )
     from .types.automod import AutoModerationRule, AutoModerationActionExecution
     from .types.channel import DMChannel as DMChannelPayload
     from .types.command import GuildApplicationCommandPermissions as GuildApplicationCommandPermissionsPayload
     from .types.emoji import Emoji as EmojiPayload, PartialEmoji as PartialEmojiPayload
     from .types.guild import Guild as GuildPayload
+    from .types.member import MemberWithUser as MemberWithUserPayload
     from .types.message import Message as MessagePayload, PartialMessage as PartialMessagePayload
     from .types.sticker import GuildSticker as GuildStickerPayload
     from .types.user import User as UserPayload, PartialUser as PartialUserPayload
@@ -465,6 +469,9 @@ class ConnectionState(Generic[ClientT]):
     def _get_message(self, msg_id: Optional[int]) -> Optional[Message]:
         return utils.find(lambda m: m.id == msg_id, reversed(self._messages)) if self._messages else None
 
+    def _get_lobby_message(self, msg_id: Optional[int]) -> Optional[Message]:
+        return utils.find(lambda m: m.id == msg_id, reversed(self._messages)) if self._messages else None
+
     def _add_guild_from_data(self, data: GuildPayload) -> Guild:
         guild = Guild(data=data, state=self)
         self._add_guild(guild)
@@ -484,6 +491,31 @@ class ConnectionState(Generic[ClientT]):
             channel = guild and guild._resolve_channel(channel_id)
 
         return channel or PartialMessageable(state=self, guild_id=guild_id, id=channel_id), guild
+
+    def _get_lobby_channel(
+        self,
+        channel_id: Optional[int],
+        lobby_id: int,
+    ) -> Tuple[Union[TextChannel, PartialMessageable], Optional[Guild]]:
+        if channel_id is None:
+            channel_id = lobby_id
+
+        lobby = self._get_lobby(lobby_id)
+        if lobby is None:
+            channel = None
+        else:
+            channel = lobby.linked_channel
+
+        if channel is None or not isinstance(channel, TextChannel):
+            return (
+                PartialMessageable(
+                    state=self,
+                    id=channel_id,
+                    type=ChannelType.lobby,
+                ),
+                None,
+            )
+        return channel, channel.guild
 
     def _update_poll_counts(self, message: Message, answer_id: int, added: bool, self_voted: bool = False) -> Optional[Poll]:
         poll = message.poll
@@ -595,6 +627,10 @@ class ConnectionState(Generic[ClientT]):
             data.get('merged_members', ()),
             merged_presences.get('guilds', ()),
         ):
+            guild_data: gw.SupplementalGuild
+            guild_members_data: List[MemberWithUserPayload]
+            guild_presences_data: List[PartialPresenceUpdatePayload]
+
             guild_id = int(guild_data['id'])
             guild = self._get_guild(guild_id)
 
@@ -609,7 +645,7 @@ class ConnectionState(Generic[ClientT]):
             guild_presences = []
             for guild_presence_data in guild_presences_data:
                 event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
-                event.user_id = int(guild_presence_data['user_id'])  # type: ignore
+                event.user_id = int(guild_presence_data['user_id'])
                 event.client_status = ClientStatus(
                     status=guild_presence_data['status'], data=guild_presence_data['client_status']
                 )
@@ -1862,32 +1898,38 @@ class ConnectionState(Generic[ClientT]):
         self.dispatch('lobby_member_remove', removed)
 
     def parse_lobby_message_create(self, data: gw.LobbyMessageCreateEvent) -> None:
-        channel, _ = self._get_guild_channel(data)
-        # channel would be the correct type here
-        message = LobbyMessage(channel=channel, data=data, state=self)  # type: ignore
+        channel, _ = self._get_lobby_channel(
+            utils._get_as_snowflake(data, 'channel_id'),
+            int(data['lobby_id']),
+        )
+
+        message = LobbyMessage(channel=channel, data=data, state=self)
         self.dispatch('lobby_message', message)
         if self._lobby_messages is not None:
             self._lobby_messages.append(message)
-        # we ensure that the channel is either a TextChannel, VoiceChannel, or Thread
-        if channel and channel.__class__ in (TextChannel, VoiceChannel, Thread, StageChannel):
+
+        # We ensure that the channel is a TextChannel
+        if channel and channel.__class__ is TextChannel:
             channel.last_message_id = message.id  # type: ignore
 
     def parse_lobby_message_delete(self, data: gw.LobbyMessageDeleteEvent) -> None:
         raw = RawLobbyMessageDeleteEvent(data)
-        found = self._get_message(raw.message_id)
+        found = self._get_lobby_message(raw.message_id)
         raw.cached_message = found
         self.dispatch('raw_lobby_message_delete', raw)
-        if self._messages is not None and found is not None:
+        if self._lobby_messages is not None and found is not None:
             self.dispatch('lobby_message_delete', found)
-            self._messages.remove(found)
+            self._lobby_messages.remove(found)
 
     def parse_lobby_message_update(self, data: gw.LobbyMessageUpdateEvent) -> None:
-        channel, _ = self._get_guild_channel(data)
-        # channel would be the correct type here
-        updated_message = LobbyMessage(channel=channel, data=data, state=self)  # type: ignore
+        channel, _ = self._get_lobby_channel(
+            utils._get_as_snowflake(data, 'channel_id'),
+            int(data['lobby_id']),
+        )
+        updated_message = LobbyMessage(channel=channel, data=data, state=self)
 
         raw = RawLobbyMessageUpdateEvent(data=data, message=updated_message)
-        cached_message = self._get_message(updated_message.id)
+        cached_message = self._get_lobby_message(updated_message.id)
         if cached_message is not None:
             older_message = copy(cached_message)
             raw.cached_message = older_message

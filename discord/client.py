@@ -91,7 +91,7 @@ if TYPE_CHECKING:
     from .guild import GuildChannel
     from .integrations import Integration
     from .member import Member, VoiceState
-    from .message import Message
+    from .message import Message, LobbyMessage
     from .raw_models import (
         RawAppCommandPermissionsUpdateEvent,
         RawBulkMessageDeleteEvent,
@@ -170,6 +170,9 @@ class Client:
 
         .. versionchanged:: 1.3
             Allow disabling the message cache and change the default size to ``1000``.
+    max_lobby_messages: Optional[:class:`int`]
+        The maximum number of lobby messages to store in the internal lobby message cache.
+        This defaults to ``1000``. Passing in ``None`` disables the lobby message cache.
     proxy: Optional[:class:`str`]
         Proxy URL.
     proxy_auth: Optional[:class:`aiohttp.BasicAuth`]
@@ -395,6 +398,11 @@ class Client:
         .. versionadded:: 1.1
         """
         return utils.SequenceProxy(self._connection._messages or [])
+
+    @property
+    def cached_lobby_messages(self) -> Sequence[LobbyMessage]:
+        """Sequence[:class:`.LobbyMessage`]: Read-only list of lobby messages the connected client has cached."""
+        return utils.SequenceProxy(self._connection._lobby_messages or [])
 
     @property
     def private_channels(self) -> Sequence[PrivateChannel]:

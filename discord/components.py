@@ -311,7 +311,7 @@ class SelectMenu(Component):
         if self.options:
             payload['options'] = [op.to_dict() for op in self.options]
         if self.channel_types:
-            payload['channel_types'] = [t.value for t in self.channel_types]
+            payload['channel_types'] = [t.value for t in self.channel_types]  # type: ignore
         if self.default_values:
             payload['default_values'] = [v.to_dict() for v in self.default_values]
 
