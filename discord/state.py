@@ -44,7 +44,8 @@ from typing import (
     Tuple,
     Deque,
 )
-import weakref
+
+# import weakref
 
 from . import utils
 from ._types import ClientT
@@ -232,8 +233,8 @@ class ConnectionState(Generic[ClientT]):
 
     def clear(self) -> None:
         self.user: Optional[ClientUser] = None
-        self._users: weakref.WeakValueDictionary[int, User] = weakref.WeakValueDictionary()
-        # self._users: Dict[int, User] = {}
+        # self._users: weakref.WeakValueDictionary[int, User] = weakref.WeakValueDictionary()
+        self._users: Dict[int, User] = {}
         self._emojis: Dict[int, Emoji] = {}
         self._stickers: Dict[int, GuildSticker] = {}
         self._guilds: Dict[int, Guild] = {}
