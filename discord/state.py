@@ -374,6 +374,10 @@ class ConnectionState(Generic[ClientT]):
     def guilds(self) -> Sequence[Guild]:
         return utils.SequenceProxy(self._guilds.values())
 
+    @property
+    def lobbies(self) -> Sequence[Lobby]:
+        return utils.SequenceProxy(self._lobbies.values())
+
     def _get_guild(self, guild_id: Optional[int]) -> Optional[Guild]:
         # the keys of self._guilds are ints
         return self._guilds.get(guild_id)  # type: ignore

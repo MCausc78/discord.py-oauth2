@@ -365,6 +365,11 @@ class Client:
         return self._connection.guilds
 
     @property
+    def lobbies(self) -> Sequence[Lobby]:
+        """Sequence[:class:`.Lobby`]: The lobbies that the connected client is a member of."""
+        return self._connection.lobbies
+
+    @property
     def emojis(self) -> Sequence[Emoji]:
         """Sequence[:class:`.Emoji`]: The emojis that the connected client has.
 
