@@ -254,8 +254,8 @@ def load_opus(name: str) -> None:
 
     .. warning::
 
-        The bitness of the library must match the bitness of your python
-        interpreter. If the library is 64-bit then your python interpreter
+        The bitness of the library must match the bitness of your Python
+        interpreter. If the library is 64-bit then your Python interpreter
         must be 64-bit as well. Usually if there's a mismatch in bitness then
         the load will throw an exception.
 

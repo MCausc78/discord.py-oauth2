@@ -28,7 +28,7 @@ from copy import copy
 import datetime
 from typing import Dict, List, Optional, TYPE_CHECKING, Tuple
 
-
+from .abc import Messageable
 from .flags import LobbyMemberFlags
 from .mixins import Hashable
 from .utils import MISSING, _from_json, _get_as_snowflake, find, parse_time, snowflake_time
@@ -36,7 +36,7 @@ from .utils import MISSING, _from_json, _get_as_snowflake, find, parse_time, sno
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from .abc import Snowflake
+    from .abc import MessageableDestinationType, Snowflake
     from .guild import GuildChannel
     from .state import ConnectionState
     from .types.channel import LinkedLobby as LinkedLobbyPayload
@@ -245,7 +245,7 @@ class LobbyVoiceState:
         return f'<{self.__class__.__name__} {inner}>'
 
 
-class Lobby(Hashable):
+class Lobby(Hashable, Messageable):
     """Represents a Discord lobby.
 
     .. versionadded:: 2.6
@@ -353,6 +353,9 @@ class Lobby(Hashable):
             The member or ``None`` if not found.
         """
         return find(lambda member, /: member.id == user_id, self.members)
+
+    async def _get_messageable_destination(self) -> Tuple[int, MessageableDestinationType]:
+        return (self.id, 'lobby')
 
     async def leave(self) -> None:
         """|coro|
