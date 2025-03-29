@@ -3,8 +3,8 @@
 
 import random
 
-import discord_slayer_sdk
-from discord_slayer_sdk_slayer_sdk.ext import commands
+import slaycord
+from slaycord.ext import commands
 
 
 class MyContext(commands.Context):
@@ -17,7 +17,7 @@ class MyContext(commands.Context):
         try:
             # this will react to the command author's message
             await self.message.add_reaction(emoji)
-        except discord_slayer_sdk.HTTPException:
+        except slaycord.HTTPException:
             # sometimes errors occur during this, for example
             # maybe you don't have permission to do that
             # we don't mind, so we can just ignore them
@@ -32,7 +32,7 @@ class MyBot(commands.Bot):
         return await super().get_context(message, cls=cls)
 
 
-intents = discord_slayer_sdk.Intents.default()
+intents = slaycord.Intents.default()
 intents.message_content = True
 
 bot = MyBot(command_prefix='!', intents=intents)

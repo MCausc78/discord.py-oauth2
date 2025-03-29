@@ -4,16 +4,16 @@
 from typing import Literal, Union, NamedTuple
 from enum import Enum
 
-import discord_slayer_sdk
-from discord_slayer_sdk_slayer_sdk import app_commands
+import slaycord
+from slaycord import app_commands
 
 
-MY_GUILD = discord_slayer_sdk.Object(id=0)  # replace with your guild id
+MY_GUILD = slaycord.Object(id=0)  # replace with your guild id
 
 
-class MyClient(discord_slayer_sdk.Client):
+class MyClient(slaycord.Client):
     def __init__(self):
-        super().__init__(intents=discord_slayer_sdk.Intents.default())
+        super().__init__(intents=slaycord.Intents.default())
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
@@ -43,7 +43,7 @@ async def on_ready():
 @client.tree.command()
 @app_commands.describe(first='The first number to add', second='The second number to add')
 async def add(
-    interaction: discord_slayer_sdk.Interaction,
+    interaction: slaycord.Interaction,
     # This makes it so the first parameter can only be between 0 to 100.
     first: app_commands.Range[int, 0, 100],
     # This makes it so the second parameter must be over 0, with no maximum limit.
@@ -61,15 +61,15 @@ async def add(
 # combined with the VoiceChannel and TextChannel types.
 @client.tree.command(name='channel-info')
 @app_commands.describe(channel='The channel to get info of')
-async def channel_info(interaction: discord_slayer_sdk.Interaction, channel: Union[discord_slayer_sdk.VoiceChannel, discord_slayer_sdk.TextChannel]):
+async def channel_info(interaction: slaycord.Interaction, channel: Union[slaycord.VoiceChannel, slaycord.TextChannel]):
     """Shows basic channel info for a text or voice channel."""
 
-    embed = discord_slayer_sdk.Embed(title='Channel Info')
+    embed = slaycord.Embed(title='Channel Info')
     embed.add_field(name='Name', value=channel.name, inline=True)
     embed.add_field(name='ID', value=channel.id, inline=True)
     embed.add_field(
         name='Type',
-        value='Voice' if isinstance(channel, discord_slayer_sdk.VoiceChannel) else 'Text',
+        value='Voice' if isinstance(channel, slaycord.VoiceChannel) else 'Text',
         inline=True,
     )
 
@@ -84,7 +84,7 @@ async def channel_info(interaction: discord_slayer_sdk.Interaction, channel: Uni
 # In the code, you will receive either 'Buy' or 'Sell' as a string.
 @client.tree.command()
 @app_commands.describe(action='The action to do in the shop', item='The target item')
-async def shop(interaction: discord_slayer_sdk.Interaction, action: Literal['Buy', 'Sell'], item: str):
+async def shop(interaction: slaycord.Interaction, action: Literal['Buy', 'Sell'], item: str):
     """Interact with the shop"""
     await interaction.response.send_message(f'Action: {action}\nItem: {item}')
 
@@ -103,7 +103,7 @@ class Fruits(Enum):
 
 @client.tree.command()
 @app_commands.describe(fruit='The fruit to choose')
-async def fruit(interaction: discord_slayer_sdk.Interaction, fruit: Fruits):
+async def fruit(interaction: slaycord.Interaction, fruit: Fruits):
     """Choose a fruit!"""
     await interaction.response.send_message(repr(fruit))
 
@@ -124,14 +124,14 @@ class Point(NamedTuple):
 # However, this is outside of the scope of this example so check the documentation
 # for more information.
 class PointTransformer(app_commands.Transformer):
-    async def transform(self, interaction: discord_slayer_sdk.Interaction, value: str) -> Point:
+    async def transform(self, interaction: slaycord.Interaction, value: str) -> Point:
         (x, _, y) = value.partition(',')
         return Point(x=int(x.strip()), y=int(y.strip()))
 
 
 @client.tree.command()
 async def graph(
-    interaction: discord_slayer_sdk.Interaction,
+    interaction: slaycord.Interaction,
     # In order to use the transformer, you should use Transform to tell the
     # library to use it.
     point: app_commands.Transform[Point, PointTransformer],
@@ -150,13 +150,13 @@ class Point3D(NamedTuple):
 
     # This is the same as the above transformer except inline
     @classmethod
-    async def transform(cls, interaction: discord_slayer_sdk.Interaction, value: str):
+    async def transform(cls, interaction: slaycord.Interaction, value: str):
         x, y, z = value.split(',')
         return cls(x=int(x.strip()), y=int(y.strip()), z=int(z.strip()))
 
 
 @client.tree.command()
-async def graph3d(interaction: discord_slayer_sdk.Interaction, point: Point3D):
+async def graph3d(interaction: slaycord.Interaction, point: Point3D):
     await interaction.response.send_message(str(point))
 
 

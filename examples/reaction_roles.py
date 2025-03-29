@@ -1,20 +1,20 @@
 # This example requires the 'members' privileged intents
 
-import discord_slayer_sdk
+import slaycord
 
 
-class MyClient(discord_slayer_sdk.Client):
+class MyClient(slaycord.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.role_message_id = 0  # ID of the message that can be reacted to to add/remove a role.
         self.emoji_to_role = {
-            discord_slayer_sdk.PartialEmoji(name='🔴'): 0,  # ID of the role associated with unicode emoji '🔴'.
-            discord_slayer_sdk.PartialEmoji(name='🟡'): 0,  # ID of the role associated with unicode emoji '🟡'.
-            discord_slayer_sdk.PartialEmoji(name='green', id=0): 0,  # ID of the role associated with a partial emoji's ID.
+            slaycord.PartialEmoji(name='🔴'): 0,  # ID of the role associated with unicode emoji '🔴'.
+            slaycord.PartialEmoji(name='🟡'): 0,  # ID of the role associated with unicode emoji '🟡'.
+            slaycord.PartialEmoji(name='green', id=0): 0,  # ID of the role associated with a partial emoji's ID.
         }
 
-    async def on_raw_reaction_add(self, payload: discord_slayer_sdk.RawReactionActionEvent):
+    async def on_raw_reaction_add(self, payload: slaycord.RawReactionActionEvent):
         """Gives a role based on a reaction emoji."""
         # Make sure that the message the user is reacting to is the one we care about.
         if payload.message_id != self.role_message_id:
@@ -39,11 +39,11 @@ class MyClient(discord_slayer_sdk.Client):
         try:
             # Finally, add the role.
             await payload.member.add_roles(role)
-        except discord_slayer_sdk.HTTPException:
+        except slaycord.HTTPException:
             # If we want to do something in case of errors we'd do it here.
             pass
 
-    async def on_raw_reaction_remove(self, payload: discord_slayer_sdk.RawReactionActionEvent):
+    async def on_raw_reaction_remove(self, payload: slaycord.RawReactionActionEvent):
         """Removes a role based on a reaction emoji."""
         # Make sure that the message the user is reacting to is the one we care about.
         if payload.message_id != self.role_message_id:
@@ -75,12 +75,12 @@ class MyClient(discord_slayer_sdk.Client):
         try:
             # Finally, remove the role.
             await member.remove_roles(role)
-        except discord_slayer_sdk.HTTPException:
+        except slaycord.HTTPException:
             # If we want to do something in case of errors we'd do it here.
             pass
 
 
-intents = discord_slayer_sdk.Intents.default()
+intents = slaycord.Intents.default()
 intents.members = True
 
 client = MyClient(intents=intents)

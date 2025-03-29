@@ -1,9 +1,9 @@
 # This example requires the 'members' privileged intent to function.
 
-import discord_slayer_sdk
+import slaycord
 
 
-class MyClient(discord_slayer_sdk.Client):
+class MyClient(slaycord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
@@ -15,7 +15,7 @@ class MyClient(discord_slayer_sdk.Client):
             await guild.system_channel.send(to_send)
 
 
-intents = discord_slayer_sdk.Intents.default()
+intents = slaycord.Intents.default()
 intents.members = True
 
 client = MyClient(intents=intents)

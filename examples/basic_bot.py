@@ -1,15 +1,15 @@
 # This example requires the 'members' and 'message_content' privileged intents to function.
 
-import discord_slayer_sdk
-from discord_slayer_sdk_slayer_sdk.ext import commands
+import slaycord
+from slaycord.ext import commands
 import random
 
-description = '''An example bot to showcase the discord_slayer_sdk.ext.commands extension
+description = '''An example bot to showcase the slaycord.ext.commands extension
 module.
 
 There are a number of utility commands being showcased here.'''
 
-intents = discord_slayer_sdk.Intents.default()
+intents = slaycord.Intents.default()
 intents.members = True
 intents.message_content = True
 
@@ -55,9 +55,9 @@ async def repeat(ctx, times: int, content='repeating...'):
 
 
 @bot.command()
-async def joined(ctx, member: discord_slayer_sdk.Member):
+async def joined(ctx, member: slaycord.Member):
     """Says when a member joined."""
-    await ctx.send(f'{member.name} joined {discord_slayer_sdk.utils.format_dt(member.joined_at)}')
+    await ctx.send(f'{member.name} joined {slaycord.utils.format_dt(member.joined_at)}')
 
 
 @bot.group()

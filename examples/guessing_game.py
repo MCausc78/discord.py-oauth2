@@ -1,11 +1,11 @@
 # This example requires the 'message_content' privileged intent to function.
 
-import discord_slayer_sdk
+import slaycord
 import random
 import asyncio
 
 
-class MyClient(discord_slayer_sdk.Client):
+class MyClient(slaycord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
@@ -34,7 +34,7 @@ class MyClient(discord_slayer_sdk.Client):
                 await message.channel.send(f'Oops. It is actually {answer}.')
 
 
-intents = discord_slayer_sdk.Intents.default()
+intents = slaycord.Intents.default()
 intents.message_content = True
 
 client = MyClient(intents=intents)

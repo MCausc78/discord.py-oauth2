@@ -1,8 +1,8 @@
 # This example requires the 'message_content' privileged intent to function.
 from __future__ import annotations
 
-from discord_slayer_sdk_slayer_sdk.ext import commands
-import discord_slayer_sdk
+from slaycord.ext import commands
+import slaycord
 import re
 
 
@@ -14,20 +14,20 @@ import re
 # prevent conflicts with other buttons the bot sends.
 # For this example the custom_id is prefixed with the name of the bot.
 # Note that custom_ids can only be up to 100 characters long.
-class PersistentView(discord_slayer_sdk.ui.View):
+class PersistentView(slaycord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord_slayer_sdk.ui.button(label='Green', style=discord_slayer_sdk.ButtonStyle.green, custom_id='persistent_view:green')
-    async def green(self, interaction: discord_slayer_sdk.Interaction, button: discord_slayer_sdk.ui.Button):
+    @slaycord.ui.button(label='Green', style=slaycord.ButtonStyle.green, custom_id='persistent_view:green')
+    async def green(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
         await interaction.response.send_message('This is green.', ephemeral=True)
 
-    @discord_slayer_sdk.ui.button(label='Red', style=discord_slayer_sdk.ButtonStyle.red, custom_id='persistent_view:red')
-    async def red(self, interaction: discord_slayer_sdk.Interaction, button: discord_slayer_sdk.ui.Button):
+    @slaycord.ui.button(label='Red', style=slaycord.ButtonStyle.red, custom_id='persistent_view:red')
+    async def red(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
         await interaction.response.send_message('This is red.', ephemeral=True)
 
-    @discord_slayer_sdk.ui.button(label='Grey', style=discord_slayer_sdk.ButtonStyle.grey, custom_id='persistent_view:grey')
-    async def grey(self, interaction: discord_slayer_sdk.Interaction, button: discord_slayer_sdk.ui.Button):
+    @slaycord.ui.button(label='Grey', style=slaycord.ButtonStyle.grey, custom_id='persistent_view:grey')
+    async def grey(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
         await interaction.response.send_message('This is grey.', ephemeral=True)
 
 
@@ -37,12 +37,12 @@ class PersistentView(discord_slayer_sdk.ui.View):
 # For this example, the `template` class parameter is used to give the library a regular
 # expression to parse the custom_id with.
 # These custom IDs will be in the form of e.g. `button:user:80088516616269824`.
-class DynamicButton(discord_slayer_sdk.ui.DynamicItem[discord_slayer_sdk.ui.Button], template=r'button:user:(?P<id>[0-9]+)'):
+class DynamicButton(slaycord.ui.DynamicItem[slaycord.ui.Button], template=r'button:user:(?P<id>[0-9]+)'):
     def __init__(self, user_id: int) -> None:
         super().__init__(
-            discord_slayer_sdk.ui.Button(
+            slaycord.ui.Button(
                 label='Do Thing',
-                style=discord_slayer_sdk.ButtonStyle.blurple,
+                style=slaycord.ButtonStyle.blurple,
                 custom_id=f'button:user:{user_id}',
                 emoji='\N{THUMBS UP SIGN}',
             )
@@ -51,21 +51,21 @@ class DynamicButton(discord_slayer_sdk.ui.DynamicItem[discord_slayer_sdk.ui.Butt
 
     # This is called when the button is clicked and the custom_id matches the template.
     @classmethod
-    async def from_custom_id(cls, interaction: discord_slayer_sdk.Interaction, item: discord_slayer_sdk.ui.Button, match: re.Match[str], /):
+    async def from_custom_id(cls, interaction: slaycord.Interaction, item: slaycord.ui.Button, match: re.Match[str], /):
         user_id = int(match['id'])
         return cls(user_id)
 
-    async def interaction_check(self, interaction: discord_slayer_sdk.Interaction) -> bool:
+    async def interaction_check(self, interaction: slaycord.Interaction) -> bool:
         # Only allow the user who created the button to interact with it.
         return interaction.user.id == self.user_id
 
-    async def callback(self, interaction: discord_slayer_sdk.Interaction) -> None:
+    async def callback(self, interaction: slaycord.Interaction) -> None:
         await interaction.response.send_message('This is your very own button!', ephemeral=True)
 
 
 class PersistentViewBot(commands.Bot):
     def __init__(self):
-        intents = discord_slayer_sdk.Intents.default()
+        intents = slaycord.Intents.default()
         intents.message_content = True
 
         super().__init__(command_prefix=commands.when_mentioned_or('$'), intents=intents)
@@ -103,7 +103,7 @@ async def prepare(ctx: commands.Context):
 async def dynamic_button(ctx: commands.Context):
     """Starts a dynamic button."""
 
-    view = discord_slayer_sdk.ui.View(timeout=None)
+    view = slaycord.ui.View(timeout=None)
     view.add_item(DynamicButton(ctx.author.id))
     await ctx.send('Here is your very own button!', view=view)
 

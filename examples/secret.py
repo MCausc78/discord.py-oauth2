@@ -1,9 +1,9 @@
 import typing
 
-import discord_slayer_sdk
-from discord_slayer_sdk_slayer_sdk.ext import commands
+import slaycord
+from slaycord.ext import commands
 
-intents = discord_slayer_sdk.Intents.default()
+intents = slaycord.Intents.default()
 
 bot = commands.Bot(command_prefix=commands.when_mentioned, description="Nothing to see here!", intents=intents)
 
@@ -19,8 +19,8 @@ def create_overwrites(ctx, *objects):
     """This is just a helper function that creates the overwrites for the
     voice/text channels.
 
-    A `discord_slayer_sdk.PermissionOverwrite` allows you to determine the permissions
-    of an object, whether it be a `discord_slayer_sdk.Role` or a `discord_slayer_sdk.Member`.
+    A `slaycord.PermissionOverwrite` allows you to determine the permissions
+    of an object, whether it be a `slaycord.Role` or a `slaycord.Member`.
 
     In this case, the `view_channel` permission is being used to hide the channel
     from being viewed by whoever does not meet the criteria, thus creating a
@@ -28,15 +28,15 @@ def create_overwrites(ctx, *objects):
     """
 
     # a dict comprehension is being utilised here to set the same permission overwrites
-    # for each `discord_slayer_sdk.Role` or `discord_slayer_sdk.Member`.
-    overwrites = {obj: discord_slayer_sdk.PermissionOverwrite(view_channel=True) for obj in objects}
+    # for each `slaycord.Role` or `slaycord.Member`.
+    overwrites = {obj: slaycord.PermissionOverwrite(view_channel=True) for obj in objects}
 
     # prevents the default role (@everyone) from viewing the channel
     # if it isn't already allowed to view the channel.
-    overwrites.setdefault(ctx.guild.default_role, discord_slayer_sdk.PermissionOverwrite(view_channel=False))
+    overwrites.setdefault(ctx.guild.default_role, slaycord.PermissionOverwrite(view_channel=False))
 
     # makes sure the client is always allowed to view the channel.
-    overwrites[ctx.guild.me] = discord_slayer_sdk.PermissionOverwrite(view_channel=True)
+    overwrites[ctx.guild.me] = slaycord.PermissionOverwrite(view_channel=True)
 
     return overwrites
 
@@ -45,7 +45,7 @@ def create_overwrites(ctx, *objects):
 # it is best to lock it to be guild-only.
 @secret.command()
 @commands.guild_only()
-async def text(ctx: commands.Context, name: str, *objects: typing.Union[discord_slayer_sdk.Role, discord_slayer_sdk.Member]):
+async def text(ctx: commands.Context, name: str, *objects: typing.Union[slaycord.Role, slaycord.Member]):
     """This makes a text channel with a specified name
     that is only visible to roles or members that are specified.
     """
@@ -62,7 +62,7 @@ async def text(ctx: commands.Context, name: str, *objects: typing.Union[discord_
 
 @secret.command()
 @commands.guild_only()
-async def voice(ctx: commands.Context, name: str, *objects: typing.Union[discord_slayer_sdk.Role, discord_slayer_sdk.Member]):
+async def voice(ctx: commands.Context, name: str, *objects: typing.Union[slaycord.Role, slaycord.Member]):
     """This does the same thing as the `text` subcommand
     but instead creates a voice channel.
     """
@@ -78,7 +78,7 @@ async def voice(ctx: commands.Context, name: str, *objects: typing.Union[discord
 
 @secret.command()
 @commands.guild_only()
-async def emoji(ctx: commands.Context, emoji: discord_slayer_sdk.PartialEmoji, *roles: discord_slayer_sdk.Role):
+async def emoji(ctx: commands.Context, emoji: slaycord.PartialEmoji, *roles: slaycord.Role):
     """This clones a specified emoji that only specified roles
     are allowed to use.
     """

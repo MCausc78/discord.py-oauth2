@@ -1,5 +1,5 @@
 include README.rst
 include LICENSE
 include requirements.txt
-include discord_slayer_sdk/bin/*.dll
-include discord_slayer_sdk/py.typed
+include slaycord/bin/*.dll
+include slaycord/py.typed
