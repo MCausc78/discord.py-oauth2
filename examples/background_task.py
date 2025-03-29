@@ -1,9 +1,9 @@
-from discord.ext import tasks
+from discord_slayer_sdk_slayer_sdk.ext import tasks
 
-import discord
+import discord_slayer_sdk
 
 
-class MyClient(discord.Client):
+class MyClient(discord_slayer_sdk.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -29,5 +29,5 @@ class MyClient(discord.Client):
         await self.wait_until_ready()  # wait until the bot logs in
 
 
-client = MyClient(intents=discord.Intents.default())
+client = MyClient(intents=discord_slayer_sdk.Intents.default())
 client.run('token')

@@ -1,13 +1,13 @@
 # This example requires the 'message_content' privileged intent to function.
 
-from discord.ext import commands
+from discord_slayer_sdk_slayer_sdk.ext import commands
 
-import discord
+import discord_slayer_sdk
 
 
 class Bot(commands.Bot):
     def __init__(self):
-        intents = discord.Intents.default()
+        intents = discord_slayer_sdk.Intents.default()
         intents.message_content = True
 
         super().__init__(command_prefix=commands.when_mentioned_or('$'), intents=intents)
@@ -18,7 +18,7 @@ class Bot(commands.Bot):
 
 
 # Define a simple View that gives us a confirmation menu
-class Confirm(discord.ui.View):
+class Confirm(discord_slayer_sdk.ui.View):
     def __init__(self):
         super().__init__()
         self.value = None
@@ -26,15 +26,15 @@ class Confirm(discord.ui.View):
     # When the confirm button is pressed, set the inner value to `True` and
     # stop the View from listening to more input.
     # We also send the user an ephemeral message that we're confirming their choice.
-    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord_slayer_sdk.ui.button(label='Confirm', style=discord_slayer_sdk.ButtonStyle.green)
+    async def confirm(self, interaction: discord_slayer_sdk.Interaction, button: discord_slayer_sdk.ui.Button):
         await interaction.response.send_message('Confirming', ephemeral=True)
         self.value = True
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
-    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord_slayer_sdk.ui.button(label='Cancel', style=discord_slayer_sdk.ButtonStyle.grey)
+    async def cancel(self, interaction: discord_slayer_sdk.Interaction, button: discord_slayer_sdk.ui.Button):
         await interaction.response.send_message('Cancelling', ephemeral=True)
         self.value = False
         self.stop()

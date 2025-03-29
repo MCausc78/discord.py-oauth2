@@ -1,8 +1,8 @@
-import discord
+import discord_slayer_sdk
 import asyncio
 
 
-class MyClient(discord.Client):
+class MyClient(discord_slayer_sdk.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -24,5 +24,5 @@ class MyClient(discord.Client):
             await asyncio.sleep(60)  # task runs every 60 seconds
 
 
-client = MyClient(intents=discord.Intents.default())
+client = MyClient(intents=discord_slayer_sdk.Intents.default())
 client.run('token')
