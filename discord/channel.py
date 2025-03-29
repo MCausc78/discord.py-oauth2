@@ -348,8 +348,13 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
 
         self._fill_overwrites(data)
 
-    async def _get_channel(self) -> Self:
-        return self
+    async def _get_messageable_destination(
+        self,
+    ) -> Tuple[int, discord.abc.MessageableDestinationType,]:
+        ll = self.linked_lobby
+        if ll is None:
+            return (self.id, 'channel')
+        return (ll.lobby_id, 'lobby')
 
     @property
     def type(self) -> Literal[ChannelType.text, ChannelType.news]:
@@ -468,7 +473,7 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
         return self.guild.get_thread(thread_id)
 
 
-class VocalGuildChannel(discord.abc.Messageable, discord.abc.Connectable, discord.abc.GuildChannel, Hashable):
+class VocalGuildChannel(discord.abc.GuildChannel, Hashable):
     __slots__ = (
         'name',
         'id',
@@ -490,9 +495,6 @@ class VocalGuildChannel(discord.abc.Messageable, discord.abc.Connectable, discor
         self._state: ConnectionState = state
         self.id: int = int(data['id'])
         self._update(guild, data)
-
-    async def _get_channel(self) -> Self:
-        return self
 
     def _get_voice_client_key(self) -> Tuple[int, str]:
         return self.guild.id, 'guild_id'
@@ -1410,8 +1412,13 @@ class DMChannel(discord.abc.Messageable, discord.abc.Connectable, discord.abc.Pr
     def _get_voice_state_pair(self) -> Tuple[int, int]:
         return self.me.id, self.id
 
-    async def _get_channel(self) -> Self:
-        return self
+    async def _get_messageable_destination(
+        self,
+    ) -> Tuple[int, discord.abc.MessageableDestinationType,]:
+        recipient = self.recipient
+        if recipient is None:
+            return (self.id, 'channel')
+        return (recipient.id, 'user')
 
     def __str__(self) -> str:
         if self.recipient:
@@ -1546,7 +1553,7 @@ class DMChannel(discord.abc.Messageable, discord.abc.Connectable, discord.abc.Pr
         return PartialMessage(channel=self, id=message_id)
 
 
-class GroupChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable):
+class GroupChannel(discord.abc.PrivateChannel, Hashable):
     """Represents a Discord group channel.
 
     .. container:: operations
@@ -1653,9 +1660,6 @@ class GroupChannel(discord.abc.Messageable, discord.abc.PrivateChannel, Hashable
             if user:
                 ret[user] = entry['nick']
         return ret
-
-    async def _get_channel(self) -> Self:
-        return self
 
     def __str__(self) -> str:
         if self.name:
@@ -1802,8 +1806,17 @@ class PartialMessageable(discord.abc.Messageable, Hashable):
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} id={self.id} type={self.type!r}>'
 
-    async def _get_channel(self) -> PartialMessageable:
-        return self
+    async def _get_messageable_destination(
+        self,
+    ) -> Tuple[int, discord.abc.MessageableDestinationType,]:
+        if self.type == ChannelType.private:
+            type = 'user'
+        elif self.type == ChannelType.lobby:
+            type = 'lobby'
+        else:
+            type = 'channel'
+
+        return (self.id, type)
 
     @property
     def guild(self) -> Optional[Guild]:

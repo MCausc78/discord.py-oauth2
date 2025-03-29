@@ -32,6 +32,7 @@ from typing import (
     Callable,
     Dict,
     List,
+    Literal,
     Optional,
     Protocol,
     Sequence,
@@ -70,27 +71,28 @@ if TYPE_CHECKING:
     from .channel import (
         TextChannel,
         DMChannel,
-        GroupChannel,
         PartialMessageable,
-        VoiceChannel,
-        StageChannel,
         CategoryChannel,
     )
     from .client import Client
     from .guild import Guild
+
+    # from .http import Response, MultipartParameters
     from .member import Member
     from .message import Message
-    from .threads import Thread
     from .types.channel import (
         PermissionOverwrite as PermissionOverwritePayload,
         GuildChannel as GuildChannelPayload,
         OverwriteType,
     )
+
+    # from .types.message import Message as MessagePayload
     from .state import ConnectionState
     from .user import ClientUser
 
-    PartialMessageableChannel = Union[TextChannel, VoiceChannel, StageChannel, Thread, DMChannel, PartialMessageable]
-    MessageableChannel = Union[PartialMessageableChannel, GroupChannel]
+    PartialMessageableChannel = Union[TextChannel, DMChannel, PartialMessageable]
+    MessageableChannel = Union[PartialMessageableChannel]
+    MessageableDestinationType = Literal['channel', 'lobby', 'user']
     SnowflakeTime = Union["Snowflake", datetime]
 
 MISSING = utils.MISSING
@@ -623,19 +625,18 @@ class Messageable:
     The following classes implement this ABC:
 
     - :class:`~discord.TextChannel`
-    - :class:`~discord.VoiceChannel`
-    - :class:`~discord.StageChannel`
     - :class:`~discord.DMChannel`
     - :class:`~discord.PartialMessageable`
     - :class:`~discord.User`
     - :class:`~discord.Member`
-    - :class:`~discord.ext.commands.Context`
     """
 
     __slots__ = ()
     _state: ConnectionState
 
-    async def _get_channel(self) -> MessageableChannel:
+    async def _get_messageable_destination(
+        self,
+    ) -> Tuple[int, MessageableDestinationType,]:
         raise NotImplementedError
 
     @overload
@@ -728,10 +729,17 @@ class Messageable:
             The message that was sent.
         """
 
-        channel = await self._get_channel()
+        destination_id, destination_type = await self._get_messageable_destination()
+
         state = self._state
+        http = state.http
         content = str(content) if content is not None else None
         previous_allowed_mention = state.allowed_mentions
+
+        endpoint = {
+            'lobby': http.send_lobby_message,
+            'user': http.send_user_message,
+        }.get(destination_type, http.send_message)
 
         with handle_message_parameters(
             content=content,
@@ -740,7 +748,39 @@ class Messageable:
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_allowed_mention,
         ) as params:
-            data = await state.http.send_message(channel.id, params=params)
+            data = await endpoint(destination_id, params=params)
+
+        channel: Union[TextChannel, DMChannel, PartialMessageable]
+        if destination_type == 'lobby':
+            channel, _ = state._get_lobby_channel(
+                utils._get_as_snowflake(data, 'channel_id'),
+                int(data['lobby_id']),
+            )
+        elif destination_type == 'user':
+            channel_id = int(data['channel_id'])
+            channel = state._get_private_channel(channel_id) or PartialMessageable(
+                state=state,
+                id=channel_id,
+                type=ChannelType.private,
+            )  # type: ignore
+        else:
+            channel_id = int(data['channel_id'])
+            guild_id = utils._get_as_snowflake(data, 'guild_id')
+
+            tmp = None
+            if guild_id is None:
+                tmp = state._get_private_channel(channel_id)
+            else:
+                guild = state._get_guild(channel_id)
+                if guild is None:
+                    tmp = None
+                else:
+                    tmp = guild._resolve_channel(channel_id)
+
+            channel = tmp or PartialMessageable(
+                state=state,
+                id=channel_id,
+            )  # type: ignore
 
         ret = state.create_message(channel=channel, data=data)
 

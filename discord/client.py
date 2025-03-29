@@ -28,7 +28,6 @@ import asyncio
 import datetime
 import logging
 from typing import (
-    TYPE_CHECKING,
     Any,
     AsyncIterator,
     Callable,
@@ -40,6 +39,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TYPE_CHECKING,
     Type,
     TypeVar,
     Union,
@@ -1131,9 +1131,9 @@ class Client:
     def get_partial_messageable(
         self, id: int, *, guild_id: Optional[int] = None, type: Optional[ChannelType] = None
     ) -> PartialMessageable:
-        """Returns a partial messageable with the given channel ID.
+        """Returns a partial messageable with the given destination ID.
 
-        This is useful if you have a channel_id but don't want to do an API call
+        This is useful if you have a destination ID but don't want to do an API call
         to send messages to it.
 
         .. versionadded:: 2.0
@@ -1141,7 +1141,21 @@ class Client:
         Parameters
         ----------
         id: :class:`int`
-            The channel ID to create a partial messageable for.
+            The destination ID to create a partial messageable for.
+
+            Depending on ``type``, ID of specific entity must be passed instead.
+
+            +-----------------------------------+----------------+
+            | Channel Type                      | Entity Type    |
+            +-----------------------------------+----------------+
+            | :attr:`~ChannelType.private`      | :class:`User`  |
+            +-----------------------------------+----------------+
+            | :attr:`~ChannelType.lobby`        | :class:`Lobby` |
+            +-----------------------------------+----------------+
+            | :attr:`~ChannelType.ephemeral_dm` | :class:`User`  |
+            +-----------------------------------+----------------+
+            | Other                             | A channel      |
+            +-----------------------------------+----------------+
         guild_id: Optional[:class:`int`]
             The optional guild ID to create a partial messageable for.
 
@@ -1154,7 +1168,7 @@ class Client:
         Returns
         -------
         :class:`.PartialMessageable`
-            The partial messageable
+            The partial messageable.
         """
         return PartialMessageable(state=self._connection, id=id, guild_id=guild_id, type=type)
 

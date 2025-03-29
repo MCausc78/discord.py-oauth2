@@ -24,12 +24,24 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, Generator, Generic, List, Optional, TypeVar, Union, Sequence, Type, overload
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    TYPE_CHECKING,
+    Type,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import discord.abc
 import discord.utils
-from discord import Interaction, Message, Attachment, MessageType, User, PartialMessageable, Permissions, ChannelType, Thread
-from discord.context_managers import Typing
+from discord import Message, Attachment, MessageType, User, PartialMessageable, Permissions, ChannelType, Thread
 from .view import StringView
 
 from ._types import BotT

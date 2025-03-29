@@ -28,7 +28,7 @@ import array
 from datetime import datetime
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING, Union
 
-from .abc import Messageable, GuildChannel
+from .abc import GuildChannel
 from .errors import ClientException
 from .enums import ChannelType, try_enum
 from .flags import ChannelFlags
@@ -42,12 +42,10 @@ __all__ = (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from .channel import TextChannel, CategoryChannel, ForumChannel, ForumTag
     from .guild import Guild
     from .member import Member
-    from .message import Message, PartialMessage
+    from .message import Message  # , PartialMessage
     from .role import Role
     from .state import ConnectionState
     from .types.threads import (
@@ -59,7 +57,7 @@ if TYPE_CHECKING:
     ThreadChannelType = Literal[ChannelType.news_thread, ChannelType.public_thread, ChannelType.private_thread]
 
 
-class Thread(Messageable, Hashable):
+class Thread(Hashable):
     """Represents a Discord thread.
 
     .. container:: operations
@@ -159,9 +157,6 @@ class Thread(Messageable, Hashable):
         self.guild: Guild = guild
         self._members: Dict[int, ThreadMember] = {}
         self._from_data(data)
-
-    async def _get_channel(self) -> Self:
-        return self
 
     def __repr__(self) -> str:
         return (
@@ -438,28 +433,28 @@ class Thread(Messageable, Hashable):
 
         return base
 
-    def get_partial_message(self, message_id: int, /) -> PartialMessage:
-        """Creates a :class:`PartialMessage` from the message ID.
+    # def get_partial_message(self, message_id: int, /) -> PartialMessage:
+    #     """Creates a :class:`PartialMessage` from the message ID.
 
-        This is useful if you want to work with a message and only have its ID without
-        doing an unnecessary API call.
+    #     This is useful if you want to work with a message and only have its ID without
+    #     doing an unnecessary API call.
 
-        .. versionadded:: 2.0
+    #     .. versionadded:: 2.0
 
-        Parameters
-        ----------
-        message_id: :class:`int`
-            The message ID to create a partial message for.
+    #     Parameters
+    #     ----------
+    #     message_id: :class:`int`
+    #         The message ID to create a partial message for.
 
-        Returns
-        -------
-        :class:`PartialMessage`
-            The partial message.
-        """
+    #     Returns
+    #     -------
+    #     :class:`PartialMessage`
+    #         The partial message.
+    #     """
 
-        from .message import PartialMessage
+    #     from .message import PartialMessage
 
-        return PartialMessage(channel=self, id=message_id)
+    #     return PartialMessage(channel=self, id=message_id)
 
     def _add_member(self, member: ThreadMember, /) -> None:
         self._members[member.id] = member

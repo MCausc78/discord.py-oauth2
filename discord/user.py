@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 
 import discord.abc
 
@@ -490,9 +490,10 @@ class User(BaseUser, discord.abc.Messageable):
     def __repr__(self) -> str:
         return f'<User id={self.id} name={self.name!r} global_name={self.global_name!r} bot={self.bot}>'
 
-    async def _get_channel(self) -> DMChannel:
-        ch = await self.create_dm()
-        return ch
+    async def _get_messageable_destination(
+        self,
+    ) -> Tuple[int, discord.abc.MessageableDestinationType,]:
+        return (self.id, 'user')
 
     @property
     def dm_channel(self) -> Optional[DMChannel]:
