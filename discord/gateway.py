@@ -219,7 +219,10 @@ class VoiceKeepAliveHandler(KeepAliveHandler):
     def get_payload(self) -> Dict[str, Any]:
         return {
             'op': self.ws.HEARTBEAT,
-            'd': int(time.time() * 1000),
+            'd': {
+                't': int(time.time() * 1000),
+                'seq_ack': self.ws.sequence,
+            },
         }
 
     def ack(self) -> None:
@@ -358,14 +361,22 @@ class DiscordWebSocket:
 
         gateway = gateway or cls.DEFAULT_GATEWAY
 
-        if not compress:
-            url = gateway.with_query(v=INTERNAL_API_VERSION, encoding=encoding)
+        if compress:
+            params = {
+                'v': INTERNAL_API_VERSION,
+                'encoding': encoding,
+                'compress': utils._ActiveDecompressionContext.COMPRESSION_TYPE,
+            }
         else:
-            url = gateway.with_query(
-                v=INTERNAL_API_VERSION, encoding=encoding, compress=utils._ActiveDecompressionContext.COMPRESSION_TYPE
-            )
+            params = {
+                'v': INTERNAL_API_VERSION,
+                'encoding': encoding,
+            }
 
-        socket = await client.http.ws_connect(str(url))
+        socket = await client.http.ws_connect(
+            str(gateway),
+            params=params,
+        )
         ws = cls(socket, loop=client.loop)
 
         # dynamically add attributes needed
@@ -783,6 +794,7 @@ class DiscordVoiceWebSocket:
         _connection: VoiceConnectionState
         gateway: str
         _max_heartbeat_timeout: float
+        sequence: Optional[int]
 
     # fmt: off
     IDENTIFY            = 0
@@ -853,17 +865,23 @@ class DiscordVoiceWebSocket:
         cls,
         state: VoiceConnectionState,
         *,
+        sequence: Optional[int] = None,
         resume: bool = False,
         hook: Optional[Callable[..., Coroutine[Any, Any, Any]]] = None,
     ) -> Self:
         """Creates a voice websocket for the :class:`VoiceClient`."""
-        gateway = f'wss://{state.endpoint}/?v=4'
+        gateway = f'wss://{state.endpoint}/'
         client = state.voice_client
         http = client._state.http
-        socket = await http.ws_connect(gateway, compress=15)
+        socket = await http.ws_connect(
+            gateway,
+            compress=15,
+            params={'v': 8},
+        )
         ws = cls(socket, loop=client.loop, hook=hook)
         ws.gateway = gateway
         ws._connection = state
+        ws.sequence = sequence
         ws._max_heartbeat_timeout = 60.0
         ws.thread_id = threading.get_ident()
 
@@ -916,6 +934,9 @@ class DiscordVoiceWebSocket:
         op = msg['op']
         data = msg['d']  # According to Discord this key is always given
 
+        if 'seq' in msg:
+            self.sequence = msg['seq']
+
         if op == self.READY:
             await self.initial_connection(data)
         elif op == self.HEARTBEAT_ACK:
@@ -958,20 +979,20 @@ class DiscordVoiceWebSocket:
         struct.pack_into('>H', packet, 2, 70)  # 70 = Length
         struct.pack_into('>I', packet, 4, state.ssrc)
 
-        _log.debug('Sending ip discovery packet')
+        _log.debug('Sending IP discovery packet')
         await self.loop.sock_sendall(state.socket, packet)
 
         fut: asyncio.Future[bytes] = self.loop.create_future()
 
         def get_ip_packet(data: bytes):
-            if data[1] == 0x02 and len(data) == 74:
+            if len(data) == 74 and data[1] == 0x02:
                 self.loop.call_soon_threadsafe(fut.set_result, data)
 
         fut.add_done_callback(lambda f: state.remove_socket_listener(get_ip_packet))
         state.add_socket_listener(get_ip_packet)
         recv = await fut
 
-        _log.debug('Received ip discovery packet: %s', recv)
+        _log.debug('Received IP discovery packet: %s', recv)
 
         # the ip is ascii starting at the 8th byte and ending at the first null
         ip_start = 8
@@ -979,7 +1000,7 @@ class DiscordVoiceWebSocket:
         ip = recv[ip_start:ip_end].decode('ascii')
 
         port = struct.unpack_from('>H', recv, len(recv) - 2)[0]
-        _log.debug('detected ip: %s port: %s', ip, port)
+        _log.debug('detected IP: %s port: %s', ip, port)
 
         return ip, port
 

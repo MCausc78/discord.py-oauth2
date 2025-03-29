@@ -76,8 +76,6 @@ if TYPE_CHECKING:
     )
     from .client import Client
     from .guild import Guild
-
-    # from .http import Response, MultipartParameters
     from .member import Member
     from .message import Message
     from .types.channel import (
@@ -85,8 +83,6 @@ if TYPE_CHECKING:
         GuildChannel as GuildChannelPayload,
         OverwriteType,
     )
-
-    # from .types.message import Message as MessagePayload
     from .state import ConnectionState
     from .user import ClientUser
 
@@ -113,6 +109,8 @@ class Snowflake(Protocol):
     id: :class:`int`
         The model's unique ID.
     """
+
+    __slots__ = ()
 
     id: int
 

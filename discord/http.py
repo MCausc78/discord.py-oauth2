@@ -536,7 +536,9 @@ class HTTPClient:
         if self.__session and self.__session.closed:
             self.__session = MISSING
 
-    async def ws_connect(self, url: str, *, compress: int = 0) -> aiohttp.ClientWebSocketResponse:
+    async def ws_connect(
+        self, url: str, *, compress: int = 0, params: Optional[Dict[str, Any]] = None
+    ) -> aiohttp.ClientWebSocketResponse:
         kwargs = {
             'proxy_auth': self.proxy_auth,
             'proxy': self.proxy,
@@ -548,6 +550,9 @@ class HTTPClient:
             },
             'compress': compress,
         }
+
+        if params is not None:
+            kwargs['params'] = params
 
         return await self.__session.ws_connect(url, **kwargs)
 
