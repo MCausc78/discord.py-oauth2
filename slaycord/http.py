@@ -866,7 +866,6 @@ class HTTPClient:
     def send_lobby_message(
         self,
         lobby_id: Snowflake,
-        *,
         params: MultipartParameters,
     ) -> Response[message.Message]:
         r = Route('POST', '/lobbies/{lobby_id}/messages', lobby_id=lobby_id)
@@ -878,7 +877,6 @@ class HTTPClient:
     def send_user_message(
         self,
         user_id: Snowflake,
-        *,
         params: MultipartParameters,
     ) -> Response[message.Message]:
         r = Route('POST', '/users/{user_id}/messages', user_id=user_id)
@@ -890,7 +888,6 @@ class HTTPClient:
     def send_message(
         self,
         channel_id: Snowflake,
-        *,
         params: MultipartParameters,
     ) -> Response[message.Message]:
         r = Route('POST', '/channels/{channel_id}/messages', channel_id=channel_id)
