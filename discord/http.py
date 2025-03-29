@@ -592,7 +592,7 @@ class HTTPClient:
         # header creation
         headers: Dict[str, str] = {
             'User-Agent': self.user_agent,
-            'X-Super-Properties': "eyJicm93c2VyIjoiRGlzY29yZCBFbWJlZGRlZCIsImJyb3dzZXJfdXNlcl9hZ2VudCI6IkRpc2NvcmQgRW1iZWRkZWQvMC4wLjgiLCJicm93c2VyX3ZlcnNpb24iOiIwLjAuOCIsImNsaWVudF9idWlsZF9udW1iZXIiOjMwNDY4MywiZGVzaWduX2lkIjowLCJvcyI6IldpbmRvd3MiLCJyZWxlYXNlX2NoYW5uZWwiOiJ1bmtub3duIn0=",
+            'X-Super-Properties': self.encoded_super_properties,
             # {
             #     "browser": "Discord Embedded",
             #     "browser_user_agent": "Discord Embedded/0.0.8",
@@ -603,6 +603,10 @@ class HTTPClient:
             #     "release_channel": "unknown"
             # }
         }
+
+        supplemental_headers = kwargs.pop('supplemental_headers', None)
+        if supplemental_headers:
+            headers.update(supplemental_headers)
 
         if self.token is not None:
             headers['Authorization'] = 'Bearer ' + self.token
@@ -815,7 +819,7 @@ class HTTPClient:
 
     # login management
 
-    async def static_login(self, token: str) -> user.User:
+    async def startup(self) -> None:
         # Necessary to get aiohttp to stop complaining about session creation
         if self.connector is MISSING:
             self.connector = aiohttp.TCPConnector(limit=0)
@@ -828,6 +832,9 @@ class HTTPClient:
         )
         self._global_over = asyncio.Event()
         self._global_over.set()
+
+    async def static_login(self, token: str) -> user.User:
+        await self.startup()
 
         old_token = self.token
         self.token = token
@@ -1325,6 +1332,41 @@ class HTTPClient:
                 subscription_id=subscription_id,
             )
         )
+
+    # OAuth2 flow
+    def unmerge_provisional_account(
+        self,
+        *,
+        client_id: Snowflake,
+        client_secret: Optional[str] = None,
+        external_auth_token: str,
+        external_auth_type: str,
+    ) -> Response[None]:
+        payload = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'external_auth_token': external_auth_token,
+            'external_auth_type': external_auth_type,
+        }
+
+        return self.request(Route('POST', '/partner-sdk/provisional-accounts/unmerge'), json=payload)
+
+    def create_provisional_account(
+        self,
+        *,
+        client_id: Snowflake,
+        client_secret: Optional[str] = None,
+        external_auth_token: str,
+        external_auth_type: str,
+    ) -> Response[Any]:
+        payload = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'external_auth_token': external_auth_token,
+            'external_auth_type': external_auth_type,
+        }
+
+        return self.request(Route('POST', '/partner-sdk/token'), json=payload)
 
     # Lobbies
     def create_or_join_lobby(

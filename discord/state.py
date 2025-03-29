@@ -30,19 +30,20 @@ from copy import copy
 import inspect
 import logging
 from typing import (
-    Dict,
-    Optional,
-    TYPE_CHECKING,
-    Union,
-    Callable,
     Any,
-    List,
-    TypeVar,
+    Callable,
     Coroutine,
-    Sequence,
-    Generic,
-    Tuple,
     Deque,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    TYPE_CHECKING,
+    TypeVar,
+    Tuple,
+    Union,
+    cast,
 )
 
 # import weakref
@@ -627,14 +628,14 @@ class ConnectionState(Generic[ClientT]):
 
         guilds = []
 
-        for guild_data, guild_members_data, guild_presences_data in zip(
+        for (untyped_guild_data, untyped_guild_members_data, untyped_guild_presences_data,) in zip(
             data.get('guilds', ()),
             data.get('merged_members', ()),
             merged_presences.get('guilds', ()),
         ):
-            guild_data: gw.SupplementalGuild
-            guild_members_data: List[MemberWithUserPayload]
-            guild_presences_data: List[PartialPresenceUpdatePayload]
+            guild_data = cast('gw.SupplementalGuild', untyped_guild_data)
+            guild_members_data = cast('List[MemberWithUserPayload]', untyped_guild_members_data)
+            guild_presences_data = cast('List[PartialPresenceUpdatePayload]', untyped_guild_presences_data)
 
             guild_id = int(guild_data['id'])
             guild = self._get_guild(guild_id)
@@ -643,14 +644,14 @@ class ConnectionState(Generic[ClientT]):
                 _log.debug('READY_SUPPLEMENTAL referencing an unknown guild ID: %s. Discarding.', guild_id)
                 continue
 
-            members = [Member(data=guild_member_data, guild=guild, state=self) for guild_member_data in guild_members_data]  # type: ignore # ???
+            members = [Member(data=guild_member_data, guild=guild, state=self) for guild_member_data in guild_members_data]
             for member in members:
                 guild._add_member(member)
 
             guild_presences = []
             for guild_presence_data in guild_presences_data:
                 event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
-                event.user_id = int(guild_presence_data['user_id'])
+                event.user_id = int(guild_presence_data['user_id'])  # type: ignore
                 event.client_status = ClientStatus(
                     status=guild_presence_data['status'], data=guild_presence_data['client_status']
                 )

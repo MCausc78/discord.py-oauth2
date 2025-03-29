@@ -81,6 +81,7 @@ MISSING = utils.MISSING
 if TYPE_CHECKING:
     from .abc import Snowflake
     from .channel import VoiceChannel, StageChannel, TextChannel, ForumChannel, CategoryChannel
+    from .state import ConnectionState
     from .types.guild import (
         Guild as GuildPayload,
         GuildPreview as GuildPreviewPayload,
@@ -91,7 +92,6 @@ if TYPE_CHECKING:
         Thread as ThreadPayload,
     )
     from .types.voice import GuildVoiceState
-    from .state import ConnectionState
     from .voice_client import VoiceProtocol
 
     VocalGuildChannel = Union[VoiceChannel, StageChannel]

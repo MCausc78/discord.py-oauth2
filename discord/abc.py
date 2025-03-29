@@ -405,7 +405,7 @@ class GuildChannel:
         overwrite as a :class:`~discord.PermissionOverwrite`.
 
         .. versionchanged:: 2.0
-            Overwrites can now be type-aware :class:`~discord.Object` in case of cache lookup failure
+            Overwrites can now be type-aware :class:`~discord.Object` in case of cache lookup failure.
 
         Returns
         -------
