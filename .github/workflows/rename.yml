@@ -24,14 +24,14 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
+          git checkout feat/oauth2-gateway
           git checkout -b temp feat/oauth2-gateway
-          cp .github/files/README.rst README.rst
           rm -rf docs .github .readthedocs.yml tests
-          mv discord slaycord
+          mv discord discord_slayer_sdk
 
-          sed -i -e 's/import discord/import slaycord/g' -e '/from discord_protos/!{s/from discord/from slaycord/g}' -e '/from discord_protos/!{s/from discord/from slaycord/g}' -e 's/discord\.py/slaycord\.py/g' -e '/\(discord\.com\|discord\.gift\|discord\.gg\|discord\.new\)/! s/discord\./slaycord\./g' $(find slaycord examples -name "*.py")
-          sed -i -e 's/discord/slaycord/g' MANIFEST.in setup.py
-          sed -i -E 's/^name = "discord\.py-slayer"/name = "slaycord.py"/; /http/!s/\bdiscord\b/slaycord/g' pyproject.toml
+          sed -i -e 's/import discord/import discord_slayer_sdk/g' -e '/from discord_protos/!{s/from discord/from discord_slayer_sdk/g}' -e '/from discord_protos/!{s/from discord/from discord_slayer_sdk/g}' -e 's/discord\.py/discord_slayer_sdk\.py/g' -e '/\(discord\.com\|discord\.gift\|discord\.gg\|discord\.new\)/! s/discord\./discord_slayer_sdk\./g' $(find discord_slayer_sdk examples -name "*.py")
+          sed -i -e 's/discord/discord_slayer_sdk/g' MANIFEST.in setup.py
+          sed -i -E 's/^name = "discord\.py"/name = "discord_slayer_sdk.py"/; /http/!s/\bdiscord\b/discord_slayer_sdk/g' pyproject.toml
 
       - name: Push changes
         run: |
