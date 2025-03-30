@@ -409,22 +409,22 @@ class MessageFlags(BaseFlags):
     @flag_value
     def crossposted(self):
         """:class:`bool`: Returns ``True`` if the message is the original crossposted message."""
-        return 1
+        return 1 << 0
 
     @flag_value
     def is_crossposted(self):
         """:class:`bool`: Returns ``True`` if the message was crossposted from another channel."""
-        return 2
+        return 1 << 1
 
     @flag_value
     def suppress_embeds(self):
         """:class:`bool`: Returns ``True`` if the message's embeds have been suppressed."""
-        return 4
+        return 1 << 2
 
     @flag_value
     def source_message_deleted(self):
         """:class:`bool`: Returns ``True`` if the source message for this crosspost has been deleted."""
-        return 8
+        return 1 << 3
 
     @flag_value
     def urgent(self):
@@ -432,7 +432,7 @@ class MessageFlags(BaseFlags):
 
         An urgent message is one sent by Discord Trust and Safety.
         """
-        return 16
+        return 1 << 4
 
     @flag_value
     def has_thread(self):
@@ -440,7 +440,7 @@ class MessageFlags(BaseFlags):
 
         .. versionadded:: 2.0
         """
-        return 32
+        return 1 << 5
 
     @flag_value
     def ephemeral(self):
@@ -448,7 +448,7 @@ class MessageFlags(BaseFlags):
 
         .. versionadded:: 2.0
         """
-        return 64
+        return 1 << 6
 
     @flag_value
     def loading(self):
@@ -457,7 +457,7 @@ class MessageFlags(BaseFlags):
 
         .. versionadded:: 2.0
         """
-        return 128
+        return 1 << 7
 
     @flag_value
     def failed_to_mention_some_roles_in_thread(self):
@@ -466,7 +466,17 @@ class MessageFlags(BaseFlags):
 
         .. versionadded:: 2.0
         """
-        return 256
+        return 1 << 8
+
+    @flag_value
+    def guild_feed_hidden(self):
+        """:class:`bool`: Returns ``True`` if the message is hidden from the guild's feed."""
+        return 1 << 9
+
+    @flag_value
+    def should_show_link_not_discord_warning(self):
+        """:class:`bool`: Returns ``True`` if the message contains a link that impersonates Discord."""
+        return 1 << 10
 
     @flag_value
     def suppress_notifications(self):
@@ -474,7 +484,7 @@ class MessageFlags(BaseFlags):
 
         .. versionadded:: 2.2
         """
-        return 4096
+        return 1 << 12
 
     @alias_flag_value
     def silent(self):
@@ -482,7 +492,7 @@ class MessageFlags(BaseFlags):
 
         .. versionadded:: 2.2
         """
-        return 4096
+        return 1 << 12
 
     @flag_value
     def voice(self):
@@ -490,7 +500,7 @@ class MessageFlags(BaseFlags):
 
         .. versionadded:: 2.3
         """
-        return 8192
+        return 1 << 13
 
     @flag_value
     def forwarded(self):
@@ -498,7 +508,17 @@ class MessageFlags(BaseFlags):
 
         .. versionadded:: 2.5
         """
-        return 16384
+        return 1 << 14
+
+    @flag_value
+    def has_components_v2(self):
+        """:class:`bool`: Whether the message contains v2 components."""
+        return 1 << 15
+
+    @flag_value
+    def sent_by_social_layer_integration(self):
+        """:class:`bool`: Whether the message is trigged by the social layer integration."""
+        return 1 << 16
 
 
 @fill_with_flags()

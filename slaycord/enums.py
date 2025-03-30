@@ -31,6 +31,7 @@ from typing import Any, ClassVar, Dict, List, Iterator, Mapping, Optional, TYPE_
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+# TODO: Sort enums
 __all__ = (
     'Enum',
     'ChannelType',
@@ -81,6 +82,7 @@ __all__ = (
     'PollLayoutType',
     'VoiceChannelEffectAnimationType',
     'SubscriptionStatus',
+    'ApplicationDisclosureType',
     'MessageReferenceType',
     'ClientType',
     'ConnectionType',
@@ -271,12 +273,25 @@ class MessageType(Enum):
     stage_raise_hand = 30
     stage_topic = 31
     guild_application_premium_subscription = 32
+    premium_referral = 35
     guild_incident_alert_mode_enabled = 36
     guild_incident_alert_mode_disabled = 37
     guild_incident_report_raid = 38
     guild_incident_report_false_alarm = 39
+    guild_deadchat_revive_prompt = 40
+    custom_gift = 41
+    guild_gaming_stats_prompt = 42
     purchase_notification = 44
     poll_result = 46
+    changelog = 47
+    nitro_notification = 48
+    channel_linked_to_lobby = 49
+    gifting_prompt = 50
+    in_game_message_nux = 51
+    guild_join_request_accept_notification = 52
+    guild_join_request_reject_notification = 53
+    guild_join_request_withdrawn_notification = 54
+    hd_streaming_upgraded = 55
 
 
 class SpeakingState(Enum):
@@ -532,26 +547,44 @@ class AuditLogAction(Enum):
 
 
 class UserFlags(Enum):
-    staff = 1
-    partner = 2
-    hypesquad = 4
-    bug_hunter = 8
-    mfa_sms = 16
-    premium_promo_dismissed = 32
-    hypesquad_bravery = 64
-    hypesquad_brilliance = 128
-    hypesquad_balance = 256
-    early_supporter = 512
-    team_user = 1024
-    system = 4096
-    has_unread_urgent_messages = 8192
-    bug_hunter_level_2 = 16384
-    verified_bot = 65536
-    verified_bot_developer = 131072
-    discord_certified_moderator = 262144
-    bot_http_interactions = 524288
-    spammer = 1048576
-    active_developer = 4194304
+    staff = 1 << 0
+    partner = 1 << 1
+    hypesquad = 1 << 2
+    bug_hunter = 1 << 3
+    mfa_sms = 1 << 4
+    premium_promo_dismissed = 1 << 5
+    hypesquad_bravery = 1 << 6
+    hypesquad_brilliance = 1 << 7
+    hypesquad_balance = 1 << 8
+    early_supporter = 1 << 9
+    team_user = 1 << 10
+    is_hubspot_contact = 1 << 11
+    system = 1 << 12
+    has_unread_urgent_messages = 1 << 13
+    bug_hunter_level_2 = 1 << 14
+    underage_deleted = 1 << 15
+    verified_bot = 1 << 16
+    verified_bot_developer = 1 << 17
+    discord_certified_moderator = 1 << 18
+    bot_http_interactions = 1 << 19
+    spammer = 1 << 20
+    disable_premium = 1 << 21
+    active_developer = 1 << 22
+    provisional_account = 1 << 23
+    high_global_rate_limit = 1 << 33
+    deleted = 1 << 34
+    disabled_suspicious_activity = 1 << 35
+    self_deleted = 1 << 36
+    premium_discriminator = 1 << 37
+    used_desktop_client = 1 << 38
+    used_web_client = 1 << 39
+    used_mobile_client = 1 << 40
+    disabled = 1 << 41
+    has_session_started = 1 << 43
+    quarantined = 1 << 44
+    premium_eligible_for_unique_username = 1 << 47
+    collaborator = 1 << 50
+    restricted_collaborator = 1 << 51
 
 
 class ActivityType(Enum):
@@ -960,6 +993,13 @@ class SubscriptionStatus(Enum):
     active = 0
     ending = 1
     inactive = 2
+
+
+class ApplicationDisclosureType(Enum):
+    unspecified = 0
+    ip_location = 1
+    display_advertisements = 2
+    partner_sdk_data_sharing_message = 3
 
 
 def create_unknown_value(cls: Type[E], val: Any) -> E:
