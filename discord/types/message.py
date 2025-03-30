@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypedDict, Union
+from typing import Dict, List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired, Required
 
 from .channel import ChannelType
@@ -227,6 +227,10 @@ class Message(PartialMessage):
     thread: NotRequired[Thread]
     call: NotRequired[CallMessage]
     purchase_notification: NotRequired[PurchaseNotificationResponse]
+
+    disclosure_type: NotRequired[Literal[0, 1, 2, 3]]
+    metadata: NotRequired[Dict[str, str]]
+    recipient_id: NotRequired[Snowflake]
 
 
 class LobbyMessage(Message):

@@ -31,6 +31,7 @@ from typing import Any, ClassVar, Dict, List, Iterator, Mapping, Optional, TYPE_
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+# TODO: Sort enums
 __all__ = (
     'Enum',
     'ChannelType',
@@ -81,6 +82,7 @@ __all__ = (
     'PollLayoutType',
     'VoiceChannelEffectAnimationType',
     'SubscriptionStatus',
+    'ApplicationDisclosureType',
     'MessageReferenceType',
     'ClientType',
     'ConnectionType',
@@ -991,6 +993,13 @@ class SubscriptionStatus(Enum):
     active = 0
     ending = 1
     inactive = 2
+
+
+class ApplicationDisclosureType(Enum):
+    unspecified = 0
+    ip_location = 1
+    display_advertisements = 2
+    partner_sdk_data_sharing_message = 3
 
 
 def create_unknown_value(cls: Type[E], val: Any) -> E:
