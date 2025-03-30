@@ -27,7 +27,7 @@ from __future__ import annotations
 from typing import Dict, List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired, Required
 
-from .channel import ChannelType
+from .channel import Channel, ChannelType
 from .components import Component
 from .embed import Embed
 from .emoji import PartialEmoji
@@ -41,6 +41,7 @@ from .user import User
 
 
 class PartialMessage(TypedDict):
+    channel: NotRequired[Channel]
     channel_id: Snowflake
     guild_id: NotRequired[Snowflake]
 

@@ -1575,8 +1575,9 @@ class Message(PartialMessage, Hashable):
         This can only be accurately received in :func:`on_message` and :func:`on_lobby_message`
         due to a Discord limitation.
     recipient_id: Optional[:class:`int`]
-        The DM channel recipient's ID from side of other message's receiver.
+        The DM channel recipient's ID, sometimes can be your user ID.
     """
+    #     The DM channel recipient's ID, from side of other message's receivers if message was received through :func:`on_message`.
 
     __slots__ = (
         '_edited_timestamp',
