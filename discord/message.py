@@ -472,7 +472,7 @@ class MessageSnapshot:
     .. versionadded:: 2.5
 
     Attributes
-    -----------
+    ----------
     type: :class:`MessageType`
         The type of the forwarded message.
     content: :class:`str`
@@ -520,12 +520,12 @@ class MessageSnapshot:
         return [cls(state, snapshot['message']) for snapshot in message_snapshots]
 
     def __init__(self, state: ConnectionState, data: MessageSnapshotPayload):
-        self.type: MessageType = try_enum(MessageType, data['type'])
+        self.type: MessageType = try_enum(MessageType, data.get('type', 0))
         self.content: str = data['content']
-        self.embeds: List[Embed] = [Embed.from_dict(a) for a in data['embeds']]
-        self.attachments: List[Attachment] = [Attachment(data=a, state=state) for a in data['attachments']]
+        self.embeds: List[Embed] = list(map(Embed.from_dict, data.get('embeds', ())))
+        self.attachments: List[Attachment] = [Attachment(data=a, state=state) for a in data.get('attachments', ())]
         self.created_at: datetime.datetime = utils.parse_time(data['timestamp'])
-        self._edited_timestamp: Optional[datetime.datetime] = utils.parse_time(data['edited_timestamp'])
+        self._edited_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('edited_timestamp'))
         self.flags: MessageFlags = MessageFlags._from_value(data.get('flags', 0))
         self.stickers: List[StickerItem] = [StickerItem(data=d, state=state) for d in data.get('sticker_items', ())]
 
@@ -1572,6 +1572,8 @@ class Message(PartialMessage, Hashable):
 
         This can only be accurately received in :func:`on_message` and :func:`on_lobby_message`
         due to a Discord limitation.
+    recipient_id: Optional[:class:`int`]
+        The DM channel recipient's ID from side of other message's receiver.
     """
 
     __slots__ = (
@@ -1612,6 +1614,7 @@ class Message(PartialMessage, Hashable):
         'purchase_notification',
         'message_snapshots',
         'metadata',
+        'recipient_id',
     )
 
     if TYPE_CHECKING:
@@ -1640,7 +1643,7 @@ class Message(PartialMessage, Hashable):
         self.embeds: List[Embed] = [Embed.from_dict(a) for a in data.get('embeds', ())]
         self.activity: Optional[MessageActivityPayload] = data.get('activity')
         self._edited_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('edited_timestamp'))
-        self.type: MessageType = try_enum(MessageType, data['type'])
+        self.type: MessageType = try_enum(MessageType, data.get('type', 0))
         self.pinned: bool = data.get('pinned', False)
         self.flags: MessageFlags = MessageFlags._from_value(data.get('flags', 0))
         self.mention_everyone: bool = data.get('mention_everyone', False)
@@ -1755,6 +1758,7 @@ class Message(PartialMessage, Hashable):
             self.purchase_notification = PurchaseNotification(purchase_notification)
 
         self.metadata: Optional[Dict[str, str]] = data.get('metadata')
+        self.recipient_id: Optional[int] = utils._get_as_snowflake(data, 'recipient_id')
 
         for handler in ('author', 'member', 'mentions', 'mention_roles', 'components', 'call'):
             try:
@@ -1797,17 +1801,16 @@ class Message(PartialMessage, Hashable):
         reaction = utils.find(lambda r: r.emoji == emoji, self.reactions)
 
         if reaction is None:
-            # already removed?
+            # Already removed?
             raise ValueError('Emoji already removed?')
 
-        # if reaction isn't in the list, we crash. This means discord
-        # sent bad data, or we stored improperly
+        # If reaction isn't in the list, we crash. This means Discord sent bad data, or we stored improperly.
         reaction.count -= 1
 
         if user_id == self._state.self_id:
             reaction.me = False
         if reaction.count == 0:
-            # this raises ValueError if something went wrong as well.
+            # This raises ValueError if something went wrong as well.
             self.reactions.remove(reaction)
 
         return reaction
@@ -1828,7 +1831,7 @@ class Message(PartialMessage, Hashable):
         # In an update scheme, 'author' key has to be handled before 'member'
         # otherwise they overwrite each other which is undesirable.
         # Since there's no good way to do this we have to iterate over every
-        # handler rather than iterating over the keys which is a little slower
+        # handler rather than iterating over the keys which is a little slower.
         for key, handler in self._HANDLERS:
             try:
                 value = data[key]
