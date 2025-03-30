@@ -259,7 +259,7 @@ class ConnectionState(Generic[ClientT]):
         # LRU of max size 128
         self._private_channels: OrderedDict[int, PrivateChannel] = OrderedDict()
         # extra dict to look up private channels by user id
-        self._private_channels_by_user: Dict[int, DMChannel] = {}
+        self._private_channels_by_user: Dict[int, Union[DMChannel, EphemeralDMChannel]] = {}
 
         if self.max_messages is not None:
             self._messages: Optional[Deque[Message]] = deque(maxlen=self.max_messages)
@@ -443,7 +443,7 @@ class ConnectionState(Generic[ClientT]):
             self._private_channels.move_to_end(channel_id)  # type: ignore
             return value
 
-    def _get_private_channel_by_user(self, user_id: Optional[int]) -> Optional[DMChannel]:
+    def _get_private_channel_by_user(self, user_id: Optional[int]) -> Optional[Union[DMChannel, EphemeralDMChannel]]:
         # the keys of self._private_channels are ints
         return self._private_channels_by_user.get(user_id)  # type: ignore
 
@@ -453,21 +453,26 @@ class ConnectionState(Generic[ClientT]):
 
         if len(self._private_channels) > 128:
             _, to_remove = self._private_channels.popitem(last=False)
-            if isinstance(to_remove, DMChannel) and to_remove.recipient:
+            if isinstance(to_remove, (DMChannel, EphemeralDMChannel)) and to_remove.recipient:
                 self._private_channels_by_user.pop(to_remove.recipient.id, None)
 
-        if isinstance(channel, DMChannel) and channel.recipient:
+        if isinstance(channel, (DMChannel, EphemeralDMChannel)) and channel.recipient:
             self._private_channels_by_user[channel.recipient.id] = channel
 
-    def add_dm_channel(self, data: DMChannelPayload) -> DMChannel:
+    def add_dm_channel(self, data: DMChannelPayload) -> Union[DMChannel, EphemeralDMChannel]:
         # self.user is *always* cached when this is called
-        channel = DMChannel(me=self.user, state=self, data=data)  # type: ignore
+        if data['type'] == ChannelType.ephemeral_dm.value:
+            cls = EphemeralDMChannel
+        else:
+            cls = DMChannel
+
+        channel = cls(me=self.user, state=self, data=data)  # type: ignore
         self._add_private_channel(channel)
         return channel
 
     def _remove_private_channel(self, channel: PrivateChannel) -> None:
         self._private_channels.pop(channel.id, None)
-        if isinstance(channel, DMChannel):
+        if isinstance(channel, (DMChannel, EphemeralDMChannel)):
             recipient = channel.recipient
             if recipient is not None:
                 self._private_channels_by_user.pop(recipient.id, None)
@@ -533,7 +538,12 @@ class ConnectionState(Generic[ClientT]):
             guild_id = guild_id or int(data['guild_id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
             guild = self._get_guild(guild_id)
         except KeyError:
-            channel = DMChannel._from_message(self, channel_id, utils._get_as_snowflake(data, 'id') or None)
+            if 'channel_type' in data and data['channel_type'] == ChannelType.ephemeral_dm.value:
+                cls = EphemeralDMChannel
+            else:
+                cls = DMChannel
+
+            channel = cls._from_message(self, channel_id, utils._get_as_snowflake(data, 'id') or None)
             guild = None
         else:
             channel = guild and guild._resolve_channel(channel_id)
@@ -1075,7 +1085,7 @@ class ConnectionState(Generic[ClientT]):
             _log.debug('CHANNEL_CREATE referencing an unknown guild ID: %s. Discarding.', guild_id)
             return
 
-        # The factory can't be a DMChannel or GroupChannel here
+        # The factory can't be a DMChannel, GroupChannel or EphemeralDMChannel here
         channel = factory(guild=guild, state=self, data=data)  # type: ignore
         guild._add_channel(channel)  # type: ignore
         self.dispatch('guild_channel_create', channel)
@@ -1794,7 +1804,7 @@ class ConnectionState(Generic[ClientT]):
 
         if channel is not None:
             if raw.user is None:
-                if isinstance(channel, DMChannel):
+                if isinstance(channel, (DMChannel, EphemeralDMChannel)):
                     raw.user = channel.recipient
                 elif isinstance(channel, GroupChannel):
                     raw.user = utils.find(lambda x: x.id == raw.user_id, channel.recipients)
