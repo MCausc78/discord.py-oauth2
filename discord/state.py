@@ -200,9 +200,6 @@ class ConnectionState(Generic[ClientT]):
         self._activities: List[ActivityPayload] = activities
         self._status: Optional[str] = status
         self._intents: Optional[Intents] = intents
-        self.raw_presence_flag: bool = options.get('enable_raw_presences', utils.MISSING)
-        if self.raw_presence_flag is utils.MISSING:
-            self.raw_presence_flag = intents is None or ((not intents.members) and intents.presences)
 
         self.parsers: Dict[str, Callable[[Any], None]]
         self.parsers = parsers = {}
@@ -494,7 +491,7 @@ class ConnectionState(Generic[ClientT]):
         if 'channel' in data:
             # We are probably in Ephemeral DM context
             channel_data = data['channel']
-            factory, _ = _channel_factory(channel_data['type'])
+            factory, channel_type = _channel_factory(channel_data['type'])
 
             channel_id = int(channel_data['id'])
             guild_id = utils._get_as_snowflake(channel_data, 'guild_id')
@@ -506,7 +503,7 @@ class ConnectionState(Generic[ClientT]):
                         state=self,
                         id=channel_id,
                         guild_id=guild_id,
-                        type=try_enum(ChannelType, channel_data['type']),
+                        type=channel_type,
                     ),
                     guild,
                 )
@@ -516,6 +513,8 @@ class ConnectionState(Generic[ClientT]):
                 if channel is None:
                     channel = factory(me=self.user, state=self, data=channel_data)  # type: ignore
                     self._add_private_channel(channel)  # type: ignore
+                    if channel_type is ChannelType.ephemeral_dm:
+                        self.dispatch('private_channel_create', channel)
                     return channel  # type: ignore
                 channel._update(channel_data)  # type: ignore
                 return channel  # type: ignore
@@ -797,10 +796,10 @@ class ConnectionState(Generic[ClientT]):
         raw = RawMessageDeleteEvent(data)
         found = self._get_message(raw.message_id)
         raw.cached_message = found
-        self.dispatch('raw_message_delete', raw)
         if self._messages is not None and found is not None:
             self.dispatch('message_delete', found)
             self._messages.remove(found)
+        self.dispatch('raw_message_delete', raw)
 
     def parse_message_delete_bulk(self, data: gw.MessageDeleteBulkEvent) -> None:
         raw = RawBulkMessageDeleteEvent(data)
@@ -809,12 +808,12 @@ class ConnectionState(Generic[ClientT]):
         else:
             found_messages = []
         raw.cached_messages = found_messages
-        self.dispatch('raw_bulk_message_delete', raw)
         if found_messages:
             self.dispatch('bulk_message_delete', found_messages)
             for msg in found_messages:
                 # self._messages won't be None here
                 self._messages.remove(msg)  # type: ignore
+        self.dispatch('raw_bulk_message_delete', raw)
 
     def parse_message_update(self, data: gw.MessageUpdateEvent) -> None:
         channel, _ = self._get_guild_channel(data)
@@ -851,7 +850,6 @@ class ConnectionState(Generic[ClientT]):
                 raw.member = None
         else:
             raw.member = None
-        self.dispatch('raw_reaction_add', raw)
 
         # rich interface here
         message = self._get_message(raw.message_id)
@@ -862,22 +860,22 @@ class ConnectionState(Generic[ClientT]):
 
             if user:
                 self.dispatch('reaction_add', reaction, user)
+        self.dispatch('raw_reaction_add', raw)
 
     def parse_message_reaction_remove_all(self, data: gw.MessageReactionRemoveAllEvent) -> None:
         raw = RawReactionClearEvent(data)
-        self.dispatch('raw_reaction_clear', raw)
 
         message = self._get_message(raw.message_id)
         if message is not None:
             old_reactions = message.reactions.copy()
             message.reactions.clear()
             self.dispatch('reaction_clear', message, old_reactions)
+        self.dispatch('raw_reaction_clear', raw)
 
     def parse_message_reaction_remove(self, data: gw.MessageReactionRemoveEvent) -> None:
         emoji = PartialEmoji.from_dict(data['emoji'])
         emoji._state = self
         raw = RawReactionActionEvent(data, emoji, 'REACTION_REMOVE')
-        self.dispatch('raw_reaction_remove', raw)
 
         message = self._get_message(raw.message_id)
         if message is not None:
@@ -890,12 +888,12 @@ class ConnectionState(Generic[ClientT]):
                 user = self._get_reaction_user(message.channel, raw.user_id)
                 if user:
                     self.dispatch('reaction_remove', reaction, user)
+        self.dispatch('raw_reaction_remove', raw)
 
     def parse_message_reaction_remove_emoji(self, data: gw.MessageReactionRemoveEmojiEvent) -> None:
         emoji = PartialEmoji.from_dict(data['emoji'])
         emoji._state = self
         raw = RawReactionClearEmojiEvent(data, emoji)
-        self.dispatch('raw_reaction_clear_emoji', raw)
 
         message = self._get_message(raw.message_id)
         if message is not None:
@@ -906,6 +904,7 @@ class ConnectionState(Generic[ClientT]):
             else:
                 if reaction:
                     self.dispatch('reaction_clear_emoji', reaction)
+        self.dispatch('raw_reaction_clear_emoji', raw)
 
     def parse_presence_update(self, data: gw.PresenceUpdateEvent) -> None:
         if data.get('__fake__'):
@@ -913,9 +912,6 @@ class ConnectionState(Generic[ClientT]):
             return
 
         raw = RawPresenceUpdateEvent(data=data, state=self)
-
-        if self.raw_presence_flag:
-            self.dispatch('raw_presence_update', raw)
 
         if raw.guild_id is None:
             old: Union[Relationship, GameRelationship]
@@ -948,17 +944,21 @@ class ConnectionState(Generic[ClientT]):
                 self.dispatch('user_update', user_update[0], user_update[1])
 
             old.user = relationship.user
+            raw.pair = (old, relationship)  # type: ignore
             self.dispatch('presence_update', old, relationship)
+            self.dispatch('raw_presence_update', raw)
             return
 
         if raw.guild is None:
             _log.debug('PRESENCE_UPDATE referencing an unknown guild ID: %s. Discarding.', raw.guild_id)
+            self.dispatch('raw_presence_update', raw)
             return
 
         member = raw.guild.get_member(raw.user_id)
 
         if member is None:
             _log.debug('PRESENCE_UPDATE referencing an unknown member ID: %s. Discarding', raw.user_id)
+            self.dispatch('raw_presence_update', raw)
             return
 
         old_member = Member._copy(member)
@@ -967,7 +967,9 @@ class ConnectionState(Generic[ClientT]):
         if user_update:
             self.dispatch('user_update', user_update[0], user_update[1])
 
+        raw.pair = (old_member, member)
         self.dispatch('presence_update', old_member, member)
+        self.dispatch('raw_presence_update', raw)
 
     def parse_user_update(self, data: gw.UserUpdateEvent) -> None:
         if self.user is None:
@@ -1165,18 +1167,19 @@ class ConnectionState(Generic[ClientT]):
 
         raw = RawThreadUpdateEvent(data)
         raw.thread = thread = guild.get_thread(raw.thread_id)
-        self.dispatch('raw_thread_update', raw)
-        if thread is not None:
+        if thread is None:
+            thread = Thread(guild=guild, state=guild._state, data=data)
+            if not thread.archived:
+                guild._add_thread(thread)
+            self.dispatch('thread_join', thread)
+        else:
             old = copy(thread)
             thread._update(data)
             if thread.archived:
                 guild._remove_thread(thread)
             self.dispatch('thread_update', old, thread)
-        else:
-            thread = Thread(guild=guild, state=guild._state, data=data)
-            if not thread.archived:
-                guild._add_thread(thread)
-            self.dispatch('thread_join', thread)
+
+        self.dispatch('raw_thread_update', raw)
 
     def parse_thread_delete(self, data: gw.ThreadDeleteEvent) -> None:
         guild_id = int(data['guild_id'])
@@ -1187,11 +1190,11 @@ class ConnectionState(Generic[ClientT]):
 
         raw = RawThreadDeleteEvent(data)
         raw.thread = thread = guild.get_thread(raw.thread_id)
-        self.dispatch('raw_thread_delete', raw)
 
         if thread is not None:
             guild._remove_thread(thread)
             self.dispatch('thread_delete', thread)
+        self.dispatch('raw_thread_delete', raw)
 
     def parse_thread_list_sync(self, data: gw.ThreadListSyncEvent) -> None:
         guild_id = int(data['guild_id'])

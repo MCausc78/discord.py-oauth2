@@ -641,6 +641,9 @@ class Messageable:
     ) -> Tuple[int, MessageableDestinationType]:
         raise NotImplementedError
 
+    # TODO: `activity=MessageActivity(type=1 | 3, party_id='party_id', session_id='gateway session id')` param, sent by SDK,
+    # Also `application_id` is sent as well by it (also investigate whether it needs to be valid to send activity invite?)
+
     @overload
     async def send(
         self,
@@ -671,6 +674,7 @@ class Messageable:
         files: Optional[Sequence[File]] = None,
         delete_after: Optional[float] = None,
         allowed_mentions: Optional[AllowedMentions] = None,
+        metadata: Optional[Dict[str, str]] = None,
     ) -> Message:
         """|coro|
 
@@ -710,6 +714,8 @@ class Messageable:
             are used instead.
 
             .. versionadded:: 1.4
+        metadata: Optional[Dict[:class:`str`, :class:`str`]]
+            The message's metadata. Can be only up to 25 entries, and 1024 characters per key and value.
 
         Raises
         ------
@@ -736,7 +742,7 @@ class Messageable:
         state = self._state
         http = state.http
         content = str(content) if content is not None else None
-        previous_allowed_mention = state.allowed_mentions
+        previous_allowed_mentions = state.allowed_mentions
 
         endpoint = {
             'lobby': http.send_lobby_message,
@@ -748,7 +754,8 @@ class Messageable:
             file=file if file is not None else MISSING,
             files=files if files is not None else MISSING,
             allowed_mentions=allowed_mentions,
-            previous_allowed_mentions=previous_allowed_mention,
+            previous_allowed_mentions=previous_allowed_mentions,
+            metadata=metadata,
         ) as params:
             data = await endpoint(destination_id, params=params)
 

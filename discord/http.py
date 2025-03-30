@@ -25,9 +25,9 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import asyncio
-from base64 import b64encode
 from collections import deque
 import datetime
+from inspect import isawaitable
 import logging
 from typing import (
     Any,
@@ -48,6 +48,7 @@ from typing import (
 from urllib.parse import quote as _uriquote
 
 import aiohttp
+from multidict import CIMultiDict
 
 from . import __version__, utils
 from .errors import HTTPException, RateLimited, Forbidden, NotFound, LoginFailure, DiscordServerError, GatewayNotFound
@@ -63,6 +64,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from .client_properties import ClientProperties
     from .embeds import Embed
     from .flags import MessageFlags
     from .message import Attachment
@@ -144,6 +146,7 @@ def handle_message_parameters(
     channel_payload: Dict[str, Any] = MISSING,
     applied_tags: Optional[SnowflakeList] = MISSING,
     poll: Optional[Poll] = MISSING,
+    metadata: Optional[Dict[str, str]] = MISSING,
 ) -> MultipartParameters:
     if files is not MISSING and file is not MISSING:
         raise TypeError('Cannot mix file and files keyword arguments.')
@@ -241,14 +244,17 @@ def handle_message_parameters(
         else:
             payload['applied_tags'] = []
 
+    if poll not in (MISSING, None):
+        payload['poll'] = poll._to_dict()
+
+    if metadata is not MISSING:
+        payload['metadata'] = metadata
+
     if channel_payload is not MISSING:
         payload = {
             'message': payload,
         }
         payload.update(channel_payload)
-
-    if poll not in (MISSING, None):
-        payload['poll'] = poll._to_dict()  # type: ignore
 
     multipart = []
     if files:
@@ -489,6 +495,7 @@ class HTTPClient:
         loop: asyncio.AbstractEventLoop,
         connector: Optional[aiohttp.BaseConnector] = None,
         *,
+        client_properties: ClientProperties,
         proxy: Optional[str] = None,
         proxy_auth: Optional[aiohttp.BasicAuth] = None,
         unsync_clock: bool = True,
@@ -514,23 +521,7 @@ class HTTPClient:
         self.http_trace: Optional[aiohttp.TraceConfig] = http_trace
         self.use_clock: bool = not unsync_clock
         self.max_ratelimit_timeout: Optional[float] = max(30.0, max_ratelimit_timeout) if max_ratelimit_timeout else None
-
-        # user_agent = 'DiscordBot (https://github.com/Rapptz/discord.py {0}) Python/{1[0]}.{1[1]} aiohttp/{2}'
-        # self.user_agent: str = user_agent.format(__version__, sys.version_info, aiohttp.__version__)
-        self.user_agent: str = 'Discord Embedded/0.0.8'
-        self.encoded_super_properties: str = b64encode(
-            utils._to_json(
-                {
-                    "browser": "Discord Embedded",
-                    "browser_user_agent": "Discord Embedded/0.0.8",
-                    "browser_version": "0.0.8",
-                    "client_build_number": 304683,
-                    "design_id": 0,
-                    "os": "Windows",
-                    "release_channel": "unknown",
-                }
-            ).encode()
-        ).decode()
+        self.client_properties: ClientProperties = client_properties
 
     def clear(self) -> None:
         if self.__session and self.__session.closed:
@@ -539,15 +530,25 @@ class HTTPClient:
     async def ws_connect(
         self, url: str, *, compress: int = 0, params: Optional[Dict[str, Any]] = None
     ) -> aiohttp.ClientWebSocketResponse:
+
+        initial_headers = self.client_properties.get_websocket_initial_headers()
+        if isawaitable(initial_headers):
+            initial_headers = await initial_headers
+
+        headers: CIMultiDict[str] = CIMultiDict(initial_headers)
+        if 'User-Agent' not in headers:
+            user_agent = self.client_properties.get_websocket_user_agent()
+            if isawaitable(user_agent):
+                user_agent = await user_agent
+            headers['User-Agent'] = user_agent
+
         kwargs = {
             'proxy_auth': self.proxy_auth,
             'proxy': self.proxy,
             'max_msg_size': 0,
             'timeout': 30.0,
             'autoclose': False,
-            'headers': {
-                'User-Agent': 'WebSocket++/0.8.3-dev',
-            },
+            'headers': headers,
             'compress': compress,
         }
 
@@ -595,19 +596,23 @@ class HTTPClient:
         ratelimit = self.get_ratelimit(key)
 
         # header creation
-        headers: Dict[str, str] = {
-            'User-Agent': self.user_agent,
-            'X-Super-Properties': self.encoded_super_properties,
-            # {
-            #     "browser": "Discord Embedded",
-            #     "browser_user_agent": "Discord Embedded/0.0.8",
-            #     "browser_version": "0.0.8",
-            #     "client_build_number": 304683,
-            #     "design_id": 0,
-            #     "os": "Windows",
-            #     "release_channel": "unknown"
-            # }
-        }
+
+        initial_headers = self.client_properties.get_http_initial_headers()
+        if isawaitable(initial_headers):
+            initial_headers = await initial_headers
+
+        headers: CIMultiDict[str] = CIMultiDict(initial_headers)
+        if 'User-Agent' not in headers:
+            user_agent = self.client_properties.get_http_user_agent()
+            if isawaitable(user_agent):
+                user_agent = await user_agent
+            headers['User-Agent'] = user_agent
+
+        if 'X-Super-Properties' not in headers:
+            xsp = self.client_properties.get_client_properties_base64()
+            if isawaitable(xsp):
+                xsp = await xsp
+            headers['X-Super-Properties'] = xsp
 
         supplemental_headers = kwargs.pop('supplemental_headers', None)
         if supplemental_headers:

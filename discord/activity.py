@@ -97,6 +97,7 @@ if TYPE_CHECKING:
         ActivityTimestamps,
         ActivityParty,
         ActivityAssets,
+        ActivitySecrets,
     )
     from .types.gateway import Session as SessionPayload
     from .types.settings import (
@@ -358,16 +359,31 @@ class Game(BaseActivity):
     ----------
     name: :class:`str`
         The game's name.
+    application_id: Optional[:class:`int`]
+        The game's application ID.
+    details: Optional[:class:`str`]
+        The game's details.
+    flags: :class:`int`
+        The activity's flags.
+    state: Optional[:class:`str`]
+        The game's state.
 
     Attributes
     ----------
     name: :class:`str`
         The game's name.
+    application_id: Optional[:class:`int`]
+        The game's application ID.
+    details: Optional[:class:`str`]
+        The game's details.
+    flags: :class:`int`
+        The activity's flags.
+    state: Optional[:class:`str`]
+        The game's state.
     platform: Optional[:class:`str`]
         Where the user is playing from (ie. PS5, Xbox).
 
         .. versionadded:: 2.4
-
     assets: :class:`dict`
         A dictionary representing the images and their hover text of a game.
         It contains the following optional keys:
@@ -378,15 +394,46 @@ class Game(BaseActivity):
         - ``small_text``: A string representing the text when hovering over the small image asset.
 
         .. versionadded:: 2.4
+    party: Optional[:class:`dict`]
+        A dictionary representing the party in game.
+        It contains the following required keys:
+
+        - ``id``: A string representing the ID for the party.
+        - ``size``: A tuple of two integers, ``current_size`` and ``max_size``, representing current and max sizes of party.
+    secrets: :class:`dict`
+        A dictionary representing the secrets for joining/spectating a game.
+        It contains the following optional keys:
+
+        - ``join``: A string representing the secret for joining a game.
+        - ``spectate``: A string representing the secret for spectating a game.
     """
 
-    __slots__ = ('name', '_end', '_start', 'platform', 'assets')
+    __slots__ = (
+        'name',
+        'application_id',
+        'details',
+        'flags',
+        'state',
+        '_end',
+        '_start',
+        'platform',
+        'assets',
+        'party',
+        'secrets',
+        'session_id',
+    )
 
     def __init__(self, name: str, **extra: Any) -> None:
         super().__init__(**extra)
         self.name: str = name
+        self.application_id: Optional[int] = _get_as_snowflake(extra, 'application_id')
+        self.details: Optional[str] = extra.get('details')
+        self.flags: int = extra.get('flags', 0)
+        self.party: Optional[ActivityParty] = extra.get('party')
+        self.secrets: Optional[ActivitySecrets] = extra.get('secrets')
+        self.state: Optional[str] = extra.get('state')
         self.platform: Optional[str] = extra.get('platform')
-        self.assets: ActivityAssets = extra.get('assets', {}) or {}
+        self.assets: ActivityAssets = extra.get('assets') or {}
 
         try:
             timestamps: ActivityTimestamps = extra['timestamps']
@@ -433,13 +480,26 @@ class Game(BaseActivity):
         if self._end:
             timestamps['end'] = self._end
 
-        return {
+        payload = {
             'type': ActivityType.playing.value,
             'name': str(self.name),
-            'timestamps': timestamps,
+            'timestamps': timestamps or None,
             'platform': str(self.platform) if self.platform else None,
-            'assets': self.assets,
-        }  # type: ignore
+            'assets': self.assets or None,
+        }
+        if self.application_id is not None:
+            payload['application_id'] = self.application_id
+        if self.details is not None:
+            payload['details'] = self.details
+        if self.flags:
+            payload['flags'] = self.flags
+        if self.party is not None:
+            payload['party'] = self.party
+        if self.secrets is not None:
+            payload['secrets'] = self.secrets
+        if self.state is not None:
+            payload['state'] = self.state
+        return payload  # type: ignore
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Game) and other.name == self.name
@@ -505,7 +565,7 @@ class Streaming(BaseActivity):
         self.game: Optional[str] = extra.pop('state', None)
         self.url: str = url
         self.details: Optional[str] = extra.pop('details', self.name)  # compatibility
-        self.assets: ActivityAssets = extra.pop('assets', {})
+        self.assets: ActivityAssets = extra.pop('assets') or {}
 
     @property
     def type(self) -> ActivityType:
@@ -585,11 +645,11 @@ class Spotify:
     def __init__(self, **data: Any) -> None:
         self._state: str = data.pop('state', '')
         self._details: str = data.pop('details', '')
-        self._timestamps: ActivityTimestamps = data.pop('timestamps', {})
-        self._assets: ActivityAssets = data.pop('assets', {})
-        self._party: ActivityParty = data.pop('party', {})
+        self._timestamps: ActivityTimestamps = data.pop('timestamps') or {}
+        self._assets: ActivityAssets = data.pop('assets') or {}
+        self._party: ActivityParty = data.pop('party') or {}
         self._sync_id: str = data.pop('sync_id', '')
-        self._session_id: Optional[str] = data.pop('session_id')
+        self._session_id: Optional[str] = data.pop('session_id', None)
         self._created_at: Optional[float] = data.pop('created_at', None)
 
     @property

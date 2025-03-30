@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 from collections import deque
 import concurrent.futures
+from inspect import isawaitable
 import logging
 import struct
 import sys
@@ -58,6 +59,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .client import Client
+    from .client_properties import ClientProperties
     from .state import ConnectionState
     from .voice_state import VoiceConnectionState
 
@@ -289,6 +291,7 @@ class DiscordWebSocket:
         _initial_identify: bool
         gateway: yarl.URL
         _max_heartbeat_timeout: float
+        client_properties: ClientProperties
 
     # fmt: off
     DEFAULT_GATEWAY    = yarl.URL('wss://gateway.gaming-sdk.com/')
@@ -390,6 +393,7 @@ class DiscordWebSocket:
         ws.session_id = session
         ws.sequence = sequence
         ws._max_heartbeat_timeout = client._connection.heartbeat_timeout
+        ws.client_properties = client.properties
 
         if client._enable_debug_events:
             ws.send = ws.debug_send
@@ -441,17 +445,16 @@ class DiscordWebSocket:
 
     async def identify(self) -> None:
         """Sends the IDENTIFY packet."""
+        properties = self.client_properties.get_client_properties()
+        if isawaitable(properties):
+            properties = await properties
         payload = {
             'op': self.IDENTIFY,
             'd': {
                 'token': 'Bearer ' + (self.token or ''),
                 # DEDUPE_USER_OBJECTS | PRIORITIZED_READY_PAYLOAD | AUTO_CALL_CONNECT | AUTO_LOBBY_CONNECT
                 'capabilities': (1 << 4) | (1 << 5) | (1 << 12) | (1 << 16),
-                'properties': {
-                    'os': sys.platform,
-                    'browser': 'Discord Embedded',
-                    'device': 'discord.py',
-                },
+                'properties': properties,
                 'compress': True,
                 'large_threshold': 250,
             },
@@ -497,8 +500,7 @@ class DiscordWebSocket:
         data = msg.get('d')
         seq = msg.get('s')
 
-        if event:
-            self._dispatch('raw_dispatch_event', event, data, seq)
+        self._dispatch('raw_event', msg)
 
         if seq is not None:
             self.sequence = seq

@@ -54,6 +54,7 @@ from .activity import BaseActivity, Spotify, ActivityTypes, create_activity
 from .appinfo import AppInfo
 from .backoff import ExponentialBackoff
 from .channel import PartialMessageable
+from .client_properties import ClientProperties, DefaultClientProperties
 from .emoji import Emoji
 from .enums import ChannelType, Status, RelationshipType, ClientType
 from .errors import *
@@ -85,13 +86,14 @@ if TYPE_CHECKING:
 
     from .abc import Messageable, PrivateChannel, Snowflake, SnowflakeTime
     from .automod import AutoModAction, AutoModRule
-    from .channel import DMChannel, GroupChannel
+    from .channel import DMChannel, GroupChannel, EphemeralDMChannel
     from .ext.commands import Bot, Context, CommandError
     from .game_relationship import GameRelationship
     from .guild import GuildChannel
     from .integrations import Integration
     from .member import Member, VoiceState
     from .message import Message, LobbyMessage
+    from .poll import PollAnswer
     from .raw_models import (
         RawAppCommandPermissionsUpdateEvent,
         RawBulkMessageDeleteEvent,
@@ -111,12 +113,11 @@ if TYPE_CHECKING:
     from .reaction import Reaction
     from .relationship import Relationship
     from .role import Role
+    from .settings import UserSettings
     from .scheduled_event import ScheduledEvent
+    from .subscription import Subscription
     from .threads import ThreadMember
     from .types.guild import Guild as GuildPayload
-    from .poll import PollAnswer
-    from .settings import UserSettings
-    from .subscription import Subscription
     from .voice_client import VoiceProtocol
 
 
@@ -270,21 +271,28 @@ class Client:
         self.ws: DiscordWebSocket = None  # type: ignore
         self._listeners: Dict[str, List[Tuple[asyncio.Future, Callable[..., bool]]]] = {}
 
+        properties = options.get('client_properties')
+        if properties is None:
+            properties = DefaultClientProperties()
+
         connector: Optional[aiohttp.BaseConnector] = options.get('connector', None)
         proxy: Optional[str] = options.pop('proxy', None)
         proxy_auth: Optional[aiohttp.BasicAuth] = options.pop('proxy_auth', None)
         unsync_clock: bool = options.pop('assume_unsync_clock', True)
         http_trace: Optional[aiohttp.TraceConfig] = options.pop('http_trace', None)
         max_ratelimit_timeout: Optional[float] = options.pop('max_ratelimit_timeout', None)
+
         self.http: HTTPClient = HTTPClient(
             self.loop,
             connector,
+            client_properties=properties,
             proxy=proxy,
             proxy_auth=proxy_auth,
             unsync_clock=unsync_clock,
             http_trace=http_trace,
             max_ratelimit_timeout=max_ratelimit_timeout,
         )
+        self.properties: ClientProperties = properties
 
         self._handlers: Dict[str, Callable[..., None]] = {
             'ready': self._handle_ready,
@@ -642,8 +650,8 @@ class Client:
         self.loop = loop
         self.http.loop = loop
         self._connection.loop = loop
-
         self._ready = asyncio.Event()
+        await self.properties.setup()
 
     async def setup_hook(self) -> None:
         """|coro|
@@ -2523,7 +2531,7 @@ class Client:
 
         return Widget(state=self._connection, data=data)
 
-    async def create_dm(self, user: Snowflake) -> DMChannel:
+    async def create_dm(self, user: Snowflake) -> Union[DMChannel, EphemeralDMChannel]:
         """|coro|
 
         Creates a :class:`.DMChannel` with this user.
@@ -2540,7 +2548,7 @@ class Client:
 
         Returns
         -------
-        :class:`.DMChannel`
+        Union[:class:`.DMChannel`, :class:`.EphemeralDMChannel`]
             The channel that was created.
         """
         state = self._connection
