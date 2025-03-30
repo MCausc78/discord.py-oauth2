@@ -71,6 +71,8 @@ if TYPE_CHECKING:
     from .channel import (
         TextChannel,
         DMChannel,
+        GroupChannel,
+        EphemeralDMChannel,
         PartialMessageable,
         CategoryChannel,
     )
@@ -86,8 +88,8 @@ if TYPE_CHECKING:
     from .state import ConnectionState
     from .user import ClientUser
 
-    PartialMessageableChannel = Union[TextChannel, DMChannel, PartialMessageable]
-    MessageableChannel = Union[PartialMessageableChannel]
+    PartialMessageableChannel = Union[TextChannel, DMChannel, GroupChannel, EphemeralDMChannel, PartialMessageable]
+    MessageableChannel = PartialMessageableChannel
     MessageableDestinationType = Literal['channel', 'lobby', 'user']
     SnowflakeTime = Union["Snowflake", datetime]
 
@@ -216,6 +218,7 @@ class PrivateChannel:
 
     - :class:`~slaycord.DMChannel`
     - :class:`~slaycord.GroupChannel`
+    - :class:`~slaycord.EphemeralDMChannel`
 
     This ABC must also implement :class:`~slaycord.abc.Snowflake`.
 
@@ -624,6 +627,7 @@ class Messageable:
 
     - :class:`~slaycord.TextChannel`
     - :class:`~slaycord.DMChannel`
+    - :class:`~slaycord.EphemeralDMChannel`
     - :class:`~slaycord.PartialMessageable`
     - :class:`~slaycord.User`
     - :class:`~slaycord.Member`
@@ -634,7 +638,7 @@ class Messageable:
 
     async def _get_messageable_destination(
         self,
-    ) -> Tuple[int, MessageableDestinationType,]:
+    ) -> Tuple[int, MessageableDestinationType]:
         raise NotImplementedError
 
     @overload
@@ -748,37 +752,50 @@ class Messageable:
         ) as params:
             data = await endpoint(destination_id, params=params)
 
-        channel: Union[TextChannel, DMChannel, PartialMessageable]
-        if destination_type == 'lobby':
-            channel, _ = state._get_lobby_channel(
-                utils._get_as_snowflake(data, 'channel_id'),
-                int(data['lobby_id']),
-            )
-        elif destination_type == 'user':
-            channel_id = int(data['channel_id'])
-            channel = state._get_private_channel(channel_id) or PartialMessageable(
-                state=state,
-                id=channel_id,
-                type=ChannelType.private,
-            )  # type: ignore
+        channel: Union[TextChannel, DMChannel, EphemeralDMChannel, PartialMessageable]
+        if 'channel' in data:
+            channel, _ = state._get_guild_channel({'channel': channel})  # type: ignore
         else:
-            channel_id = int(data['channel_id'])
-            guild_id = utils._get_as_snowflake(data, 'guild_id')
+            if destination_type == 'lobby':
+                channel, _ = state._get_lobby_channel(
+                    utils._get_as_snowflake(data, 'channel_id'),
+                    int(data['lobby_id']),
+                )
+            elif destination_type == 'user':
+                from .channel import PartialMessageable
 
-            tmp = None
-            if guild_id is None:
-                tmp = state._get_private_channel(channel_id)
+                channel_id = int(data['channel_id'])
+                channel = state._get_private_channel(channel_id)  # type: ignore
+                if channel is None:
+                    from .channel import PartialMessageable
+
+                    channel = PartialMessageable(
+                        state=state,
+                        id=channel_id,
+                        type=ChannelType.private,
+                    )
             else:
-                guild = state._get_guild(channel_id)
-                if guild is None:
-                    tmp = None
-                else:
-                    tmp = guild._resolve_channel(channel_id)
+                channel_id = int(data['channel_id'])
+                guild_id = utils._get_as_snowflake(data, 'guild_id')
 
-            channel = tmp or PartialMessageable(
-                state=state,
-                id=channel_id,
-            )  # type: ignore
+                tmp = None
+                if guild_id is None:
+                    tmp = state._get_private_channel(channel_id)
+                else:
+                    guild = state._get_guild(channel_id)
+                    if guild is None:
+                        tmp = None
+                    else:
+                        tmp = guild._resolve_channel(channel_id)
+
+                if tmp is None:
+                    from .channel import PartialMessageable
+
+                    tmp = PartialMessageable(
+                        state=state,
+                        id=channel_id,
+                    )
+                channel = tmp  # type: ignore
 
         ret = state.create_message(channel=channel, data=data)
 

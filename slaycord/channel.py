@@ -72,6 +72,7 @@ __all__ = (
     'ForumTag',
     'ForumChannel',
     'GroupChannel',
+    'EphemeralDMChannel',
     'PartialMessageable',
     'VoiceChannelEffect',
     'VoiceChannelSoundEffect',
@@ -1359,7 +1360,7 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
 
         .. describe:: str(x)
 
-            Returns a string representation of the channel
+            Returns a string representation of the channel.
 
     Attributes
     ----------
@@ -1763,6 +1764,229 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
         return base
 
 
+class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc.PrivateChannel, Hashable):
+    """Represents a Discord ephemeral direct message channel.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two channels are equal.
+
+        .. describe:: x != y
+
+            Checks if two channels are not equal.
+
+        .. describe:: hash(x)
+
+            Returns the channel's hash.
+
+        .. describe:: str(x)
+
+            Returns a string representation of the channel.
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The direct message channel ID.
+    recipients: Tuple[:class:`User`, ...]
+        The users participating in the ephemral direct message channel.
+    recipient: :class:`User`
+        The user you are participating with in the direct message channel.
+    me: :class:`ClientUser`
+        The user presenting yourself.
+    last_message_id: Optional[:class:`int`]
+        The last message ID of the message sent to this channel. It may
+        *not* point to an existing or valid message.
+
+        .. versionadded:: 2.0
+    last_pin_timestamp: Optional[:class:`datetime.datetime`]
+        When the last pinned message was pinned. ``None`` if there are no pinned messages.
+
+        .. versionadded:: 2.0
+    """
+
+    __slots__ = (
+        'id',
+        'recipient',
+        'me',
+        'last_message_id',
+        'last_pin_timestamp',
+        '_message_request',
+        '_requested_at',
+        '_spam',
+        '_state',
+    )
+
+    def __init__(self, *, me: ClientUser, state: ConnectionState, data: DMChannelPayload):
+        self._state: ConnectionState = state
+
+        recipients_data = data.get('recipients')
+        if recipients_data:
+            self.recipients: Tuple[User, ...] = tuple(state.store_user(d, dispatch=False) for d in recipients_data)
+            self.recipient: Optional[User] = utils.find(lambda recipient: recipient.id != me.id, self.recipients)
+        else:
+            self.recipients = ()
+            self.recipient = None
+
+        self.me: ClientUser = me
+        self.id: int = int(data['id'])
+        self._update(data)
+
+    def _update(self, data: DMChannelPayload) -> None:
+        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
+        self.last_pin_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('last_pin_timestamp'))
+        self._message_request: Optional[bool] = data.get('is_message_request')
+        self._requested_at: Optional[datetime.datetime] = utils.parse_time(data.get('is_message_request_timestamp'))
+        self._spam: bool = data.get('is_spam', False)
+
+    def _get_voice_client_key(self) -> Tuple[int, str]:
+        return self.me.id, 'self_id'
+
+    def _get_voice_state_pair(self) -> Tuple[int, int]:
+        return self.me.id, self.id
+
+    async def _get_messageable_destination(
+        self,
+    ) -> Tuple[int, slaycord.abc.MessageableDestinationType,]:
+        recipient = self.recipient
+        if recipient is None:
+            return (self.id, 'channel')
+        return (recipient.id, 'user')
+
+    def __str__(self) -> str:
+        if self.recipient:
+            return f'Ephemeral Direct Message with {self.recipient}'
+        return 'Ephemeral Direct Message with Unknown User'
+
+    def __repr__(self) -> str:
+        return f'<EphemeralDMChannel id={self.id} recipient={self.recipient!r}>'
+
+    @classmethod
+    def _from_message(cls, state: ConnectionState, channel_id: int, message_id: Optional[int]) -> Self:
+        self = cls.__new__(cls)
+        self._state = state
+        self.recipient = None
+        # state.user won't be None here
+        self.me = state.user  # type: ignore
+        self.id = channel_id
+        self.last_message_id = message_id
+        self.last_pin_timestamp = None
+        self._message_request = False
+        self._requested_at = None
+        self._spam = False
+        return self
+
+    @property
+    def type(self) -> Literal[ChannelType.ephemeral_dm]:
+        """:class:`ChannelType`: The channel's Discord type."""
+        return ChannelType.ephemeral_dm
+
+    @property
+    def guild(self) -> Optional[Guild]:
+        """Optional[:class:`Guild`]: The guild this Ephemeral DM channel belongs to. Always ``None``.
+
+        This is mainly provided for compatibility purposes in duck typing.
+
+        .. versionadded:: 2.0
+        """
+        return None
+
+    @property
+    def jump_url(self) -> str:
+        """:class:`str`: Returns a URL that allows the client to jump to the channel.
+
+        .. versionadded:: 2.0
+        """
+        return f'https://discord.com/channels/@me/{self.id}'
+
+    @property
+    def created_at(self) -> datetime.datetime:
+        """:class:`datetime.datetime`: Returns the direct message channel's creation time in UTC."""
+        return utils.snowflake_time(self.id)
+
+    @property
+    def requested_at(self) -> Optional[datetime.datetime]:
+        """Optional[:class:`datetime.datetime`]: Returns the message request's creation time in UTC, if applicable."""
+        return self._requested_at
+
+    def is_message_request(self) -> bool:
+        """:class:`bool`: Indicates if the direct message is/was a message request."""
+        return self._message_request is not None
+
+    def is_accepted(self) -> bool:
+        """:class:`bool`: Indicates if the message request is accepted. For regular direct messages, this is always ``True``."""
+        return not self._message_request if self._message_request is not None else True
+
+    def is_spam(self) -> bool:
+        """:class:`bool`: Indicates if the direct message is a spam message request."""
+        return self._spam
+
+    def permissions_for(self, obj: Any = None, /) -> Permissions:
+        """Handles permission resolution for a :class:`User`.
+
+        This function is there for compatibility with other channel types.
+
+        Actual direct messages do not really have the concept of permissions.
+
+        This returns all the Text related permissions set to ``True`` except:
+
+        - :attr:`~Permissions.send_tts_messages`: You cannot send TTS messages in a DM.
+        - :attr:`~Permissions.manage_messages`: You cannot delete others messages in a DM.
+        - :attr:`~Permissions.create_private_threads`: There are no threads in a DM.
+        - :attr:`~Permissions.create_public_threads`: There are no threads in a DM.
+        - :attr:`~Permissions.manage_threads`: There are no threads in a DM.
+        - :attr:`~Permissions.send_messages_in_threads`: There are no threads in a DM.
+
+        .. versionchanged:: 2.0
+
+            ``obj`` parameter is now positional-only.
+
+        .. versionchanged:: 2.1
+
+            Thread related permissions are now set to ``False``.
+
+        Parameters
+        ----------
+        obj: :class:`User`
+            The user to check permissions for. This parameter is ignored
+            but kept for compatibility with other ``permissions_for`` methods.
+
+        Returns
+        -------
+        :class:`Permissions`
+            The resolved permissions.
+        """
+        return Permissions._dm_permissions()
+
+    def get_partial_message(self, message_id: int, /) -> PartialMessage:
+        """Creates a :class:`PartialMessage` from the message ID.
+
+        This is useful if you want to work with a message and only have its ID without
+        doing an unnecessary API call.
+
+        .. versionadded:: 1.6
+
+        .. versionchanged:: 2.0
+
+            ``message_id`` parameter is now positional-only.
+
+        Parameters
+        ----------
+        message_id: :class:`int`
+            The message ID to create a partial message for.
+
+        Returns
+        -------
+        :class:`PartialMessage`
+            The partial message.
+        """
+
+        from .message import PartialMessage
+
+        return PartialMessage(channel=self, id=message_id)
+
+
 class PartialMessageable(slaycord.abc.Messageable, Hashable):
     """Represents a partial messageable to aid with working messageable channels when
     only a channel ID is present.
@@ -1914,6 +2138,8 @@ def _private_channel_factory(channel_type: int):
         return DMChannel, value
     elif value is ChannelType.group:
         return GroupChannel, value
+    elif value is ChannelType.ephemeral_dm:
+        return EphemeralDMChannel, value
     else:
         return None, value
 
@@ -1924,6 +2150,8 @@ def _channel_factory(channel_type: int):
         return DMChannel, value
     elif value is ChannelType.group:
         return GroupChannel, value
+    elif value is ChannelType.ephemeral_dm:
+        return EphemeralDMChannel, value
     else:
         return cls, value
 

@@ -259,7 +259,7 @@ class ConnectionState(Generic[ClientT]):
         # LRU of max size 128
         self._private_channels: OrderedDict[int, PrivateChannel] = OrderedDict()
         # extra dict to look up private channels by user id
-        self._private_channels_by_user: Dict[int, DMChannel] = {}
+        self._private_channels_by_user: Dict[int, Union[DMChannel, EphemeralDMChannel]] = {}
 
         if self.max_messages is not None:
             self._messages: Optional[Deque[Message]] = deque(maxlen=self.max_messages)
@@ -443,7 +443,7 @@ class ConnectionState(Generic[ClientT]):
             self._private_channels.move_to_end(channel_id)  # type: ignore
             return value
 
-    def _get_private_channel_by_user(self, user_id: Optional[int]) -> Optional[DMChannel]:
+    def _get_private_channel_by_user(self, user_id: Optional[int]) -> Optional[Union[DMChannel, EphemeralDMChannel]]:
         # the keys of self._private_channels are ints
         return self._private_channels_by_user.get(user_id)  # type: ignore
 
@@ -453,21 +453,26 @@ class ConnectionState(Generic[ClientT]):
 
         if len(self._private_channels) > 128:
             _, to_remove = self._private_channels.popitem(last=False)
-            if isinstance(to_remove, DMChannel) and to_remove.recipient:
+            if isinstance(to_remove, (DMChannel, EphemeralDMChannel)) and to_remove.recipient:
                 self._private_channels_by_user.pop(to_remove.recipient.id, None)
 
-        if isinstance(channel, DMChannel) and channel.recipient:
+        if isinstance(channel, (DMChannel, EphemeralDMChannel)) and channel.recipient:
             self._private_channels_by_user[channel.recipient.id] = channel
 
-    def add_dm_channel(self, data: DMChannelPayload) -> DMChannel:
+    def add_dm_channel(self, data: DMChannelPayload) -> Union[DMChannel, EphemeralDMChannel]:
         # self.user is *always* cached when this is called
-        channel = DMChannel(me=self.user, state=self, data=data)  # type: ignore
+        if data['type'] == ChannelType.ephemeral_dm.value:
+            cls = EphemeralDMChannel
+        else:
+            cls = DMChannel
+
+        channel = cls(me=self.user, state=self, data=data)  # type: ignore
         self._add_private_channel(channel)
         return channel
 
     def _remove_private_channel(self, channel: PrivateChannel) -> None:
         self._private_channels.pop(channel.id, None)
-        if isinstance(channel, DMChannel):
+        if isinstance(channel, (DMChannel, EphemeralDMChannel)):
             recipient = channel.recipient
             if recipient is not None:
                 self._private_channels_by_user.pop(recipient.id, None)
@@ -486,12 +491,59 @@ class ConnectionState(Generic[ClientT]):
     def _get_guild_channel(
         self, data: PartialMessagePayload, guild_id: Optional[int] = None
     ) -> Tuple[Union[Channel, Thread], Optional[Guild]]:
+        if 'channel' in data:
+            # We are probably in Ephemeral DM context
+            channel_data = data['channel']
+            factory, _ = _channel_factory(channel_data['type'])
+
+            channel_id = int(channel_data['id'])
+            guild_id = utils._get_as_snowflake(channel_data, 'guild_id')
+
+            if factory is None:
+                guild = self._get_guild(guild_id)
+                return (
+                    PartialMessageable(
+                        state=self,
+                        id=channel_id,
+                        guild_id=guild_id,
+                        type=try_enum(ChannelType, channel_data['type']),
+                    ),
+                    guild,
+                )
+
+            if guild_id is None:
+                channel = self._get_private_channel(channel_id)
+                if channel is None:
+                    channel = factory(me=self.user, state=self, data=channel_data)  # type: ignore
+                    self._add_private_channel(channel)  # type: ignore
+                    return channel  # type: ignore
+                channel._update(channel_data)  # type: ignore
+                return channel  # type: ignore
+
+            guild = self._get_guild(guild_id)
+            if guild is None:
+                guild = self._get_or_create_unavailable_guild(guild_id)
+
+            channel = guild._resolve_channel(channel_id)
+            if channel is None:
+                return (
+                    factory(state=self, guild=guild, data=channel_data),  # type: ignore
+                    guild,
+                )
+            channel._update(guild, channel_data)  # type: ignore
+            return (channel, guild)
+
         channel_id = int(data['channel_id'])
         try:
             guild_id = guild_id or int(data['guild_id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
             guild = self._get_guild(guild_id)
         except KeyError:
-            channel = DMChannel._from_message(self, channel_id, int(data.get('id', 0)) or None)
+            if 'channel_type' in data and data['channel_type'] == ChannelType.ephemeral_dm.value:
+                cls = EphemeralDMChannel
+            else:
+                cls = DMChannel
+
+            channel = cls._from_message(self, channel_id, utils._get_as_snowflake(data, 'id') or None)
             guild = None
         else:
             channel = guild and guild._resolve_channel(channel_id)
@@ -856,6 +908,10 @@ class ConnectionState(Generic[ClientT]):
                     self.dispatch('reaction_clear_emoji', reaction)
 
     def parse_presence_update(self, data: gw.PresenceUpdateEvent) -> None:
+        if data.get('__fake__'):
+            _log.debug('Detected possibly fake PRESENCE_UPDATE. Discarding.')
+            return
+
         raw = RawPresenceUpdateEvent(data=data, state=self)
 
         if self.raw_presence_flag:
@@ -1029,7 +1085,7 @@ class ConnectionState(Generic[ClientT]):
             _log.debug('CHANNEL_CREATE referencing an unknown guild ID: %s. Discarding.', guild_id)
             return
 
-        # The factory can't be a DMChannel or GroupChannel here
+        # The factory can't be a DMChannel, GroupChannel or EphemeralDMChannel here
         channel = factory(guild=guild, state=self, data=data)  # type: ignore
         guild._add_channel(channel)  # type: ignore
         self.dispatch('guild_channel_create', channel)
@@ -1744,11 +1800,11 @@ class ConnectionState(Generic[ClientT]):
     def parse_typing_start(self, data: gw.TypingStartEvent) -> None:
         raw = RawTypingEvent(data)
         raw.user = self.get_user(raw.user_id)
-        channel, guild = self._get_guild_channel(data)
+        channel, guild = self._get_guild_channel(data)  # type: ignore
 
         if channel is not None:
             if raw.user is None:
-                if isinstance(channel, DMChannel):
+                if isinstance(channel, (DMChannel, EphemeralDMChannel)):
                     raw.user = channel.recipient
                 elif isinstance(channel, GroupChannel):
                     raw.user = utils.find(lambda x: x.id == raw.user_id, channel.recipients)
@@ -2034,6 +2090,10 @@ class ConnectionState(Generic[ClientT]):
             self.dispatch('game_relationship_update', old, new)
 
     def parse_game_relationship_remove(self, data: gw.GameRelationshipRemoveEvent) -> None:
+        # TODO: After GAME_RELATIONSHIP_REMOVE, we may get PRESENCE_UPDATE with `guild_id: null`,
+        # and `presence_update` gets dispatched, with <Relationship type=implicit>, and <Relationship type=implicit> args
+        # This is false, it needs to be fixed
+
         r_id = int(data['id'])
 
         try:
@@ -2042,6 +2102,28 @@ class ConnectionState(Generic[ClientT]):
             _log.warning('GAME_RELATIONSHIP_REMOVE referencing unknown game relationship ID: %s. Discarding.', r_id)
         else:
             self.dispatch('game_relationship_remove', old)
+
+        ws = self._get_websocket()
+        asyncio.create_task(self._prevent_fake_presence_update(ws, r_id))
+
+    async def _prevent_fake_presence_update(self, ws: DiscordWebSocket, user_id: int) -> None:
+        fut = ws.wait_for(
+            'PRESENCE_UPDATE',
+            predicate=(
+                lambda data, /: (
+                    utils._get_as_snowflake(data, 'guild_id') is None
+                    and int(data['user']['id']) == user_id
+                    and data['status'] == 'offline'
+                )
+            ),
+        )
+
+        try:
+            data = await asyncio.wait_for(fut, timeout=5)
+        except asyncio.TimeoutError:
+            pass
+        else:
+            data['__fake__'] = True
 
     def parse_user_settings_update(self, data: gw.UserSettingsUpdateEvent) -> None:
         old = copy(self.settings)

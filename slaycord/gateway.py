@@ -558,14 +558,7 @@ class DiscordWebSocket:
         elif event == 'RESUMED':
             _log.info('Gateway has successfully RESUMED session %s.', self.session_id)
 
-        try:
-            func = self._discord_parsers[event]
-        except KeyError:
-            _log.debug('Unknown event %s.', event)
-        else:
-            func(data)
-
-        # remove the dispatched listeners
+        # Remove the dispatched listeners
         removed = []
         for index, entry in enumerate(self._dispatch_listeners):
             if entry.event != event:
@@ -589,6 +582,13 @@ class DiscordWebSocket:
 
         for index in reversed(removed):
             del self._dispatch_listeners[index]
+
+        try:
+            func = self._discord_parsers[event]
+        except KeyError:
+            _log.debug('Unknown event %s.', event)
+        else:
+            func(data)
 
     @property
     def latency(self) -> float:
