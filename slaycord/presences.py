@@ -23,17 +23,20 @@ DEALINGS IN THE SOFTWARE.
 """
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Tuple
+from typing import Optional, TYPE_CHECKING, Tuple, Union
 
 from .activity import create_activity
-from .enums import Status, try_enum
+from .enums import try_enum, Status
 from .utils import MISSING, _get_as_snowflake, _RawReprMixin
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .activity import ActivityTypes
+    from .game_relationship import GameRelationship
     from .guild import Guild
+    from .member import Member
+    from .relationship import Relationship
     from .state import ConnectionState
     from .types.activity import ClientStatus as ClientStatusPayload, PartialPresenceUpdate
 
@@ -147,9 +150,18 @@ class RawPresenceUpdateEvent(_RawReprMixin):
     activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
         The activities the user is currently doing. Due to a Discord API limitation, a user's Spotify activity may not appear
         if they are listening to a song with a title longer than ``128`` characters. See :issue:`1738` for more information.
+    pair: Optional[Union[Tuple[:class:`Member`, :class:`Member`], Tuple[:class:`Relationship`, :class:`Relationship`], Tuple[:class:`GameRelationship`, :class:`GameRelationship`]]
+        The ``(old, new)`` pair representing old and new presence.
     """
 
-    __slots__ = ('user_id', 'guild_id', 'guild', 'client_status', 'activities')
+    __slots__ = (
+        'user_id',
+        'guild_id',
+        'guild',
+        'client_status',
+        'activities',
+        'pair',
+    )
 
     def __init__(self, *, data: PartialPresenceUpdate, state: ConnectionState) -> None:
         self.user_id: int = int(data['user']['id'])
@@ -157,3 +169,6 @@ class RawPresenceUpdateEvent(_RawReprMixin):
         self.activities: Tuple[ActivityTypes, ...] = tuple(create_activity(d, state) for d in data['activities'])
         self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
         self.guild: Optional[Guild] = state._get_guild(self.guild_id)
+        self.pair: Optional[
+            Union[Tuple[Member, Member], Tuple[Relationship, Relationship], Tuple[GameRelationship, GameRelationship]]
+        ] = None
