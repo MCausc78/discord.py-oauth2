@@ -2033,7 +2033,7 @@ class PartialMessageable(discord.abc.Messageable, Hashable):
 
     async def _get_messageable_destination(
         self,
-    ) -> Tuple[int, discord.abc.MessageableDestinationType,]:
+    ) -> Tuple[int, discord.abc.MessageableDestinationType]:
         if self.type == ChannelType.private:
             type = 'user'
         elif self.type == ChannelType.lobby:

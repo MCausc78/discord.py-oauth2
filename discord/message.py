@@ -1267,18 +1267,36 @@ class PartialMessage(Hashable):
         HTTPException
             Deleting the message failed.
         """
+
+        channel = self.channel
+        if channel.type in (ChannelType.private, ChannelType.ephemeral_dm):
+            if hasattr(channel, 'recipient'):
+                recipient = channel.recipient  # type: ignore
+                if recipient is None:
+                    endpoint = self._state.http.delete_message
+                    target_id = channel.id
+                else:
+                    endpoint = self._state.http.delete_user_message
+                    target_id = recipient.id
+            else:
+                endpoint = self._state.http.delete_message
+                target_id = channel.id
+        else:
+            endpoint = self._state.http.delete_message
+            target_id = channel.id
+
         if delay is not None:
 
             async def delete(delay: float):
                 await asyncio.sleep(delay)
                 try:
-                    await self._state.http.delete_message(self.channel.id, self.id)
+                    await endpoint(target_id, self.id)
                 except HTTPException:
                     pass
 
             asyncio.create_task(delete(delay))
         else:
-            await self._state.http.delete_message(self.channel.id, self.id)
+            await endpoint(target_id, self.id)
 
     async def edit(
         self,
@@ -2375,14 +2393,36 @@ class Message(PartialMessage, Hashable):
         else:
             previous_allowed_mentions = None
 
+        channel = self.channel
+        if channel.type in (ChannelType.private, ChannelType.ephemeral_dm):
+            if hasattr(channel, 'recipient'):
+                recipient = channel.recipient  # type: ignore
+                if recipient is None:
+                    endpoint = self._state.http.edit_message
+                    target_id = channel.id
+                else:
+                    endpoint = self._state.http.edit_user_message
+                    target_id = recipient.id
+            else:
+                endpoint = self._state.http.edit_message
+                target_id = channel.id
+        else:
+            endpoint = self._state.http.edit_message
+            target_id = channel.id
+
         with handle_message_parameters(
             content=content,
             attachments=attachments,
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_allowed_mentions,
         ) as params:
-            data = await self._state.http.edit_message(self.channel.id, self.id, params=params)
-            message = Message(state=self._state, channel=self.channel, data=data)
+            data = await endpoint(target_id, self.id, params=params)
+            if 'channel' in data:
+                channel, _ = self._state._get_guild_channel({'channel': channel})  # type: ignore
+            else:
+                channel = self.channel
+
+            message = Message(state=self._state, channel=channel, data=data)  # type: ignore
 
         if delete_after is not None:
             await self.delete(delay=delete_after)
