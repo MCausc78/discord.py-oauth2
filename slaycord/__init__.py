@@ -34,6 +34,7 @@ from .client import *
 from .client_properties import *
 from .colour import *
 from .components import *
+from .connections import *
 from .embeds import *
 from .emoji import *
 from .enums import *

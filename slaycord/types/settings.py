@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from typing import List, Optional, TypedDict
+from typing import List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
 from .activity import StatusType
@@ -46,10 +46,11 @@ class GuildFolder(TypedDict):
 class UserSettings(TypedDict):
     status: NotRequired[StatusType]
     custom_status: NotRequired[Optional[UserSettingsCustomStatus]]
+    slayer_sdk_receive_in_game_dms: NotRequired[Literal[0, 1, 2, 3]]
 
 
 class GatewayUserSettings(UserSettings):
     show_current_game: NotRequired[bool]
-    guild_folders: NotRequired[Optional[GuildFolder]]
+    guild_folders: NotRequired[List[GuildFolder]]
     allow_activity_party_privacy_voice_channel: NotRequired[bool]
     allow_activity_party_privacy_friends: NotRequired[bool]

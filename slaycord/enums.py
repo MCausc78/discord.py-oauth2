@@ -34,59 +34,62 @@ if TYPE_CHECKING:
 # TODO: Sort enums
 __all__ = (
     'Enum',
-    'ChannelType',
-    'MessageType',
-    'SpeakingState',
-    'VerificationLevel',
-    'ContentFilter',
-    'Status',
-    'DefaultAvatar',
+    'ActivityType',
+    'AppCommandPermissionType',
+    'AppCommandOptionType',
+    'AppCommandType',
+    'ApplicationDisclosureType',
     'AuditLogAction',
     'AuditLogActionCategory',
-    'UserFlags',
-    'ActivityType',
-    'NotificationLevel',
-    'TeamMembershipState',
-    'TeamMemberRole',
-    'WebhookType',
-    'ExpireBehaviour',
-    'ExpireBehavior',
-    'StickerType',
-    'StickerFormatType',
-    'InviteTarget',
-    'VideoQualityMode',
-    'ComponentType',
+    'AutoModRuleActionType',
+    'AutoModRuleEventType',
+    'AutoModRuleTriggerType',
     'ButtonStyle',
-    'TextStyle',
-    'PrivacyLevel',
-    'InteractionType',
-    'InteractionResponseType',
-    'NSFWLevel',
-    'MFALevel',
-    'Locale',
+    'ChannelType',
+    'ClientType',
+    'ComponentType',
+    'ConnectionType',
+    'ContentFilter',
+    'DefaultAvatar',
+    'EntitlementOwnerType',
+    'EntitlementType',
     'EntityType',
     'EventStatus',
-    'AppCommandType',
-    'AppCommandOptionType',
-    'RelationshipType',
-    'AppCommandPermissionType',
-    'AutoModRuleTriggerType',
-    'AutoModRuleEventType',
-    'AutoModRuleActionType',
+    'ExpireBehavior',
+    'ExpireBehaviour',
     'ForumLayoutType',
     'ForumOrderType',
-    'SelectDefaultValueType',
-    'SKUType',
-    'EntitlementType',
-    'EntitlementOwnerType',
-    'PollLayoutType',
-    'VoiceChannelEffectAnimationType',
-    'SubscriptionStatus',
-    'ApplicationDisclosureType',
-    'MessageReferenceType',
-    'ClientType',
-    'ConnectionType',
+    'InteractionResponseType',
+    'InteractionType',
+    'InviteTarget',
+    'InviteType',
+    'Locale',
     'OperatingSystem',
+    'MFALevel',
+    'MessageReferenceType',
+    'MessageType',
+    'NSFWLevel',
+    'NotificationLevel',
+    'PollLayoutType',
+    'PrivacyLevel',
+    'ReactionType',
+    'RelationshipType',
+    'SKUType',
+    'SelectDefaultValueType',
+    'SlayerSDKReceiveInGameDMs',
+    'SpeakingState',
+    'Status',
+    'StickerFormatType',
+    'StickerType',
+    'SubscriptionStatus',
+    'TeamMemberRole',
+    'TeamMembershipState',
+    'TextStyle',
+    'UserFlags',
+    'VerificationLevel',
+    'VideoQualityMode',
+    'VoiceChannelEffectAnimationType',
+    'WebhookType',
 )
 
 
@@ -213,164 +216,50 @@ else:
                 return value
 
 
-class ChannelType(Enum):
-    text = 0
-    private = 1
-    voice = 2
-    group = 3
-    category = 4
-    news = 5
-    news_thread = 10
-    public_thread = 11
-    private_thread = 12
-    stage_voice = 13
-    forum = 15
-    media = 16
-    lobby = 17
-    ephemeral_dm = 18
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class MessageReferenceType(Enum):
-    default = 0
-    reply = 0
-    forward = 1
-
-
-class MessageType(Enum):
-    default = 0
-    recipient_add = 1
-    recipient_remove = 2
-    call = 3
-    channel_name_change = 4
-    channel_icon_change = 5
-    pins_add = 6
-    new_member = 7
-    premium_guild_subscription = 8
-    premium_guild_tier_1 = 9
-    premium_guild_tier_2 = 10
-    premium_guild_tier_3 = 11
-    channel_follow_add = 12
-    guild_stream = 13
-    guild_discovery_disqualified = 14
-    guild_discovery_requalified = 15
-    guild_discovery_grace_period_initial_warning = 16
-    guild_discovery_grace_period_final_warning = 17
-    thread_created = 18
-    reply = 19
-    chat_input_command = 20
-    thread_starter_message = 21
-    guild_invite_reminder = 22
-    context_menu_command = 23
-    auto_moderation_action = 24
-    role_subscription_purchase = 25
-    interaction_premium_upsell = 26
-    stage_start = 27
-    stage_end = 28
-    stage_speaker = 29
-    stage_raise_hand = 30
-    stage_topic = 31
-    guild_application_premium_subscription = 32
-    premium_referral = 35
-    guild_incident_alert_mode_enabled = 36
-    guild_incident_alert_mode_disabled = 37
-    guild_incident_report_raid = 38
-    guild_incident_report_false_alarm = 39
-    guild_deadchat_revive_prompt = 40
-    custom_gift = 41
-    guild_gaming_stats_prompt = 42
-    purchase_notification = 44
-    poll_result = 46
-    changelog = 47
-    nitro_notification = 48
-    channel_linked_to_lobby = 49
-    gifting_prompt = 50
-    in_game_message_nux = 51
-    guild_join_request_accept_notification = 52
-    guild_join_request_reject_notification = 53
-    guild_join_request_withdrawn_notification = 54
-    hd_streaming_upgraded = 55
-
-
-class SpeakingState(Enum):
-    none = 0
-    voice = 1
-    soundshare = 2
-    priority = 4
-
-    def __str__(self) -> str:
-        return self.name
+class ActivityType(Enum):
+    unknown = -1
+    playing = 0
+    streaming = 1
+    listening = 2
+    watching = 3
+    custom = 4
+    competing = 5
 
     def __int__(self) -> int:
         return self.value
 
 
-class VerificationLevel(Enum, comparable=True):
-    none = 0
-    low = 1
-    medium = 2
-    high = 3
-    highest = 4
-
-    def __str__(self) -> str:
-        return self.name
+class AppCommandPermissionType(Enum):
+    role = 1
+    user = 2
+    channel = 3
 
 
-class ContentFilter(Enum, comparable=True):
-    disabled = 0
-    no_role = 1
-    all_members = 2
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class Status(Enum):
-    online = 'online'
-    offline = 'offline'
-    idle = 'idle'
-    dnd = 'dnd'
-    do_not_disturb = 'dnd'
-    invisible = 'invisible'
-
-    def __str__(self) -> str:
-        return self.value
+class AppCommandOptionType(Enum):
+    subcommand = 1
+    subcommand_group = 2
+    string = 3
+    integer = 4
+    boolean = 5
+    user = 6
+    channel = 7
+    role = 8
+    mentionable = 9
+    number = 10
+    attachment = 11
 
 
-class DefaultAvatar(Enum):
-    blurple = 0
-    grey = 1
-    gray = 1
-    green = 2
-    orange = 3
-    red = 4
-    pink = 5
-
-    def __str__(self) -> str:
-        return self.name
+class AppCommandType(Enum):
+    chat_input = 1
+    user = 2
+    message = 3
 
 
-class RelationshipType(Enum):
-    none = 0
-    friend = 1
-    blocked = 2
-    incoming_request = 3
-    outgoing_request = 4
-    implicit = 5
-    suggestion = 6
-
-
-class NotificationLevel(Enum, comparable=True):
-    all_messages = 0
-    only_mentions = 1
-
-
-class AuditLogActionCategory(Enum):
-    create = 1
-    delete = 2
-    update = 3
+class ApplicationDisclosureType(Enum):
+    unspecified = 0
+    ip_location = 1
+    display_advertisements = 2
+    partner_sdk_data_sharing_message = 3
 
 
 class AuditLogAction(Enum):
@@ -546,157 +435,31 @@ class AuditLogAction(Enum):
             return 'creator_monetization'
 
 
-class UserFlags(Enum):
-    staff = 1 << 0
-    partner = 1 << 1
-    hypesquad = 1 << 2
-    bug_hunter = 1 << 3
-    mfa_sms = 1 << 4
-    premium_promo_dismissed = 1 << 5
-    hypesquad_bravery = 1 << 6
-    hypesquad_brilliance = 1 << 7
-    hypesquad_balance = 1 << 8
-    early_supporter = 1 << 9
-    team_user = 1 << 10
-    is_hubspot_contact = 1 << 11
-    system = 1 << 12
-    has_unread_urgent_messages = 1 << 13
-    bug_hunter_level_2 = 1 << 14
-    underage_deleted = 1 << 15
-    verified_bot = 1 << 16
-    verified_bot_developer = 1 << 17
-    discord_certified_moderator = 1 << 18
-    bot_http_interactions = 1 << 19
-    spammer = 1 << 20
-    disable_premium = 1 << 21
-    active_developer = 1 << 22
-    provisional_account = 1 << 23
-    high_global_rate_limit = 1 << 33
-    deleted = 1 << 34
-    disabled_suspicious_activity = 1 << 35
-    self_deleted = 1 << 36
-    premium_discriminator = 1 << 37
-    used_desktop_client = 1 << 38
-    used_web_client = 1 << 39
-    used_mobile_client = 1 << 40
-    disabled = 1 << 41
-    has_session_started = 1 << 43
-    quarantined = 1 << 44
-    premium_eligible_for_unique_username = 1 << 47
-    collaborator = 1 << 50
-    restricted_collaborator = 1 << 51
+class AuditLogActionCategory(Enum):
+    create = 1
+    delete = 2
+    update = 3
 
 
-class ActivityType(Enum):
-    unknown = -1
-    playing = 0
-    streaming = 1
-    listening = 2
-    watching = 3
-    custom = 4
-    competing = 5
-
-    def __int__(self) -> int:
-        return self.value
+class AutoModRuleActionType(Enum):
+    block_message = 1
+    send_alert_message = 2
+    timeout = 3
+    block_member_interactions = 4
 
 
-class TeamMembershipState(Enum):
-    invited = 1
-    accepted = 2
+class AutoModRuleEventType(Enum):
+    message_send = 1
+    member_update = 2
 
 
-class TeamMemberRole(Enum):
-    admin = 'admin'
-    developer = 'developer'
-    read_only = 'read_only'
-
-
-class WebhookType(Enum):
-    incoming = 1
-    channel_follower = 2
-    application = 3
-
-
-class ExpireBehaviour(Enum):
-    remove_role = 0
-    kick = 1
-
-
-ExpireBehavior = ExpireBehaviour
-
-
-class StickerType(Enum):
-    standard = 1
-    guild = 2
-
-
-class StickerFormatType(Enum):
-    png = 1
-    apng = 2
-    lottie = 3
-    gif = 4
-
-    @property
-    def file_extension(self) -> str:
-        # fmt: off
-        lookup: Dict[StickerFormatType, str] = {
-            StickerFormatType.png: 'png',
-            StickerFormatType.apng: 'png',
-            StickerFormatType.lottie: 'json',
-            StickerFormatType.gif: 'gif',
-        }
-        # fmt: on
-        return lookup.get(self, 'png')
-
-
-class InviteTarget(Enum):
-    unknown = 0
-    stream = 1
-    embedded_application = 2
-
-
-class InteractionType(Enum):
-    ping = 1
-    application_command = 2
-    component = 3
-    autocomplete = 4
-    modal_submit = 5
-
-
-class InteractionResponseType(Enum):
-    pong = 1
-    # ack = 2 (deprecated)
-    # channel_message = 3 (deprecated)
-    channel_message = 4  # (with source)
-    deferred_channel_message = 5  # (with source)
-    deferred_message_update = 6  # for components
-    message_update = 7  # for components
-    autocomplete_result = 8
-    modal = 9  # for modals
-    # premium_required = 10 (deprecated)
-
-
-class VideoQualityMode(Enum):
-    auto = 1
-    full = 2
-
-    def __int__(self) -> int:
-        return self.value
-
-
-class ComponentType(Enum):
-    action_row = 1
-    button = 2
-    select = 3
-    string_select = 3
-    text_input = 4
-    user_select = 5
-    role_select = 6
-    mentionable_select = 7
-    channel_select = 8
-
-    def __int__(self) -> int:
-        return self.value
+class AutoModRuleTriggerType(Enum):
+    keyword = 1
+    harmful_link = 2
+    spam = 3
+    keyword_preset = 4
+    mention_spam = 5
+    member_profile = 6
 
 
 class ButtonStyle(Enum):
@@ -719,31 +482,193 @@ class ButtonStyle(Enum):
         return self.value
 
 
-class TextStyle(Enum):
-    short = 1
-    paragraph = 2
+class ChannelType(Enum):
+    text = 0
+    private = 1
+    voice = 2
+    group = 3
+    category = 4
+    news = 5
+    news_thread = 10
+    public_thread = 11
+    private_thread = 12
+    stage_voice = 13
+    forum = 15
+    media = 16
+    lobby = 17
+    ephemeral_dm = 18
 
-    # Aliases
-    long = 2
+    def __str__(self) -> str:
+        return self.name
+
+
+class ClientType(Enum):
+    web = 'web'
+    mobile = 'mobile'
+    desktop = 'desktop'
+    embedded = 'embedded'
+    unknown = 'unknown'
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class ComponentType(Enum):
+    action_row = 1
+    button = 2
+    select = 3
+    string_select = 3
+    text_input = 4
+    user_select = 5
+    role_select = 6
+    mentionable_select = 7
+    channel_select = 8
 
     def __int__(self) -> int:
         return self.value
 
 
-class PrivacyLevel(Enum):
-    guild_only = 2
+class ConnectionType(Enum):
+    amazon_music = 'amazon-music'
+    battle_net = 'battlenet'
+    bluesky = 'bluesky'
+    bungie = 'bungie'
+    contacts = 'contacts'
+    crunchyroll = 'crunchyroll'
+    domain = 'domain'
+    ebay = 'ebay'
+    epic_games = 'epicgames'
+    facebook = 'facebook'
+    github = 'github'
+    instagram = 'instagram'
+    league_of_legends = 'leagueoflegends'
+    mastodon = 'mastodon'
+    paypal = 'paypal'
+    playstation = 'playstation'
+    playstation_staging = 'playstation-stg'
+    reddit = 'reddit'
+    riot_games = 'riotgames'
+    roblox = 'roblox'
+    samsung = 'samsung'
+    skype = 'skype'
+    soundcloud = 'soundcloud'
+    spotify = 'spotify'
+    steam = 'steam'
+    tiktok = 'tiktok'
+    twitch = 'twitch'
+    twitter = 'twitter'
+    xbox = 'xbox'
+    youtube = 'youtube'
+
+    def __str__(self) -> str:
+        return self.value
 
 
-class NSFWLevel(Enum, comparable=True):
-    default = 0
-    explicit = 1
-    safe = 2
-    age_restricted = 3
-
-
-class MFALevel(Enum, comparable=True):
+class ContentFilter(Enum, comparable=True):
     disabled = 0
-    require_2fa = 1
+    no_role = 1
+    all_members = 2
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class DefaultAvatar(Enum):
+    blurple = 0
+    grey = 1
+    gray = 1
+    green = 2
+    orange = 3
+    red = 4
+    pink = 5
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class EntitlementOwnerType(Enum):
+    guild = 1
+    user = 2
+
+
+class EntitlementType(Enum):
+    purchase = 1
+    premium_subscription = 2
+    developer_gift = 3
+    test_mode_purchase = 4
+    free_purchase = 5
+    user_gift = 6
+    premium_purchase = 7
+    application_subscription = 8
+
+
+class EntityType(Enum):
+    stage_instance = 1
+    voice = 2
+    external = 3
+
+
+class EventStatus(Enum):
+    scheduled = 1
+    active = 2
+    completed = 3
+    canceled = 4
+
+    ended = 3
+    cancelled = 4
+
+
+class ExpireBehavior(Enum):
+    remove_role = 0
+    kick = 1
+
+
+ExpireBehaviour = ExpireBehavior
+
+
+class ForumLayoutType(Enum):
+    not_set = 0
+    list_view = 1
+    gallery_view = 2
+
+
+class ForumOrderType(Enum):
+    latest_activity = 0
+    creation_date = 1
+
+
+class InteractionResponseType(Enum):
+    pong = 1
+    # ack = 2 (deprecated)
+    # channel_message = 3 (deprecated)
+    channel_message = 4  # (with source)
+    deferred_channel_message = 5  # (with source)
+    deferred_message_update = 6  # for components
+    message_update = 7  # for components
+    autocomplete_result = 8
+    modal = 9  # for modals
+    # premium_required = 10 (deprecated)
+    iframe_modal = 11
+
+
+class InteractionType(Enum):
+    ping = 1
+    application_command = 2
+    component = 3
+    autocomplete = 4
+    modal_submit = 5
+
+
+class InviteTarget(Enum):
+    unknown = 0
+    stream = 1
+    embedded_application = 2
+
+
+class InviteType(Enum):
+    guild = 0
+    group_dm = 1
+    friend = 2
 
 
 class Locale(Enum):
@@ -779,90 +704,6 @@ class Locale(Enum):
     turkish = 'tr'
     ukrainian = 'uk'
     vietnamese = 'vi'
-
-    def __str__(self) -> str:
-        return self.value
-
-
-E = TypeVar('E', bound='Enum')
-
-
-class EntityType(Enum):
-    stage_instance = 1
-    voice = 2
-    external = 3
-
-
-class EventStatus(Enum):
-    scheduled = 1
-    active = 2
-    completed = 3
-    canceled = 4
-
-    ended = 3
-    cancelled = 4
-
-
-class AppCommandOptionType(Enum):
-    subcommand = 1
-    subcommand_group = 2
-    string = 3
-    integer = 4
-    boolean = 5
-    user = 6
-    channel = 7
-    role = 8
-    mentionable = 9
-    number = 10
-    attachment = 11
-
-
-class AppCommandType(Enum):
-    chat_input = 1
-    user = 2
-    message = 3
-
-
-class AppCommandPermissionType(Enum):
-    role = 1
-    user = 2
-    channel = 3
-
-
-class ConnectionType(Enum):
-    battle_net = 'battlenet'
-    contacts = 'contacts'
-    crunchyroll = 'crunchyroll'
-    ebay = 'ebay'
-    epic_games = 'epicgames'
-    facebook = 'facebook'
-    github = 'github'
-    instagram = 'instagram'
-    league_of_legends = 'leagueoflegends'
-    paypal = 'paypal'
-    playstation = 'playstation'
-    reddit = 'reddit'
-    riot_games = 'riotgames'
-    samsung = 'samsung'
-    spotify = 'spotify'
-    skype = 'skype'
-    steam = 'steam'
-    tiktok = 'tiktok'
-    twitch = 'twitch'
-    twitter = 'twitter'
-    youtube = 'youtube'
-    xbox = 'xbox'
-
-    def __str__(self) -> str:
-        return self.value
-
-
-class ClientType(Enum):
-    web = 'web'
-    mobile = 'mobile'
-    desktop = 'desktop'
-    embedded = 'embedded'
-    unknown = 'unknown'
 
     def __str__(self) -> str:
         return self.value
@@ -908,42 +749,105 @@ class OperatingSystem(Enum):
         return self.to_string()
 
 
-class AutoModRuleTriggerType(Enum):
-    keyword = 1
-    harmful_link = 2
-    spam = 3
-    keyword_preset = 4
-    mention_spam = 5
-    member_profile = 6
+class MFALevel(Enum, comparable=True):
+    disabled = 0
+    require_2fa = 1
 
 
-class AutoModRuleEventType(Enum):
-    message_send = 1
-    member_update = 2
+class MessageReferenceType(Enum):
+    default = 0
+    reply = 0
+    forward = 1
 
 
-class AutoModRuleActionType(Enum):
-    block_message = 1
-    send_alert_message = 2
-    timeout = 3
-    block_member_interactions = 4
+class MessageType(Enum):
+    default = 0
+    recipient_add = 1
+    recipient_remove = 2
+    call = 3
+    channel_name_change = 4
+    channel_icon_change = 5
+    pins_add = 6
+    new_member = 7
+    premium_guild_subscription = 8
+    premium_guild_tier_1 = 9
+    premium_guild_tier_2 = 10
+    premium_guild_tier_3 = 11
+    channel_follow_add = 12
+    guild_stream = 13
+    guild_discovery_disqualified = 14
+    guild_discovery_requalified = 15
+    guild_discovery_grace_period_initial_warning = 16
+    guild_discovery_grace_period_final_warning = 17
+    thread_created = 18
+    reply = 19
+    chat_input_command = 20
+    thread_starter_message = 21
+    guild_invite_reminder = 22
+    context_menu_command = 23
+    auto_moderation_action = 24
+    role_subscription_purchase = 25
+    interaction_premium_upsell = 26
+    stage_start = 27
+    stage_end = 28
+    stage_speaker = 29
+    stage_raise_hand = 30
+    stage_topic = 31
+    guild_application_premium_subscription = 32
+    premium_referral = 35
+    guild_incident_alert_mode_enabled = 36
+    guild_incident_alert_mode_disabled = 37
+    guild_incident_report_raid = 38
+    guild_incident_report_false_alarm = 39
+    guild_deadchat_revive_prompt = 40
+    custom_gift = 41
+    guild_gaming_stats_prompt = 42
+    purchase_notification = 44
+    poll_result = 46
+    changelog = 47
+    nitro_notification = 48
+    channel_linked_to_lobby = 49
+    gifting_prompt = 50
+    in_game_message_nux = 51
+    guild_join_request_accept_notification = 52
+    guild_join_request_reject_notification = 53
+    guild_join_request_withdrawn_notification = 54
+    hd_streaming_upgraded = 55
 
 
-class ForumLayoutType(Enum):
-    not_set = 0
-    list_view = 1
-    gallery_view = 2
+class NSFWLevel(Enum, comparable=True):
+    default = 0
+    explicit = 1
+    safe = 2
+    age_restricted = 3
 
 
-class ForumOrderType(Enum):
-    latest_activity = 0
-    creation_date = 1
+class NotificationLevel(Enum, comparable=True):
+    all_messages = 0
+    only_mentions = 1
 
 
-class SelectDefaultValueType(Enum):
-    user = 'user'
-    role = 'role'
-    channel = 'channel'
+class PollLayoutType(Enum):
+    default = 1
+
+
+class PrivacyLevel(Enum):
+    guild_only = 2
+
+
+class ReactionType(Enum):
+    normal = 0
+    burst = 1
+
+
+class RelationshipType(Enum):
+    none = 0
+    friend = 1
+    blocked = 2
+    incoming_request = 3
+    outgoing_request = 4
+    implicit = 5
+    suggestion = 6
 
 
 class SKUType(Enum):
@@ -953,40 +857,66 @@ class SKUType(Enum):
     subscription_group = 6
 
 
-class EntitlementType(Enum):
-    purchase = 1
-    premium_subscription = 2
-    developer_gift = 3
-    test_mode_purchase = 4
-    free_purchase = 5
-    user_gift = 6
-    premium_purchase = 7
-    application_subscription = 8
+class SelectDefaultValueType(Enum):
+    user = 'user'
+    role = 'role'
+    channel = 'channel'
 
 
-class EntitlementOwnerType(Enum):
-    guild = 1
-    user = 2
+class SlayerSDKReceiveInGameDMs(Enum):
+    unset = 0
+    all = 1
+    users_with_game = 2
+    none = 3
 
 
-class PollLayoutType(Enum):
-    default = 1
+class SpeakingState(Enum):
+    none = 0
+    voice = 1
+    soundshare = 2
+    priority = 4
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __int__(self) -> int:
+        return self.value
 
 
-class InviteType(Enum):
-    guild = 0
-    group_dm = 1
-    friend = 2
+class Status(Enum):
+    online = 'online'
+    offline = 'offline'
+    idle = 'idle'
+    dnd = 'dnd'
+    do_not_disturb = 'dnd'
+    invisible = 'invisible'
+
+    def __str__(self) -> str:
+        return self.value
 
 
-class ReactionType(Enum):
-    normal = 0
-    burst = 1
+class StickerFormatType(Enum):
+    png = 1
+    apng = 2
+    lottie = 3
+    gif = 4
+
+    @property
+    def file_extension(self) -> str:
+        # fmt: off
+        lookup: Dict[StickerFormatType, str] = {
+            StickerFormatType.png: 'png',
+            StickerFormatType.apng: 'png',
+            StickerFormatType.lottie: 'json',
+            StickerFormatType.gif: 'gif',
+        }
+        # fmt: on
+        return lookup.get(self, 'png')
 
 
-class VoiceChannelEffectAnimationType(Enum):
-    premium = 0
-    basic = 1
+class StickerType(Enum):
+    standard = 1
+    guild = 2
 
 
 class SubscriptionStatus(Enum):
@@ -995,11 +925,100 @@ class SubscriptionStatus(Enum):
     inactive = 2
 
 
-class ApplicationDisclosureType(Enum):
-    unspecified = 0
-    ip_location = 1
-    display_advertisements = 2
-    partner_sdk_data_sharing_message = 3
+class TeamMemberRole(Enum):
+    admin = 'admin'
+    developer = 'developer'
+    read_only = 'read_only'
+
+
+class TeamMembershipState(Enum):
+    invited = 1
+    accepted = 2
+
+
+class TextStyle(Enum):
+    short = 1
+    paragraph = 2
+
+    # Aliases
+    long = 2
+
+    def __int__(self) -> int:
+        return self.value
+
+
+class UserFlags(Enum):
+    staff = 1 << 0
+    partner = 1 << 1
+    hypesquad = 1 << 2
+    bug_hunter = 1 << 3
+    mfa_sms = 1 << 4
+    premium_promo_dismissed = 1 << 5
+    hypesquad_bravery = 1 << 6
+    hypesquad_brilliance = 1 << 7
+    hypesquad_balance = 1 << 8
+    early_supporter = 1 << 9
+    team_user = 1 << 10
+    is_hubspot_contact = 1 << 11
+    system = 1 << 12
+    has_unread_urgent_messages = 1 << 13
+    bug_hunter_level_2 = 1 << 14
+    underage_deleted = 1 << 15
+    verified_bot = 1 << 16
+    verified_bot_developer = 1 << 17
+    discord_certified_moderator = 1 << 18
+    bot_http_interactions = 1 << 19
+    spammer = 1 << 20
+    disable_premium = 1 << 21
+    active_developer = 1 << 22
+    provisional_account = 1 << 23
+    high_global_rate_limit = 1 << 33
+    deleted = 1 << 34
+    disabled_suspicious_activity = 1 << 35
+    self_deleted = 1 << 36
+    premium_discriminator = 1 << 37
+    used_desktop_client = 1 << 38
+    used_web_client = 1 << 39
+    used_mobile_client = 1 << 40
+    disabled = 1 << 41
+    has_session_started = 1 << 43
+    quarantined = 1 << 44
+    premium_eligible_for_unique_username = 1 << 47
+    collaborator = 1 << 50
+    restricted_collaborator = 1 << 51
+
+
+class VerificationLevel(Enum, comparable=True):
+    none = 0
+    low = 1
+    medium = 2
+    high = 3
+    highest = 4
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class VideoQualityMode(Enum):
+    auto = 1
+    full = 2
+
+    def __int__(self) -> int:
+        return self.value
+
+
+class VoiceChannelEffectAnimationType(Enum):
+    premium = 0
+    basic = 1
+
+
+class WebhookType(Enum):
+    incoming = 1
+    channel_follower = 2
+    application = 3
+
+
+E = TypeVar('E', bound='Enum')
 
 
 def create_unknown_value(cls: Type[E], val: Any) -> E:

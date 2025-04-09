@@ -1172,7 +1172,7 @@ class PartialMessage(Hashable):
             Returns the partial message's hash.
 
     Attributes
-    -----------
+    ----------
     channel: Union[:class:`PartialMessageable`, :class:`TextChannel`, :class:`StageChannel`, :class:`VoiceChannel`, :class:`Thread`, :class:`DMChannel`]
         The channel associated with this partial message.
     id: :class:`int`
@@ -1340,7 +1340,7 @@ class PartialMessage(Hashable):
             This message does not exist.
 
         Returns
-        --------
+        -------
         :class:`Message`
             The newly edited message.
         """
@@ -1387,7 +1387,7 @@ class PartialMessage(Hashable):
             .. versionadded:: 2.5
 
         Returns
-        ---------
+        -------
         :class:`~slaycord.MessageReference`
             The reference to this message.
         """

@@ -1809,6 +1809,7 @@ class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, sla
     __slots__ = (
         'id',
         'recipient',
+        'recipients',
         'me',
         'last_message_id',
         'last_pin_timestamp',

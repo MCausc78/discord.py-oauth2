@@ -555,7 +555,10 @@ class DiscordWebSocket:
             self.sequence = msg['s']
             self.session_id = data['session_id']
             self.gateway = yarl.URL(data['resume_gateway_url'])
-            _log.info('Connected to Gateway (Session ID: %s).', self.session_id)
+
+            scopes = data.get('scopes', [])
+
+            _log.info('Connected to Gateway (Session ID: %s) with %s OAuth2 scopes.', self.session_id, len(scopes))
 
         elif event == 'RESUMED':
             _log.info('Gateway has successfully RESUMED session %s.', self.session_id)

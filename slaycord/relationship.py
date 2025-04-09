@@ -30,6 +30,7 @@ from .enums import RelationshipType, Status, try_enum
 from .mixins import Hashable
 from .object import Object
 from .presences import ClientStatus
+from .user import User
 from .utils import _get_as_snowflake, parse_time
 
 if TYPE_CHECKING:
@@ -41,7 +42,6 @@ if TYPE_CHECKING:
     from .state import ConnectionState
     from .types.gateway import RelationshipEvent
     from .types.user import User as UserPayload, Relationship as RelationshipPayload
-    from .user import User
 
 # fmt: off
 __all__ = (

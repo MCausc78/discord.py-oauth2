@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypedDict, Union
+from typing import List, Literal, Optional, TypedDict, Tuple, Union
 from typing_extensions import NotRequired, Required
 
 from .activity import StatusType, PartialPresenceUpdate, Activity
@@ -497,4 +497,5 @@ class GameRelationshipRemoveEvent(TypedDict):
     user_id: Snowflake
 
 
+SessionsReplaceEvent = Union[List[Session], Tuple[Session, ...]]
 UserSettingsUpdateEvent = GatewayUserSettings

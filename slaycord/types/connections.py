@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-present Rapptz
+Copyright (c) 2025-present MCausc78
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -24,65 +24,68 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Literal, Optional, TypedDict, Union
+from typing import Dict, List, Literal, TypedDict, Union
 from typing_extensions import NotRequired
 
+from .integration import IntegrationAccount, IntegrationGuild, IntegrationType
 from .snowflake import Snowflake
-from .user import User
+
+ConnectionType = Literal[
+    'amazon-music',
+    'battlenet',
+    'bluesky',
+    'bungie',
+    'contacts',
+    'crunchyroll',
+    'domain',
+    'ebay',
+    'epicgames',
+    'facebook',
+    'github',
+    'instagram',
+    'leagueoflegends',
+    'mastodon',
+    'paypal',
+    'playstation',
+    'playstation-stg',
+    'reddit',
+    'riotgames',
+    'roblox',
+    'samsung',
+    'skype',
+    'spotify',
+    'soundcloud',
+    'steam',
+    'tiktok',
+    'twitch',
+    'twitter',
+    'xbox',
+    'youtube',
+]
+VisibilityType = Literal[0, 1]
 
 
-class IntegrationApplication(TypedDict):
-    id: Snowflake
-    name: str
-    icon: Optional[str]
-    description: str
-    summary: str
-    bot: NotRequired[User]
-
-
-class IntegrationAccount(TypedDict):
+class PartialConnection(TypedDict):
     id: str
+    type: ConnectionType
     name: str
+    verified: bool
+    metadata: NotRequired[Dict[str, str]]
 
 
-IntegrationExpireBehavior = Literal[0, 1]
-
-
-class PartialIntegration(TypedDict):
-    id: Snowflake
-    name: str
+class ConnectionIntegration(TypedDict):
+    id: Union[Literal['twitch-partners'], Snowflake]
     type: IntegrationType
     account: IntegrationAccount
-    application_id: NotRequired[Snowflake]
+    guild: IntegrationGuild
 
 
-IntegrationType = Literal['twitch', 'youtube', 'discord', 'guild_subscription']
-
-
-class BaseIntegration(PartialIntegration):
-    enabled: NotRequired[bool]
-    syncing: NotRequired[bool]
-    synced_at: NotRequired[str]
-    user: NotRequired[User]
-    expire_behavior: NotRequired[IntegrationExpireBehavior]
-    expire_grace_period: NotRequired[int]
-
-
-class StreamIntegration(BaseIntegration):
-    role_id: Optional[Snowflake]
-    enable_emoticons: bool
-    subscriber_count: int
+class Connection(PartialConnection):
+    metadata_visibility: VisibilityType
     revoked: bool
-
-
-class BotIntegration(BaseIntegration):
-    application: IntegrationApplication
-
-
-Integration = Union[BaseIntegration, StreamIntegration, BotIntegration]
-
-
-class IntegrationGuild(TypedDict):
-    id: Snowflake
-    name: str
-    icon: Optional[str]
+    integrations: List[ConnectionIntegration]
+    friend_sync: bool
+    show_activity: bool
+    two_way_link: bool
+    visibility: VisibilityType
+    access_token: NotRequired[str]

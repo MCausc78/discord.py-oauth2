@@ -99,13 +99,13 @@ GuildFeature = Literal[
 class _BaseGuildPreview(UnavailableGuild):
     name: str
     icon: Optional[str]
-    splash: Optional[str]
-    discovery_splash: Optional[str]
-    emojis: List[Emoji]
-    stickers: List[GuildSticker]
+    splash: NotRequired[Optional[str]]
+    discovery_splash: NotRequired[Optional[str]]
+    emojis: NotRequired[List[Emoji]]
+    stickers: NotRequired[List[GuildSticker]]
     features: List[GuildFeature]
-    description: Optional[str]
-    incidents_data: Optional[IncidentData]
+    description: NotRequired[Optional[str]]
+    incidents_data: NotRequired[Optional[IncidentData]]
 
 
 class _GuildPreviewUnique(TypedDict):
@@ -119,27 +119,27 @@ class GuildPreview(_BaseGuildPreview, _GuildPreviewUnique):
 
 class Guild(_BaseGuildPreview):
     owner_id: Snowflake
-    region: str
-    afk_channel_id: Optional[Snowflake]
-    afk_timeout: int
-    verification_level: VerificationLevel
-    default_message_notifications: DefaultMessageNotificationLevel
-    explicit_content_filter: ExplicitContentFilterLevel
-    roles: List[Role]
-    mfa_level: MFALevel
-    nsfw_level: NSFWLevel
-    application_id: Optional[Snowflake]
-    system_channel_id: Optional[Snowflake]
-    system_channel_flags: int
-    rules_channel_id: Optional[Snowflake]
-    vanity_url_code: Optional[str]
+    region: NotRequired[str]
+    afk_channel_id: NotRequired[Optional[Snowflake]]
+    afk_timeout: NotRequired[int]
+    verification_level: NotRequired[VerificationLevel]
+    default_message_notifications: NotRequired[DefaultMessageNotificationLevel]
+    explicit_content_filter: NotRequired[ExplicitContentFilterLevel]
+    roles: NotRequired[List[Role]]
+    mfa_level: NotRequired[MFALevel]
+    nsfw_level: NotRequired[NSFWLevel]
+    application_id: NotRequired[Optional[Snowflake]]
+    system_channel_id: NotRequired[Optional[Snowflake]]
+    system_channel_flags: NotRequired[int]
+    rules_channel_id: NotRequired[Optional[Snowflake]]
+    vanity_url_code: NotRequired[Optional[str]]
     banner: Optional[str]
-    premium_tier: PremiumTier
-    preferred_locale: str
+    premium_tier: NotRequired[PremiumTier]
+    preferred_locale: NotRequired[str]
     public_updates_channel_id: Optional[Snowflake]
-    stickers: List[GuildSticker]
-    stage_instances: List[StageInstance]
-    guild_scheduled_events: List[GuildScheduledEvent]
+    stickers: NotRequired[List[GuildSticker]]
+    stage_instances: NotRequired[List[StageInstance]]
+    guild_scheduled_events: NotRequired[List[GuildScheduledEvent]]
     icon_hash: NotRequired[Optional[str]]
     owner: NotRequired[bool]
     permissions: NotRequired[str]

@@ -24,12 +24,13 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import Optional, TYPE_CHECKING, Tuple
 
 from .enums import RelationshipType, Status, try_enum
 from .mixins import Hashable
 from .object import Object
 from .presences import ClientStatus
+from .user import User
 from .utils import parse_time
 
 if TYPE_CHECKING:
@@ -40,7 +41,6 @@ if TYPE_CHECKING:
     from .presences import RawPresenceUpdateEvent
     from .state import ConnectionState
     from .types.user import User as UserPayload, GameRelationship as GameRelationshipPayload
-    from .user import User
 
 # fmt: off
 __all__ = (
