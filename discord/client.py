@@ -50,17 +50,18 @@ import aiohttp
 
 from . import utils
 
-from .activity import BaseActivity, Spotify, ActivityTypes, create_activity
+from .activity import BaseActivity, Spotify, ActivityTypes, Session, create_activity
 from .appinfo import AppInfo
 from .backoff import ExponentialBackoff
 from .channel import PartialMessageable
 from .client_properties import ClientProperties, DefaultClientProperties
+from .connections import Connection
 from .emoji import Emoji
 from .enums import ChannelType, Status, RelationshipType, ClientType
 from .errors import *
 from .flags import ApplicationFlags, Intents
 from .gateway import *
-from .guild import Guild
+from .guild import UserGuild, Guild
 from .http import HTTPClient
 from .invite import Invite
 from .lobby import Lobby
@@ -397,6 +398,14 @@ class Client:
         return self._connection.stickers
 
     @property
+    def sessions(self) -> Sequence[Session]:
+        """Sequence[:class:`.Session`]: The gateway sessions that the current user is connected in with.
+
+        When connected, this includes a representation of the library's session and an "all" session representing the user's overall presence.
+        """
+        return utils.SequenceProxy(self._connection._sessions.values())
+
+    @property
     def soundboard_sounds(self) -> List[SoundboardSound]:
         """List[:class:`.SoundboardSound`]: The soundboard sounds that the connected client has.
 
@@ -444,14 +453,49 @@ class Client:
         return [r for r in self._connection._relationships.values() if r.type is RelationshipType.friend]
 
     @property
+    def incoming_friend_requests(self) -> List[Relationship]:
+        """List[:class:`.Relationship`]: Returns all the users that the connected client has friend request from."""
+        return [r for r in self._connection._relationships.values() if r.type is RelationshipType.incoming_request]
+
+    @property
+    def outgoing_friend_requests(self) -> List[Relationship]:
+        """List[:class:`.Relationship`]: Returns all the users that the connected client has sent friend request to."""
+        return [r for r in self._connection._relationships.values() if r.type is RelationshipType.outgoing_request]
+
+    @property
     def game_friends(self) -> List[GameRelationship]:
         """List[:class:`.GameRelationship`]: Returns all the users that the connected client is friends with in-game."""
         return [r for r in self._connection._game_relationships.values() if r.type is RelationshipType.friend]
 
     @property
+    def incoming_game_friend_requests(self) -> List[GameRelationship]:
+        """List[:class:`.GameRelationship`]: Returns all the users that the connected client has game friend request from."""
+        return [r for r in self._connection._game_relationships.values() if r.type is RelationshipType.incoming_request]
+
+    @property
+    def outgoing_game_friend_requests(self) -> List[GameRelationship]:
+        """List[:class:`.GameRelationship`]: Returns all the users that the connected client has sent game friend request."""
+        return [r for r in self._connection._game_relationships.values() if r.type is RelationshipType.outgoing_request]
+
+    @property
     def blocked(self) -> List[Relationship]:
         """List[:class:`.Relationship`]: Returns all the users that the connected client has blocked."""
         return [r for r in self._connection._relationships.values() if r.type is RelationshipType.blocked]
+
+    def get_game_relationship(self, user_id: int, /) -> Optional[GameRelationship]:
+        """Retrieves the :class:`.GameRelationship`, if applicable.
+
+        Parameters
+        ----------
+        user_id: :class:`int`
+            The user ID to check if we have a game relationship with them.
+
+        Returns
+        -------
+        Optional[:class:`.GameRelationship`]
+            The game relationship, if available.
+        """
+        return self._connection._game_relationships.get(user_id)
 
     def get_relationship(self, user_id: int, /) -> Optional[Relationship]:
         """Retrieves the :class:`.Relationship`, if applicable.
@@ -527,6 +571,16 @@ class Client:
     def disclose(self) -> Sequence[str]:
         """Sequence[:class:`str`]: Upcoming changes to the user's account."""
         return utils.SequenceProxy(self._connection.disclose)
+
+    @property
+    def av_sf_protocol_floor(self) -> int:
+        """:class:`int`: The minimum DAVE version. Currently ``-1``."""
+        return self._connection.av_sf_protocol_floor
+
+    @property
+    def scopes(self) -> Tuple[str, ...]:
+        """Tuple[:class:`str`, ...]: The OAuth2 scopes the connected client has."""
+        return self._connection.scopes
 
     def is_ready(self) -> bool:
         """:class:`bool`: Specifies if the client's internal cache is ready for use."""
@@ -1292,6 +1346,21 @@ class Client:
             The soundboard sound or ``None`` if not found.
         """
         return self._connection.get_soundboard_sound(id)
+
+    def get_lobby(self, id: int, /) -> Optional[Lobby]:
+        """Returns a lobby with the given ID.
+
+        Parameters
+        ----------
+        id: :class:`int`
+            The ID to search for.
+
+        Returns
+        -------
+        Optional[:class:`.Lobby`]
+            The lobby or ``None`` if not found.
+        """
+        return self._connection._get_lobby(id)
 
     def get_all_channels(self) -> Generator[GuildChannel, None, None]:
         """A generator that retrieves every :class:`.abc.GuildChannel` the client can 'access'.
@@ -2258,11 +2327,34 @@ class Client:
                 continue
 
             if activity is not None:
-                me.activities = (activity,)  # type: ignore # Type checker does not understand the downcast here
+                me.activities = (activity,)  # type: ignore
             else:
                 me.activities = ()
 
             me.status = status
+
+    # Connections
+
+    async def fetch_connections(self) -> List[Connection]:
+        r"""|coro|
+
+        Retrieves :class:`list` of your :class:`Connection`\s.
+
+        Raises
+        ------
+        Forbidden
+            You do not have proper permissions to retrieve your connections.
+        HTTPException
+            Retrieving connections failed.
+
+        Returns
+        -------
+        List[:class:`Connection`]
+            The retrieved connections.
+        """
+        state = self._connection
+        data = await state.http.get_connections()
+        return [Connection(data=d, state=state) for d in data]
 
     # Guild stuff
 
@@ -2273,14 +2365,14 @@ class Client:
         before: Optional[SnowflakeTime] = None,
         after: Optional[SnowflakeTime] = None,
         with_counts: bool = True,
-    ) -> AsyncIterator[Guild]:
+    ) -> AsyncIterator[UserGuild]:
         """Retrieves an :term:`asynchronous iterator` that enables receiving your guilds.
 
         .. note::
 
-            Using this, you will only receive :attr:`.Guild.owner`, :attr:`.Guild.icon`,
-            :attr:`.Guild.id`, :attr:`.Guild.name`, :attr:`.Guild.approximate_member_count`,
-            and :attr:`.Guild.approximate_presence_count` per :class:`.Guild`.
+            Using this, you will only receive :attr:`.UserGuild.is_owner`, :attr:`.UserGuild.icon`,
+            :attr:`.UserGuild.id`, :attr:`.UserGuild.name`, :attr:`.UserGuild.approximate_member_count`,
+            and :attr:`.UserGuild.approximate_presence_count` per :class:`.UserGuild`.
 
         .. note::
 
@@ -2297,7 +2389,7 @@ class Client:
         Flattening into a list ::
 
             guilds = [guild async for guild in client.fetch_guilds(limit=150)]
-            # guilds is now a list of Guild...
+            # guilds is now a list of UserGuild...
 
         All parameters are optional.
 
@@ -2323,7 +2415,7 @@ class Client:
             If the datetime is naive, it is assumed to be local time.
         with_counts: :class:`bool`
             Whether to include count information in the guilds. This fills the
-            :attr:`.Guild.approximate_member_count` and :attr:`.Guild.approximate_presence_count`
+            :attr:`.UserGuild.approximate_member_count` and :attr:`.UserGuild.approximate_presence_count`
             attributes without needing any privileged intents. Defaults to ``True``.
 
             .. versionadded:: 2.3
@@ -2335,7 +2427,7 @@ class Client:
 
         Yields
         ------
-        :class:`.Guild`
+        :class:`.UserGuild`
             The guild with the guild data parsed.
         """
 
@@ -2390,7 +2482,7 @@ class Client:
             count = 0
 
             for count, raw_guild in enumerate(data, 1):
-                yield Guild(state=self._connection, data=raw_guild)
+                yield UserGuild(state=self._connection, data=raw_guild)
 
             if count < 200:
                 # There's no data left after this
@@ -2450,11 +2542,6 @@ class Client:
             Whether to include count information in the invite. This fills the
             :attr:`.Invite.approximate_member_count` and :attr:`.Invite.approximate_presence_count`
             fields.
-        with_expiration: :class:`bool`
-            Whether to include the expiration date of the invite. This fills the
-            :attr:`.Invite.expires_at` field.
-
-            .. versionadded:: 2.0
         scheduled_event_id: Optional[:class:`int`]
             The ID of the scheduled event this invite is for.
 
@@ -2490,7 +2577,6 @@ class Client:
         data = await self.http.get_invite(
             resolved.code,
             with_counts=with_counts,
-            with_expiration=with_expiration,
             guild_scheduled_event_id=scheduled_event_id,
         )
         return Invite.from_incomplete(state=self._connection, data=data)

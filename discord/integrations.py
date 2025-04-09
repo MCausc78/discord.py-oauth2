@@ -25,11 +25,11 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import datetime
-from typing import Optional, TYPE_CHECKING, Type, Tuple
+from typing import Optional, TYPE_CHECKING, Type, Tuple, Union
 
-from .enums import try_enum, ExpireBehaviour
+from .enums import try_enum, ExpireBehavior
 from .user import User
-from .utils import _get_as_snowflake, parse_time
+from .utils import _get_as_snowflake, parse_time, utcnow
 
 __all__ = (
     'IntegrationAccount',
@@ -41,7 +41,7 @@ __all__ = (
 )
 
 if TYPE_CHECKING:
-    from .guild import Guild
+    from .guild import Guild, UserGuild
     from .role import Role
     from .state import ConnectionState
     from .types.integration import (
@@ -85,11 +85,11 @@ class Integration:
 
     Attributes
     ----------
-    id: :class:`int`
+    id: Union[:class:`int`, :class:`str`]
         The integration ID.
     name: :class:`str`
         The integration name.
-    guild: :class:`Guild`
+    guild: Union[:class:`Guild`, :class:`UserGuild`]
         The guild of the integration.
     type: :class:`str`
         The integration type (i.e. Twitch).
@@ -112,8 +112,8 @@ class Integration:
         'enabled',
     )
 
-    def __init__(self, *, data: IntegrationPayload, guild: Guild) -> None:
-        self.guild: Guild = guild
+    def __init__(self, *, data: IntegrationPayload, guild: Union[Guild, UserGuild]) -> None:
+        self.guild: Union[Guild, UserGuild] = guild
         self._state: ConnectionState = guild._state
         self._from_data(data)
 
@@ -121,14 +121,19 @@ class Integration:
         return f'<{self.__class__.__name__} id={self.id} name={self.name!r}>'
 
     def _from_data(self, data: IntegrationPayload) -> None:
-        self.id: int = int(data['id'])
+        id = data['id']
+        try:
+            self.id: Union[int, str] = int(id)
+        except ValueError:
+            # For Twitch Partners, `id` will be a string
+            self.id = id
         self.type: IntegrationType = data['type']
         self.name: str = data['name']
         self.account: IntegrationAccount = IntegrationAccount(data['account'])
 
         user = data.get('user')
         self.user: Optional[User] = User(state=self._state, data=user) if user else None
-        self.enabled: bool = data['enabled']
+        self.enabled: bool = data.get('enabled', True)
 
 
 class StreamIntegration(Integration):
@@ -152,8 +157,8 @@ class StreamIntegration(Integration):
         Where the integration is currently syncing.
     enable_emoticons: Optional[:class:`bool`]
         Whether emoticons should be synced for this integration (currently twitch only).
-    expire_behaviour: :class:`ExpireBehaviour`
-        The behaviour of expiring subscribers. Aliased to ``expire_behavior`` as well.
+    expire_behavior: :class:`ExpireBehavior`
+        The behavior of expiring subscribers. Aliased to ``expire_behaviour`` as well.
     expire_grace_period: :class:`int`
         The grace period (in days) for expiring subscribers.
     user: :class:`User`
@@ -166,7 +171,7 @@ class StreamIntegration(Integration):
 
     __slots__ = (
         'revoked',
-        'expire_behaviour',
+        'expire_behavior',
         'expire_grace_period',
         'synced_at',
         '_role_id',
@@ -178,18 +183,18 @@ class StreamIntegration(Integration):
     def _from_data(self, data: StreamIntegrationPayload) -> None:
         super()._from_data(data)
         self.revoked: bool = data['revoked']
-        self.expire_behaviour: ExpireBehaviour = try_enum(ExpireBehaviour, data['expire_behavior'])
-        self.expire_grace_period: int = data['expire_grace_period']
-        self.synced_at: datetime.datetime = parse_time(data['synced_at'])
+        self.expire_behavior: ExpireBehavior = try_enum(ExpireBehavior, data.get('expire_behavior', 0))
+        self.expire_grace_period: int = data.get('expire_grace_period', 0)
+        self.synced_at: datetime.datetime = parse_time(data.get('synced_at')) or utcnow()
         self._role_id: Optional[int] = _get_as_snowflake(data, 'role_id')
-        self.syncing: bool = data['syncing']
+        self.syncing: bool = data.get('syncing', True)
         self.enable_emoticons: bool = data['enable_emoticons']
         self.subscriber_count: int = data['subscriber_count']
 
     @property
-    def expire_behavior(self) -> ExpireBehaviour:
-        """:class:`ExpireBehaviour`: An alias for :attr:`expire_behaviour`."""
-        return self.expire_behaviour
+    def expire_behaviour(self) -> ExpireBehavior:
+        """:class:`ExpireBehavior`: An alias for :attr:`expire_behavior`."""
+        return self.expire_behavior
 
     @property
     def role(self) -> Optional[Role]:

@@ -27,7 +27,7 @@ from __future__ import annotations
 from typing import List, Optional, TYPE_CHECKING, Union
 
 from .activity import CustomActivity
-from .enums import Status, try_enum
+from .enums import try_enum, SlayerSDKReceiveInGameDMs, Status
 from .utils import MISSING
 
 if TYPE_CHECKING:
@@ -90,22 +90,24 @@ class UserSettings:
     Depending on where they were retrieved from, only some attributes might be present,
     and rest of attributes are set to their default values.
 
-    +---------------------------+---------------------------------------------+
-    | Source                    | Attributes                                  |
-    +---------------------------+---------------------------------------------+
-    | :attr:`Client.settings`   | All                                         |
-    +---------------------------+---------------------------------------------+
-    | :meth:`UserSettings.edit` | :attr:`status`, and :attr:`custom_activity` |
-    +---------------------------+---------------------------------------------+
+    +---------------------------+----------------------------------------------------------------------+
+    | Source                    | Attributes                                                           |
+    +---------------------------+----------------------------------------------------------------------+
+    | :attr:`Client.settings`   | All except :attr:`receive_in_game_dms`                               |
+    +---------------------------+----------------------------------------------------------------------+
+    | :meth:`UserSettings.edit` | :attr:`status`, :attr:`custom_activity`, :attr:`receive_in_game_dms` |
+    +---------------------------+----------------------------------------------------------------------+
 
     Attributes
     ----------
     status: :class:`Status`
         The current status. Defaults to :attr:`~Status.online`.
-    custom_activity: Optional[:class:`CustomActivity`]
-        The current custom status.
     show_current_game: :class:`bool`
         Whether to show the current game. Defaults to ``True``.
+    guild_folders: List[:class:`GuildFolder`]
+        The guild folders.
+    custom_activity: Optional[:class:`CustomActivity`]
+        The current custom status.
     allow_activity_party_privacy_friends: :class:`bool`
         Whether to allow friends to join your activity without sending a request.
 
@@ -114,7 +116,22 @@ class UserSettings:
         Whether to allow people in the same voice channel as you to join your activity without sending a request. Does not apply to Community guilds.
 
         Defaults to ``True``.
+    receive_in_game_dms: :class:`SlayerSDKReceiveInGameDMs`
+        A setting for receiving in-game DMs via the social layer API.
+
+        Defaults to :attr:`~SlayerSDKReceiveInGameDMs.all`.
     """
+
+    __slots__ = (
+        '_state',
+        'status',
+        'show_current_game',
+        'guild_folders',
+        'custom_activity',
+        'allow_activity_party_privacy_friends',
+        'allow_activity_party_privacy_voice_channel',
+        'receive_in_game_dms',
+    )
 
     def __init__(self, *, data: Union[GatewayUserSettingsPayload, UserSettingsPayload], state: ConnectionState) -> None:
         self._state: ConnectionState = state
@@ -126,6 +143,18 @@ class UserSettings:
         elif not hasattr(self, 'status'):
             self.status = Status.online
 
+        if 'show_current_game' in data or from_ready:
+            self.show_current_game: bool = data.get('show_current_game', True)
+        elif not hasattr(self, 'show_current_game'):
+            self.show_current_game = True
+
+        if 'guild_folders' in data or from_ready:
+            self.guild_folders: List[GuildFolder] = [
+                GuildFolder(data=d, state=self._state) for d in data.get('guild_folders', ())
+            ]
+        elif not hasattr(self, 'guild_folders'):
+            self.guild_folders = []
+
         if 'custom_status' in data or from_ready:
             custom_status_data = data.get('custom_status')
             self.custom_activity: Optional[CustomActivity] = (
@@ -133,11 +162,6 @@ class UserSettings:
             )
         elif not hasattr(data, 'custom_status'):
             self.custom_activity = None
-
-        if 'show_current_game' in data or from_ready:
-            self.show_current_game: bool = data.get('show_current_game', True)
-        elif not hasattr(self, 'show_current_game'):
-            self.show_current_game = True
 
         if 'allow_activity_party_privacy_friends' in data or from_ready:
             self.allow_activity_party_privacy_friends: bool = data.get('allow_activity_party_privacy_friends', True)
@@ -151,11 +175,19 @@ class UserSettings:
         elif not hasattr(self, 'allow_activity_party_privacy_voice_channel'):
             self.allow_activity_party_privacy_voice_channel = True
 
+        if 'slayer_sdk_receive_in_game_dms' in data or from_ready:
+            self.receive_in_game_dms: SlayerSDKReceiveInGameDMs = try_enum(
+                SlayerSDKReceiveInGameDMs, data.get('slayer_sdk_receive_in_game_dms', 1)
+            )
+        elif not hasattr(self, 'receive_in_game_dms'):
+            self.receive_in_game_dms = SlayerSDKReceiveInGameDMs.all
+
     async def edit(
         self,
         *,
         status: Optional[Status] = MISSING,
         custom_activity: Optional[CustomActivity] = None,
+        receive_in_game_dms: Optional[SlayerSDKReceiveInGameDMs] = MISSING,
     ) -> UserSettings:
         """|coro|
 
@@ -169,6 +201,10 @@ class UserSettings:
             The status to set. Pass ``None`` to set :attr:`~Status.online`.
         custom_activity: Optional[:class:`CustomActivity`]
             The custom status to set.
+        receive_in_game_dms: Optional[:class:`SlayerSDKReceiveInGameDMs`]
+            The option for receiving in-game DMs via the social layer API.
+
+            Pass ``None`` to set :attr:`~SlayerSDKReceiveInGameDMs.all`
 
         Raises
         ------
@@ -194,6 +230,11 @@ class UserSettings:
             payload['custom_status'] = None
         elif custom_activity is not MISSING:
             payload['custom_status'] = custom_activity.to_user_settings_payload()
+
+        if receive_in_game_dms is None:
+            payload['slayer_sdk_receive_in_game_dms'] = 1
+        elif receive_in_game_dms is not MISSING:
+            payload['slayer_sdk_receive_in_game_dms'] = receive_in_game_dms.value
 
         data = await state.http.modify_user_settings(**payload)
         return UserSettings(data=data, state=state)

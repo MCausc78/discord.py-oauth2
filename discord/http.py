@@ -73,6 +73,7 @@ if TYPE_CHECKING:
     from .types import (
         channel,
         command,
+        connections,
         guild,
         invite,
         lobby,
@@ -1034,12 +1035,10 @@ class HTTPClient:
         invite_id: str,
         *,
         with_counts: bool = True,
-        with_expiration: bool = True,
         guild_scheduled_event_id: Optional[Snowflake] = None,
     ) -> Response[invite.Invite]:
         params: Dict[str, Any] = {
             'with_counts': int(with_counts),
-            'with_expiration': int(with_expiration),
         }
 
         if guild_scheduled_event_id:
@@ -1472,6 +1471,9 @@ class HTTPClient:
 
         # TODO: POST /external/science
         return self.request(Route('POST', '/science'), json=payload)
+
+    def get_connections(self) -> Response[list[connections.Connection]]:
+        return self.request(Route('GET', '/users/@me/connections'))
 
     def modify_user_settings(self, /, **payload) -> Response[settings.UserSettings]:
         return self.request(Route('PATCH', '/users/@me/settings'), json=payload)

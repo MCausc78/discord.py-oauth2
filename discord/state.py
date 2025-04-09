@@ -515,9 +515,9 @@ class ConnectionState(Generic[ClientT]):
                     self._add_private_channel(channel)  # type: ignore
                     if channel_type is ChannelType.ephemeral_dm:
                         self.dispatch('private_channel_create', channel)
-                    return channel  # type: ignore
+                    return channel, None
                 channel._update(channel_data)  # type: ignore
-                return channel  # type: ignore
+                return channel, None
 
             guild = self._get_guild(guild_id)
             if guild is None:
@@ -668,6 +668,8 @@ class ConnectionState(Generic[ClientT]):
         for lobby_data in data.get('lobbies', ()):
             lobby = Lobby(data=lobby_data, state=self)
             self._lobbies[lobby.id] = lobby
+
+        self.parse_sessions_replace(data.get('sessions', ()), from_ready=True)
 
         self.dispatch('connect')
 
@@ -2133,6 +2135,54 @@ class ConnectionState(Generic[ClientT]):
         self.settings._update(data)
         self.dispatch('settings_update', old, self.settings)
         self.dispatch('internal_settings_update', old, self.settings)
+
+    def parse_sessions_replace(self, payload: gw.SessionsReplaceEvent, *, from_ready: bool = False) -> None:
+        data = {s['session_id']: s for s in payload}
+
+        for session_id, session in data.items():
+            existing = self._sessions.get(session_id)
+            if existing is not None:
+                old = copy.copy(existing)
+                existing._update(session)
+                if not from_ready and (
+                    old.status != existing.status or old.active != existing.active or old.activities != existing.activities
+                ):
+                    self.dispatch('session_update', old, existing)
+            else:
+                existing = Session(state=self, data=session)
+                self._sessions[session_id] = existing
+                if not from_ready:
+                    self.dispatch('session_create', existing)
+
+        old_all = None
+        if not from_ready:
+            removed_sessions = [s for s in self._sessions if s not in data]
+            for session_id in removed_sessions:
+                if session_id == 'all':
+                    old_all = self._sessions.pop('all')
+                else:
+                    session = self._sessions.pop(session_id)
+                    self.dispatch('session_delete', session)
+
+        if 'all' not in self._sessions:
+            # The "all" session does not always exist...
+            # This usually happens if there is only a single session (us)
+            # In the case it is "removed", we try to update the old one
+            # Else, we create a new one with fake data
+            if len(data) > 1:
+                # We have more than one session, this should not happen
+                ws = self._get_websocket()
+                fake = data[ws.session_id]  # type: ignore
+            else:
+                fake = list(data.values())[0]
+            if old_all is not None:
+                old = copy(old_all)
+                old_all._update(fake)
+                if old.status != old_all.status or old.active != old_all.active or old.activities != old_all.activities:
+                    self.dispatch('session_update', old, old_all)
+            else:
+                old_all = Session._fake_all(state=self, data=fake)
+            self._sessions['all'] = old_all
 
     def parse_subscription_create(self, data: gw.SubscriptionCreateEvent) -> None:
         subscription = Subscription(data=data, state=self)

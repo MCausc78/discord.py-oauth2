@@ -1809,6 +1809,7 @@ class EphemeralDMChannel(discord.abc.Messageable, discord.abc.Connectable, disco
     __slots__ = (
         'id',
         'recipient',
+        'recipients',
         'me',
         'last_message_id',
         'last_pin_timestamp',
