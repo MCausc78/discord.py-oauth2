@@ -1684,7 +1684,7 @@ class Intents(BaseFlags):
 
     @flag_value
     def unknown_19(self) -> int:
-        """:class:`bool`: Unknown"""
+        """:class:`bool`: Unknown."""
         return 1 << 19
 
     @alias_flag_value

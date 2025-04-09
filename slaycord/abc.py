@@ -642,7 +642,7 @@ class Messageable:
         raise NotImplementedError
 
     # TODO: `activity=MessageActivity(type=1 | 3, party_id='party_id', session_id='gateway session id')` param, sent by SDK,
-    # Also `application_id` is sent as well by it (also investigate whether it needs to be valid to send activity invite?)
+    # Also `application_id` is sent as well by it (also investigate whether it needs to be valid to send activity invite?) (update: it is!)
 
     @overload
     async def send(
@@ -652,6 +652,7 @@ class Messageable:
         file: File = ...,
         delete_after: float = ...,
         allowed_mentions: AllowedMentions = ...,
+        metadata: Optional[Dict[str, str]] = None,
     ) -> Message:
         ...
 
@@ -663,6 +664,7 @@ class Messageable:
         files: Sequence[File] = ...,
         delete_after: float = ...,
         allowed_mentions: AllowedMentions = ...,
+        metadata: Optional[Dict[str, str]] = None,
     ) -> Message:
         ...
 

@@ -1395,7 +1395,15 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
 
     def __init__(self, *, me: ClientUser, state: ConnectionState, data: DMChannelPayload):
         self._state: ConnectionState = state
-        self.recipient: Optional[User] = state.store_user(data['recipients'][0]) if data.get('recipients') else None
+
+        recipients = data.get('recipients')
+        if recipients:
+            self.recipient: Optional[User] = state.store_user(recipients[0])
+        elif 'recipient_ids' in data:
+            self.recipient = state.get_user(int(data['recipient_ids'][0]))
+        else:
+            self.recipient = None
+
         self.me: ClientUser = me
         self.id: int = int(data['id'])
         self._update(data)
@@ -2033,7 +2041,7 @@ class PartialMessageable(slaycord.abc.Messageable, Hashable):
 
     async def _get_messageable_destination(
         self,
-    ) -> Tuple[int, slaycord.abc.MessageableDestinationType,]:
+    ) -> Tuple[int, slaycord.abc.MessageableDestinationType]:
         if self.type == ChannelType.private:
             type = 'user'
         elif self.type == ChannelType.lobby:

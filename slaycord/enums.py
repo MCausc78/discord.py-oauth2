@@ -482,7 +482,7 @@ class ButtonStyle(Enum):
         return self.value
 
 
-class ChannelType(Enum):
+class ChannelType(Enum, comparable=True):
     text = 0
     private = 1
     voice = 2
