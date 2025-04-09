@@ -1279,7 +1279,7 @@ class PartialMessage(Hashable):
                     endpoint = self._state.http.delete_user_message
                     target_id = recipient.id
             else:
-                endpoint = self._state.http.delete_message
+                endpoint = self._state.http.delete_user_message
                 target_id = channel.id
         else:
             endpoint = self._state.http.delete_message
@@ -2404,7 +2404,7 @@ class Message(PartialMessage, Hashable):
                     endpoint = self._state.http.edit_user_message
                     target_id = recipient.id
             else:
-                endpoint = self._state.http.edit_message
+                endpoint = self._state.http.edit_user_message
                 target_id = channel.id
         else:
             endpoint = self._state.http.edit_message

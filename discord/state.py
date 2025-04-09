@@ -537,7 +537,7 @@ class ConnectionState(Generic[ClientT]):
             guild_id = guild_id or int(data['guild_id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
             guild = self._get_guild(guild_id)
         except KeyError:
-            if 'channel_type' in data and data['channel_type'] == ChannelType.ephemeral_dm.value:
+            if data.get('channel_type') == ChannelType.ephemeral_dm.value:
                 cls = EphemeralDMChannel
             else:
                 cls = DMChannel
