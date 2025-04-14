@@ -636,6 +636,20 @@ class User(BaseUser, discord.abc.Messageable):
         """
         await self._state.http.remove_relationship(self.id)
 
+    async def remove_game_friend(self) -> None:
+        """|coro|
+
+        Removes the user as a in-game friend.
+
+        Raises
+        ------
+        Forbidden
+            Not allowed to remove this user as a in-game friend.
+        HTTPException
+            Removing the user as a in-game friend failed.
+        """
+        await self._state.http.remove_game_relationship(self.id)
+
     async def send_friend_request(self) -> None:
         """|coro|
 
