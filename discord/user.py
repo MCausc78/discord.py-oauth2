@@ -30,7 +30,7 @@ import discord.abc
 
 from .asset import Asset
 from .colour import Colour
-from .enums import DefaultAvatar
+from .enums import try_enum, DefaultAvatar, PremiumType, RelationshipType
 from .flags import PublicUserFlags
 from .utils import snowflake_time, MISSING, _get_as_snowflake
 
@@ -39,9 +39,11 @@ if TYPE_CHECKING:
 
     from datetime import datetime
 
-    from .channel import DMChannel
+    from .channel import DMChannel, EphemeralDMChannel
+    from .game_relationship import GameRelationship
     from .guild import Guild
     from .message import Message
+    from .relationship import Relationship
     from .state import ConnectionState
     from .types.channel import DMChannel as DMChannelPayload
     from .types.user import PartialUser as PartialUserPayload, User as UserPayload, AvatarDecorationData
@@ -325,6 +327,44 @@ class BaseUser(_UserTag):
 
         return any(user.id == self.id for user in message.mentions)
 
+    @property
+    def game_relationship(self) -> Optional[GameRelationship]:
+        """Optional[:class:`GameRelationship`]: Returns the :class:`GameRelationship` with this user if applicable, ``None`` otherwise."""
+        return self._state._game_relationships.get(self.id)
+
+    @property
+    def relationship(self) -> Optional[Relationship]:
+        """Optional[:class:`Relationship`]: Returns the :class:`Relationship` with this user if applicable, ``None`` otherwise."""
+        return self._state._relationships.get(self.id)
+
+    def is_friend(self) -> bool:
+        """:class:`bool`: Checks if the user is your friend."""
+        r = self.relationship
+        if r is None:
+            return False
+        return r.type is RelationshipType.friend
+
+    def is_game_friend(self) -> bool:
+        """:class:`bool`: Checks if the user is your friend in-game."""
+        r = self.game_relationship
+        if r is None:
+            return False
+        return r.type is RelationshipType.friend
+
+    def is_blocked(self) -> bool:
+        """:class:`bool`: Checks if the user is blocked."""
+        r = self.relationship
+        if r is None:
+            return False
+        return r.type is RelationshipType.blocked
+
+    def is_ignored(self) -> bool:
+        """:class:`bool`: Checks if the user is ignored."""
+        r = self.relationship
+        if r is None:
+            return False
+        return r.user_ignored
+
 
 class ClientUser(BaseUser):
     """Represents your Discord user.
@@ -368,18 +408,32 @@ class ClientUser(BaseUser):
 
     verified: :class:`bool`
         Specifies if the user's email is verified.
+    email: Optional[:class:`str`]
+        The email the user used when registering.
     locale: Optional[:class:`str`]
         The IETF language tag used to identify the language the user is using.
     mfa_enabled: :class:`bool`
         Specifies if the user has MFA turned on and working.
+    premium_type: :class:`PremiumType`
+        Specifies the type of premium a user has (i.e. Nitro, Nitro Classic, or Nitro Basic).
     """
 
-    __slots__ = ('locale', '_flags', 'verified', 'mfa_enabled', '__weakref__')
+    __slots__ = (
+        'email',
+        'locale',
+        '_flags',
+        'verified',
+        'mfa_enabled',
+        'premium_type',
+        '__weakref__',
+    )
 
     if TYPE_CHECKING:
         verified: bool
+        email: Optional[str]
         locale: Optional[str]
         mfa_enabled: bool
+        premium_type: PremiumType
         _flags: int
 
     def __init__(self, *, state: ConnectionState, data: UserPayload) -> None:
@@ -393,11 +447,13 @@ class ClientUser(BaseUser):
 
     def _update(self, data: UserPayload) -> None:
         super()._update(data)
-        # There's actually an Optional[str] phone field as well but I won't use it
+        # There's actually an Optional[str] phone field as well but it's not given through OAuth2
         self.verified = data.get('verified', False)
+        self.email = data.get('email')
         self.locale = data.get('locale')
         self._flags = data.get('flags', 0)
         self.mfa_enabled = data.get('mfa_enabled', False)
+        self.premium_type = try_enum(PremiumType, data.get('premium_type', 0))
 
     async def edit(self, *, global_name: Optional[str] = MISSING) -> ClientUser:
         """|coro|
@@ -492,12 +548,12 @@ class User(BaseUser, discord.abc.Messageable):
 
     async def _get_messageable_destination(
         self,
-    ) -> Tuple[int, discord.abc.MessageableDestinationType,]:
+    ) -> Tuple[int, discord.abc.MessageableDestinationType]:
         return (self.id, 'user')
 
     @property
-    def dm_channel(self) -> Optional[DMChannel]:
-        """Optional[:class:`DMChannel`]: Returns the channel associated with this user if it exists.
+    def dm_channel(self) -> Optional[Union[DMChannel, EphemeralDMChannel]]:
+        """Optional[Union[:class:`DMChannel`, :class:`EphemeralDMChannel`]]: Returns the channel associated with this user if it exists.
 
         If this returns ``None``, you can create a DM channel by calling the
         :meth:`create_dm` coroutine function.
@@ -517,7 +573,7 @@ class User(BaseUser, discord.abc.Messageable):
         user_id = self.id
         return [guild for guild in self._state._guilds.values() if user_id in guild._members]
 
-    async def create_dm(self) -> DMChannel:
+    async def create_dm(self) -> Union[DMChannel, EphemeralDMChannel]:
         """|coro|
 
         Creates a :class:`DMChannel` with this user.
@@ -527,7 +583,7 @@ class User(BaseUser, discord.abc.Messageable):
 
         Returns
         -------
-        :class:`.DMChannel`
+        Union[:class:`.DMChannel`, :class:`.EphemeralDMChannel`]
             The channel that was created.
         """
         found = self.dm_channel
@@ -537,3 +593,73 @@ class User(BaseUser, discord.abc.Messageable):
         state = self._state
         data: DMChannelPayload = await state.http.start_private_message(self.id)
         return state.add_dm_channel(data)
+
+    async def block(self) -> None:
+        """|coro|
+
+        Blocks the user.
+
+        Raises
+        ------
+        Forbidden
+            Not allowed to block this user.
+        HTTPException
+            Blocking the user failed.
+        """
+        await self._state.http.add_relationship(self.id, type=RelationshipType.blocked.value)
+
+    async def unblock(self) -> None:
+        """|coro|
+
+        Unblocks the user.
+
+        Raises
+        ------
+        Forbidden
+            Not allowed to unblock this user.
+        HTTPException
+            Unblocking the user failed.
+        """
+        await self._state.http.remove_relationship(self.id)
+
+    async def remove_friend(self) -> None:
+        """|coro|
+
+        Removes the user as a friend.
+
+        Raises
+        ------
+        Forbidden
+            Not allowed to remove this user as a friend.
+        HTTPException
+            Removing the user as a friend failed.
+        """
+        await self._state.http.remove_relationship(self.id)
+
+    async def send_friend_request(self) -> None:
+        """|coro|
+
+        Sends the user a friend request.
+
+        Raises
+        ------
+        Forbidden
+            Not allowed to send a friend request to the user.
+        HTTPException
+            Sending the friend request failed.
+        """
+        await self._state.http.add_relationship(self.id)
+
+    async def send_game_friend_request(self) -> None:
+        """|coro|
+
+        Sends the user a in-game friend request.
+
+        Raises
+        ------
+        Forbidden
+            Not allowed to send a game friend request to the user.
+        HTTPException
+            Sending the game friend request failed.
+        """
+        await self._state.http.add_game_relationship(self.id)

@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypedDict, Tuple, Union
+from typing import Dict, List, Literal, Optional, TypedDict, Tuple, Union
 from typing_extensions import NotRequired, Required
 
 from .activity import StatusType, PartialPresenceUpdate, Activity
@@ -42,7 +42,7 @@ from .member import MemberWithUser
 from .message import Message, LobbyMessage, ReactionType
 from .role import Role
 from .scheduled_event import GuildScheduledEvent
-from .settings import GatewayUserSettings
+from .settings import GatewayUserSettings, AudioContext, AudioSettings
 from .sku import Entitlement
 from .snowflake import Snowflake
 from .soundboard import SoundboardSound
@@ -463,6 +463,13 @@ class _LobbyMembersEvent(TypedDict):
 
 
 LobbyMemberAddEvent = LobbyMemberUpdateEvent = LobbyMemberRemoveEvent = _LobbyMembersEvent
+
+
+class LobbyMemberConnectEvent(TypedDict):
+    member: LobbyMember
+    lobby_id: Snowflake
+
+
 LobbyMessageCreateEvent = LobbyMessage
 
 
@@ -498,4 +505,13 @@ class GameRelationshipRemoveEvent(TypedDict):
 
 
 SessionsReplaceEvent = Union[List[Session], Tuple[Session, ...]]
+
+AudioSettingsUpdateEvent = Dict[AudioContext, Dict[Snowflake, AudioSettings]]
+
+
+class UserMergeOperationCompletedEvent(TypedDict):
+    merge_operation_id: Snowflake
+    source_user_id: Snowflake
+
+
 UserSettingsUpdateEvent = GatewayUserSettings

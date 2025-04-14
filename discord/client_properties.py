@@ -208,9 +208,9 @@ class SimpleClientProperties(ClientProperties):
     ) -> None:
         if value is not None:
             if gateway_value is not None and http_value is not None:
-                raise TypeError('Cannot specify value, gateway_value and http_value at once')
-
-            if gateway_value is None:
+                gateway_value = gateway_value | value  # type: ignore
+                http_value = http_value | value  # type: ignore
+            elif gateway_value is None:
                 gateway_value = value
             if http_value is None:
                 http_value = value

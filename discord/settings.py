@@ -24,19 +24,23 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING, Union
+from copy import copy
+from typing import Dict, List, Literal, Optional, TYPE_CHECKING, Union, overload
 
 from .activity import CustomActivity
-from .enums import try_enum, SlayerSDKReceiveInGameDMs, Status
+from .enums import try_enum, AudioContext, SlayerSDKReceiveInGameDMs, Status
 from .utils import MISSING
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from .guild import Guild
     from .state import ConnectionState
     from .types.settings import (
         GuildFolder as GuildFolderPayload,
         GatewayUserSettings as GatewayUserSettingsPayload,
         UserSettings as UserSettingsPayload,
+        AudioSettings as AudioSettingsPayload,
     )
 
 
@@ -240,7 +244,209 @@ class UserSettings:
         return UserSettings(data=data, state=state)
 
 
+class AudioSettings:
+    """Represents audio settings for an user.
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The user's ID the audio settings are for.
+    context: :class:`AudioContext`
+        The audio context.
+    muted: :class:`bool`
+        Whether the user is muted.
+    volume: :class:`float`
+        The volume of user. This always is between 0 and 200.
+    soundboard_muted: :class:`bool`
+        Whether the soundboard sounds coming from this user are muted.
+    """
+
+    __slots__ = (
+        '_state',
+        'id',
+        'context',
+        'muted',
+        'volume',
+        'soundboard_muted',
+    )
+
+    def __init__(
+        self,
+        *,
+        data: AudioSettingsPayload,
+        state: ConnectionState,
+        context: AudioContext,
+        id: int,
+    ) -> None:
+        self._state: ConnectionState = state
+        self.id: int = id
+        self.context: AudioContext = context
+        self._update(data)
+
+    def _update(self, data: AudioSettingsPayload) -> None:
+        self.muted: bool = data['muted']
+        self.volume: float = data['volume']
+        self.soundboard_muted: bool = data['soundboard_muted']
+
+    @classmethod
+    def _default(cls, id: int, context: AudioContext, state: ConnectionState) -> Self:
+        self = cls.__new__(cls)
+        self._state = state
+        self.id = id
+        self.context = context
+        self.muted = False
+        self.volume = 100.0
+        self.soundboard_muted = False
+        return self
+
+    async def edit(
+        self,
+        *,
+        muted: bool = MISSING,
+        volume: float = MISSING,
+        soundboard_muted: bool = MISSING,
+    ) -> AudioSettings:
+        """|coro|
+
+        Edits the audio settings.
+
+        All parameters are optional.
+
+        Parameters
+        ----------
+        muted: :class:`bool`
+            Whether the user is muted.
+        volume: :class:`float`
+            The volume of user. Must be between 0 and 200.
+        soundboard_muted: :class:`bool`
+            Whether the soundboard sounds coming from this user are muted.
+
+        Raises
+        ------
+        Forbidden
+            You do not have proper permissions to edit the audio settings.
+        HTTPException
+            Editing audio settings failed.
+
+        Returns
+        -------
+        :class:`AudioSettings`
+            The newly edietd audio settings.
+        """
+        # Weird Discord bug
+        if muted is MISSING and volume is MISSING and soundboard_muted is MISSING:
+            return self
+
+        payload = {}
+        if muted is not MISSING:
+            payload['muted'] = muted
+        if volume is not MISSING:
+            payload['volume'] = volume
+        if soundboard_muted is not MISSING:
+            payload['soundboard_muted'] = soundboard_muted
+
+        state = self._state
+        await state.http.modify_audio_settings(self.context.value, self.id, **payload)
+
+        ret = copy(self)
+        if muted is not MISSING:
+            ret.muted = muted
+        if volume is not MISSING:
+            ret.volume = volume
+        if soundboard_muted is not MISSING:
+            ret.soundboard_muted = soundboard_muted
+        return ret
+
+
+class AudioSettingsManager:
+    """Manager for audio settings.
+
+    Attributes
+    ----------
+    data: Dict[:class:`AudioContext`, Dict[:class:`int`, :class:`AudioSettings`]]
+        The audio settings cache.
+    """
+
+    __slots__ = (
+        '_state',
+        'data',
+    )
+
+    def __init__(
+        self,
+        *,
+        data: Dict[AudioContext, Dict[int, AudioSettings]],
+        state: ConnectionState,
+    ) -> None:
+        self._state: ConnectionState = state
+        self.data: Dict[AudioContext, Dict[int, AudioSettings]] = data
+
+    @classmethod
+    def _copy(cls, instance: AudioSettingsManager) -> Self:
+        self = cls.__new__(cls)
+        self._state = instance._state
+        self.data = {k: copy(v) for k, v in self.data.items()}
+        return self
+
+    @overload
+    def get(self, context: AudioContext, user_id: int, *, if_not_exists: Literal[True] = ...) -> AudioSettings:
+        ...
+
+    @overload
+    def get(self, context: AudioContext, user_id: int, *, if_not_exists: Literal[False] = ...) -> Optional[AudioSettings]:
+        ...
+
+    def get(self, context: AudioContext, user_id: int, *, if_not_exists: bool = True) -> Optional[AudioSettings]:
+        """Retrieves audio settings from cache.
+
+        Parameters
+        ----------
+        context: :class:`AudioContext`
+            The audio context for settings.
+        user_id: :class:`int`
+            The user's ID to retrieve audio settings for.
+        if_not_exists: :class:`bool`
+            Whether to always return non-``None`` value if audio settings were not found for provided user.
+
+            Defaults to ``True``.
+
+        Returns
+        -------
+        Optional[:class:`AudioSettings`]
+            The audio settings.
+        """
+        try:
+            return self.data[context][user_id]
+        except KeyError:
+            if if_not_exists:
+                return AudioSettings._default(
+                    id=user_id,
+                    context=context,
+                    state=self._state,
+                )
+            return None
+
+    def of(self, context: AudioContext) -> Dict[int, AudioSettings]:
+        """Retrieve all audio settings for provided context.
+
+        This is equivalent to: ::
+
+            return manager.data.get(context, {})
+
+        Returns
+        -------
+        Dict[:class:`int`, :class:`AudioSettings`]
+            The mapping of user IDs to audio settings for them.
+        """
+        try:
+            return self.data[context]
+        except KeyError:
+            return {}
+
+
 __all__ = (
     'GuildFolder',
     'UserSettings',
+    'AudioSettings',
+    'AudioSettingsManager',
 )

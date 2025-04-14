@@ -114,7 +114,7 @@ if TYPE_CHECKING:
     from .reaction import Reaction
     from .relationship import Relationship
     from .role import Role
-    from .settings import UserSettings
+    from .settings import UserSettings, AudioSettingsManager
     from .scheduled_event import ScheduledEvent
     from .subscription import Subscription
     from .threads import ThreadMember
@@ -516,6 +516,11 @@ class Client:
     def settings(self) -> UserSettings:
         """:class:`.UserSettings`: Returns the user's settings."""
         return self._connection.settings
+
+    @property
+    def audio_settings(self) -> AudioSettingsManager:
+        """:class:`.AudioSettingsManager`: Returns the manager for user's audio settings."""
+        return self._connection._audio_settings
 
     @property
     def voice_clients(self) -> List[VoiceProtocol]:

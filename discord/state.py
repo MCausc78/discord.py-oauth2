@@ -44,6 +44,7 @@ from typing import (
     Tuple,
     Union,
     cast,
+    overload,
 )
 
 # import weakref
@@ -55,7 +56,7 @@ from .automod import AutoModRule, AutoModAction
 from .channel import *
 from .channel import _private_channel_factory, _channel_factory
 from .emoji import Emoji
-from .enums import ChannelType, try_enum, Status
+from .enums import try_enum, AudioContext, ChannelType, Status
 from .flags import ApplicationFlags, Intents, MemberCacheFlags
 from .game_relationship import GameRelationship
 from .guild import Guild
@@ -72,7 +73,7 @@ from .raw_models import *
 from .relationship import Relationship
 from .role import Role
 from .scheduled_event import ScheduledEvent
-from .settings import UserSettings
+from .settings import UserSettings, AudioSettings, AudioSettingsManager
 from .sku import Entitlement
 from .soundboard import SoundboardSound
 from .stage_instance import StageInstance
@@ -96,7 +97,10 @@ if TYPE_CHECKING:
         Activity as ActivityPayload,
     )
     from .types.automod import AutoModerationRule, AutoModerationActionExecution
-    from .types.channel import DMChannel as DMChannelPayload
+    from .types.channel import (
+        DMChannel as DMChannelPayload,
+        EphemeralDMChannel as EphemeralDMChannelPayload,
+    )
     from .types.command import GuildApplicationCommandPermissions as GuildApplicationCommandPermissionsPayload
     from .types.emoji import Emoji as EmojiPayload, PartialEmoji as PartialEmojiPayload
     from .types.guild import Guild as GuildPayload
@@ -239,6 +243,7 @@ class ConnectionState(Generic[ClientT]):
 
         self._lobbies: Dict[int, Lobby] = {}
         self._game_relationships: Dict[int, GameRelationship] = {}
+        self._audio_settings: AudioSettingsManager = AudioSettingsManager(data={}, state=self)
         self._relationships: Dict[int, Relationship] = {}
         self._sessions: Dict[str, Session] = {}
         self._subscriptions: Dict[int, Subscription] = {}
@@ -456,7 +461,17 @@ class ConnectionState(Generic[ClientT]):
         if isinstance(channel, (DMChannel, EphemeralDMChannel)) and channel.recipient:
             self._private_channels_by_user[channel.recipient.id] = channel
 
-    def add_dm_channel(self, data: DMChannelPayload) -> Union[DMChannel, EphemeralDMChannel]:
+    @overload
+    def add_dm_channel(self, data: DMChannelPayload) -> DMChannel:
+        ...
+
+    @overload
+    def add_dm_channel(self, data: EphemeralDMChannelPayload) -> EphemeralDMChannel:
+        ...
+
+    def add_dm_channel(
+        self, data: Union[DMChannelPayload, EphemeralDMChannelPayload]
+    ) -> Union[DMChannel, EphemeralDMChannel]:
         # self.user is *always* cached when this is called
         if data['type'] == ChannelType.ephemeral_dm.value:
             cls = EphemeralDMChannel
@@ -1917,6 +1932,34 @@ class ConnectionState(Generic[ClientT]):
         lobby.members.append(member)
         self.dispatch('lobby_join', member)
 
+    def parse_lobby_member_connect(self, data: gw.LobbyMemberConnectEvent) -> None:
+        lobby_id = int(data['lobby_id'])
+
+        lobby = self._get_lobby(lobby_id)
+        if lobby is None:
+            _log.debug('LOBBY_MEMBER_CONNECT referencing an unknown lobby ID: %s. Discarding.', lobby_id)
+            return
+
+        member = LobbyMember.from_dict(data=data['member'], lobby=lobby, state=self)
+        lobby.members.append(member)
+        self.dispatch('lobby_connect', member)
+
+    # {
+    #   't': 'LOBBY_MEMBER_CONNECT',
+    #   's': 194,
+    #   'op': 0,
+    #   'd': {
+    #     'member': {
+    #       'user_id': '1073325901825187841',
+    #       'user': {'id': '1073325901825187841'},
+    #       'metadata': {'baller': 'yus'},
+    #       'flags': 1,
+    #       'connected': True
+    #     },
+    #     'lobby_id': 'XXX'
+    #   }
+    # }
+
     def parse_lobby_member_update(self, data: gw.LobbyMemberUpdateEvent) -> None:
         lobby_id = int(data['lobby_id'])
 
@@ -2215,6 +2258,49 @@ class ConnectionState(Generic[ClientT]):
 
         self.dispatch('subscription_delete', subscription)
 
+    def parse_audio_settings_update(self, data: gw.AudioSettingsUpdateEvent) -> None:
+        old = AudioSettingsManager._copy(self._audio_settings)
+        new = self._audio_settings
+
+        for k, v in data.items():
+            context = try_enum(AudioContext, k)
+            try:
+                audio_settings = new.data[context]
+            except KeyError:
+                audio_settings = {}
+                for i, d in v.items():
+                    id = int(i)
+                    audio_settings[id] = AudioSettings(data=d, state=self, context=context, id=id)
+                new.data[context] = audio_settings
+            else:
+                for i, d in v.items():
+                    id = int(i)
+
+                    try:
+                        setting = audio_settings[id]
+                    except KeyError:
+                        audio_settings[id] = AudioSettings(data=d, state=self, context=context, id=id)
+                    else:
+                        setting._update(d)
+
+        self.dispatch('audio_settings_update', old, new)
+
+    def parse_user_merge_operation_completed(self, data: gw.UserMergeOperationCompletedEvent) -> None:
+        merge_operation_id = int(data['merge_operation_id'])
+        source_user_id = int(data['source_user_id'])
+
+        self.dispatch(
+            'provisional_account_merged',
+            merge_operation_id,
+            source_user_id,
+        )
+
+    # TODO: These events
+    # CALL_CREATE
+    # CALL_UPDATE
+    # CALL_DELETE
+    # ACTIVITY_INVITE_CREATE
+
     def _get_reaction_user(self, channel: MessageableChannel, user_id: int) -> Optional[Union[User, Member]]:
         if isinstance(channel, (TextChannel, Thread, VoiceChannel)):
             return channel.guild.get_member(user_id)
@@ -2274,4 +2360,5 @@ class ConnectionState(Generic[ClientT]):
 
     @property
     def current_session(self) -> Optional[Session]:
-        return self._sessions.get(self.session_id)  # type: ignore
+        ws = self._get_websocket()
+        return self._sessions.get(ws.session_id)  # type: ignore

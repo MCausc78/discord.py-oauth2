@@ -308,6 +308,8 @@ class DiscordWebSocket:
     HELLO                       = 10
     HEARTBEAT_ACK               = 11
     GUILD_SYNC                  = 12
+    CALL_CONNECT                = 13
+    LOBBY_VOICE_STATES          = 17
     # fmt: on
 
     def __init__(self, socket: aiohttp.ClientWebSocketResponse, *, loop: asyncio.AbstractEventLoop) -> None:
@@ -749,6 +751,17 @@ class DiscordWebSocket:
         }
 
         _log.debug('Updating our voice state to %s.', payload)
+        await self.send_as_json(payload)
+
+    async def call_connect(self, channel_id: int) -> None:
+        payload = {
+            'op': self.CALL_CONNECT,
+            'd': {
+                'channel_id': channel_id,
+            },
+        }
+
+        _log.debug('Attemping to discover a call in %s.', payload)
         await self.send_as_json(payload)
 
     async def close(self, code: int = 4000) -> None:

@@ -321,6 +321,55 @@ class UserGuild(Hashable):
             return None
         return Asset._from_guild_image(self._state, self.id, self._banner, path='banners')
 
+    async def fetch_me(self) -> Member:
+        """|coro|
+
+        Retrieve member version of yourself for this guild.
+
+        Similar to :meth:`Client.fetch_me` except returns :class:`Member`.
+        This is essentially used to get the member version of yourself.
+
+        Raises
+        ------
+        Forbidden
+            You do not have proper permissions to fetch member version of yourself for this guild.
+        HTTPException
+            Retrieving member version of yourself failed.
+
+        Returns
+        -------
+        :class:`Member`
+            The member version of yourself.
+        """
+        state = self._state
+        data = await state.http.get_guild_me(self.id)
+        return Member(data=data, guild=self, state=state)  # type: ignore # probably present
+
+    async def widget(self) -> Widget:
+        """|coro|
+
+        Returns the widget of the guild.
+
+        .. note::
+
+            The guild must have the widget enabled to get this information.
+
+        Raises
+        ------
+        Forbidden
+            The widget for this guild is disabled.
+        HTTPException
+            Retrieving the widget failed.
+
+        Returns
+        -------
+        :class:`Widget`
+            The guild's widget.
+        """
+        data = await self._state.http.get_widget(self.id)
+
+        return Widget(state=self._state, data=data)
+
 
 class Guild(UserGuild):
     """Represents a Discord guild.
@@ -1289,31 +1338,6 @@ class Guild(UserGuild):
         if self.vanity_url_code is None:
             return None
         return f'{Invite.BASE}/{self.vanity_url_code}'
-
-    async def widget(self) -> Widget:
-        """|coro|
-
-        Returns the widget of the guild.
-
-        .. note::
-
-            The guild must have the widget enabled to get this information.
-
-        Raises
-        ------
-        Forbidden
-            The widget for this guild is disabled.
-        HTTPException
-            Retrieving the widget failed.
-
-        Returns
-        -------
-        :class:`Widget`
-            The guild's widget.
-        """
-        data = await self._state.http.get_widget(self.id)
-
-        return Widget(state=self._state, data=data)
 
     @property
     def invites_paused_until(self) -> Optional[datetime.datetime]:

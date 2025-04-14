@@ -54,3 +54,12 @@ class GatewayUserSettings(UserSettings):
     guild_folders: NotRequired[List[GuildFolder]]
     allow_activity_party_privacy_voice_channel: NotRequired[bool]
     allow_activity_party_privacy_friends: NotRequired[bool]
+
+
+AudioContext = Literal['user', 'stream']
+
+
+class AudioSettings(TypedDict):
+    muted: bool
+    volume: float
+    soundboard_muted: bool

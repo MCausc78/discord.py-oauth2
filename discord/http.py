@@ -36,11 +36,12 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Literal,
     NamedTuple,
     Optional,
     Sequence,
-    Tuple,
     TYPE_CHECKING,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -77,6 +78,7 @@ if TYPE_CHECKING:
         guild,
         invite,
         lobby,
+        member,
         message,
         settings,
         sku,
@@ -851,7 +853,7 @@ class HTTPClient:
         self.token = token
 
         try:
-            data = await self.request(Route('GET', '/users/@me'))
+            data = await self.get_me()
         except HTTPException as exc:
             self.token = old_token
             if exc.status == 401:
@@ -860,14 +862,43 @@ class HTTPClient:
 
         return data
 
+    # Authentication
+
+    def get_fingerprint(self) -> Response[Dict[Literal['fingerprint'], str]]:
+        return self.request(Route('GET', '/auth/fingerprint'))
+
+    # Self user
+
+    def get_me(self) -> Response[user.User]:
+        return self.request(Route('GET', '/users/@me'))
+
+    def get_guild_me(self, guild_id: Snowflake) -> Response[member.Member]:
+        return self.request(Route('GET', '/users/@me/guilds/{guild_id}/member', guild_id=guild_id))
+
+    def modify_audio_settings(
+        self,
+        context: settings.AudioContext,
+        target_id: int,  # Currently called user_id on backend, but who knows...
+        /,
+        **payload,
+    ) -> Response[None]:
+        # This endpoint fails with invalid JSON string if payload is empty?
+        route = Route(
+            'PATCH',
+            '/users/@me/audio-settings/{context}/{target_id}',
+            context=context,
+            target_id=target_id,
+        )
+        return self.request(route, json=payload)
+
     # Group functionality
 
-    def start_group(self, user_id: Snowflake, recipients: List[int]) -> Response[channel.GroupDMChannel]:
-        payload = {
-            'recipients': recipients,
-        }
+    # def start_group(self, user_id: Snowflake, recipients: List[int]) -> Response[channel.GroupDMChannel]:
+    #     payload = {
+    #         'recipients': recipients,
+    #     }
 
-        return self.request(Route('POST', '/users/{user_id}/channels', user_id=user_id), json=payload)
+    #     return self.request(Route('POST', '/users/{user_id}/channels', user_id=user_id), json=payload)
 
     # Message management
 
