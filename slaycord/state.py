@@ -663,8 +663,17 @@ class ConnectionState(Generic[ClientT]):
                 self.application_name: str = application['name']
                 self.application_flags: ApplicationFlags = ApplicationFlags._from_value(application['flags'])
 
-        for guild_data in data.get('guilds', ()):
-            self._add_guild_from_data(guild_data)  # _add_guild_from_data requires a complete Guild payload
+        for raw_guild_data, raw_guild_members_data in zip(
+            data.get('guilds', ()),
+            data.get('merged_members', ()),
+        ):
+            guild_data: GuildPayload = cast('GuildPayload', raw_guild_data)
+            guild_members_data: List[MemberWithUserPayload] = cast('List[MemberWithUserPayload]', raw_guild_members_data)
+            guild = self._add_guild_from_data(guild_data)
+
+            for guild_member_data in guild_members_data:
+                member = Member(data=guild_member_data, guild=guild, state=self)
+                guild._add_member(member)
 
         for pm in data.get('private_channels', ()):
             factory, _ = _private_channel_factory(pm['type'])
