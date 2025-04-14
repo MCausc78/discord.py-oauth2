@@ -54,10 +54,10 @@ ChannelType = Union[ChannelTypeWithoutThread, ThreadType]
 
 class _BaseChannel(TypedDict):
     id: Snowflake
-    name: str
 
 
 class _BaseGuildChannel(_BaseChannel):
+    name: str
     guild_id: Snowflake
     position: int
     permission_overwrites: List[PermissionOverwrite]
@@ -184,17 +184,20 @@ GuildChannel = Union[
 
 
 class _BaseDMChannel(_BaseChannel):
-    type: Literal[1]
-    last_message_id: Optional[Snowflake]
-
-
-class DMChannel(_BaseChannel):
-    type: Literal[1]
     last_message_id: Optional[Snowflake]
     recipients: List[PartialUser]
+
+
+class DMChannel(_BaseDMChannel):
+    type: Literal[1]
     is_message_request: NotRequired[bool]
     is_message_request_timestamp: NotRequired[str]
     is_spam: NotRequired[bool]
+
+
+class EphemeralDMChannel(_BaseDMChannel):
+    type: Literal[18]
+    flags: int
 
 
 class GroupDMNickname(TypedDict):

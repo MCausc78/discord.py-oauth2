@@ -31,7 +31,7 @@ from typing import Any, ClassVar, Dict, List, Iterator, Mapping, Optional, TYPE_
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-# TODO: Sort enums
+
 __all__ = (
     'Enum',
     'ActivityType',
@@ -39,6 +39,7 @@ __all__ = (
     'AppCommandOptionType',
     'AppCommandType',
     'ApplicationDisclosureType',
+    'AudioContext',
     'AuditLogAction',
     'AuditLogActionCategory',
     'AutoModRuleActionType',
@@ -71,6 +72,7 @@ __all__ = (
     'NSFWLevel',
     'NotificationLevel',
     'PollLayoutType',
+    'PremiumType',
     'PrivacyLevel',
     'ReactionType',
     'RelationshipType',
@@ -260,6 +262,11 @@ class ApplicationDisclosureType(Enum):
     ip_location = 1
     display_advertisements = 2
     partner_sdk_data_sharing_message = 3
+
+
+class AudioContext(Enum):
+    user = 'user'
+    stream = 'stream'
 
 
 class AuditLogAction(Enum):
@@ -829,6 +836,24 @@ class NotificationLevel(Enum, comparable=True):
 
 class PollLayoutType(Enum):
     default = 1
+
+
+class PremiumType(Enum):
+    none = 0
+    nitro_classic = 1
+    nitro = 2
+    nitro_basic = 3
+
+    @classmethod
+    def from_sku_id(cls, sku_id: int) -> Optional[PremiumType]:
+        lookup = {
+            628379670982688768: cls.none,
+            521846918637420545: cls.nitro_classic,
+            521842865731534868: cls.nitro,
+            521847234246082599: cls.nitro,
+            978380684370378762: cls.nitro_basic,
+        }
+        return lookup.get(sku_id)
 
 
 class PrivacyLevel(Enum):

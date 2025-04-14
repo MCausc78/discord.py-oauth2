@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from .activity import ActivityTypes
     from .channel import DMChannel, VoiceChannel, StageChannel
     from .flags import PublicUserFlags
-    from .guild import Guild
+    from .guild import UserGuild, Guild
     from .message import Message
     from .presences import RawPresenceUpdateEvent
     from .role import Role
@@ -305,13 +305,13 @@ class Member(slaycord.abc.Messageable, _UserTag):
         avatar_decoration: Optional[Asset]
         avatar_decoration_sku_id: Optional[int]
 
-    def __init__(self, *, data: MemberWithUserPayload, guild: Guild, state: ConnectionState):
+    def __init__(self, *, data: MemberWithUserPayload, guild: Union[UserGuild, Guild], state: ConnectionState):
         self._state: ConnectionState = state
         if 'user' in data:
             self._user: User = state.store_user(data['user'])
         elif 'user_id' in data:
             self._user: User = state._users[int(data['user_id'])]
-        self.guild: Guild = guild
+        self.guild: Union[UserGuild, Guild] = guild
         self.joined_at: Optional[datetime.datetime] = utils.parse_time(data.get('joined_at'))
         self.premium_since: Optional[datetime.datetime] = utils.parse_time(data.get('premium_since'))
         self._roles: utils.SnowflakeList = utils.SnowflakeList(map(int, data['roles']))
@@ -356,7 +356,7 @@ class Member(slaycord.abc.Messageable, _UserTag):
         return cls(data=data, guild=message.guild, state=message._state)  # type: ignore
 
     @classmethod
-    def _from_client_user(cls, *, user: ClientUser, guild: Guild, state: ConnectionState) -> Self:
+    def _from_client_user(cls, *, user: ClientUser, guild: Union[UserGuild, Guild], state: ConnectionState) -> Self:
         data = {
             'roles': [],
             'user': user._to_minimal_user_json(),
@@ -374,7 +374,9 @@ class Member(slaycord.abc.Messageable, _UserTag):
         self._flags = data.get('flags', 0)
 
     @classmethod
-    def _try_upgrade(cls, *, data: UserWithMemberPayload, guild: Guild, state: ConnectionState) -> Union[User, Self]:
+    def _try_upgrade(
+        cls, *, data: UserWithMemberPayload, guild: Union[UserGuild, Guild], state: ConnectionState
+    ) -> Union[User, Self]:
         # A User object with a 'member' key
         try:
             member_data = data.pop('member')
@@ -561,6 +563,9 @@ class Member(slaycord.abc.Messageable, _UserTag):
         """
         result = []
         g = self.guild
+        if not isinstance(g, Guild):
+            return []
+
         for role_id in self._roles:
             role = g.get_role(role_id)
             if role:
@@ -692,8 +697,16 @@ class Member(slaycord.abc.Messageable, _UserTag):
 
         This is useful for figuring where a member stands in the role
         hierarchy chain.
+
+        Raises
+        ------
+        TypeError
+            The guild is detached, meaning it's partial and role cache is missing.
         """
         guild = self.guild
+        if not isinstance(guild, Guild):
+            raise TypeError('Guild is detached')
+
         if len(self._roles) == 0:
             return guild.default_role
 
@@ -715,7 +728,13 @@ class Member(slaycord.abc.Messageable, _UserTag):
             Member timeouts are taken into consideration.
         """
 
-        if self.guild.owner_id == self.id:
+        g = self.guild
+        if isinstance(g, UserGuild):
+            is_owner = g.is_owner
+        else:
+            is_owner = g.owner_id == self.id
+
+        if is_owner:
             return Permissions.all()
 
         base = Permissions.none()
@@ -749,6 +768,8 @@ class Member(slaycord.abc.Messageable, _UserTag):
     @property
     def voice(self) -> Optional[VoiceState]:
         """Optional[:class:`VoiceState`]: Returns the member's current voice state."""
+        if not isinstance(self.guild, Guild):
+            return None
         return self.guild._voice_state_for(self._user.id)
 
     @property
@@ -774,7 +795,10 @@ class Member(slaycord.abc.Messageable, _UserTag):
         Optional[:class:`Role`]
             The role or ``None`` if not found in the member's roles.
         """
-        return self.guild.get_role(role_id) if self._roles.has(role_id) else None
+        g = self.guild
+        if not isinstance(g, Guild):
+            return None
+        return g.get_role(role_id) if self._roles.has(role_id) else None
 
     def is_timed_out(self) -> bool:
         """Returns whether this member is timed out.
