@@ -2622,6 +2622,57 @@ class Client:
 
         return Widget(state=self._connection, data=data)
 
+    async def fetch_game_relationships(self) -> List[GameRelationship]:
+        """|coro|
+
+        Retrieves all your game relationships.
+
+        .. note::
+
+            This method is an API call. For general usage, consider :attr:`game_relationships` instead.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving your game relationships failed.
+
+        Returns
+        -------
+        List[:class:`.GameRelationship`]
+            All your game relationships.
+        """
+        state = self._connection
+        data = await state.http.get_game_relationships()
+        return [GameRelationship(state=state, data=d) for d in data]
+
+    async def fetch_relationships(self, *, with_implicit: Optional[bool] = None) -> List[Relationship]:
+        """|coro|
+
+        Retrieves all your relationships.
+
+        .. note::
+
+            This method is an API call. For general usage, consider :attr:`relationships` instead.
+
+        Parameters
+        ----------
+        with_implicit: Optional[:class:`bool`]
+            Whether to include :attr:`~RelationshipType.implicit` relationships as well. Defaults to ``False``.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving your relationships failed.
+
+        Returns
+        -------
+        List[:class:`.Relationship`]
+            All your relationships.
+        """
+        state = self._connection
+        data = await state.http.get_relationships(with_implicit=with_implicit)
+        return [Relationship(state=state, data=d) for d in data]
+
     async def create_dm(self, user: Snowflake) -> Union[DMChannel, EphemeralDMChannel]:
         """|coro|
 
@@ -2678,7 +2729,7 @@ class Client:
         Raises
         ------
         Forbidden
-            You do not have permissions to join lobby.
+            You do not have proper permissions to join lobby.
         HTTPException
             Creating/joining the lobby failed.
 
@@ -2768,19 +2819,7 @@ class Client:
         state = self._connection
         await state.http.send_friend_request(username, discrim or 0)
 
-    @overload
-    async def send_game_friend_request(self, user: _UserTag, /) -> None:
-        ...
-
-    @overload
-    async def send_game_friend_request(self, user: int, /) -> None:
-        ...
-
-    @overload
-    async def send_game_friend_request(self, user: str, /) -> None:
-        ...
-
-    async def send_game_friend_request(self, *args: Union[_UserTag, str, int]) -> None:
+    async def send_game_friend_request(self, user: Union[_UserTag, int, str]) -> None:
         """|coro|
 
         Sends a game friend request to another user.
@@ -2803,8 +2842,6 @@ class Client:
         ----------
         user: Union[:class:`discord.User`, :class:`str`, :class:`int`]
             The user to send the game friend request to.
-        username: :class:`str`
-            The username of the user to send the game friend request to.
 
         Raises
         ------
@@ -2815,12 +2852,8 @@ class Client:
         TypeError
             More than 2 parameters or less than 1 parameter was passed.
         """
-
-        if len(args) != 1:
-            raise TypeError(f'send_game_friend_request() takes 1 or 2 arguments but {len(args)} were given')
-
         state = self._connection
-        user = args[0]
+
         if isinstance(user, _UserTag):
             username = str(user)
         elif isinstance(user, str):

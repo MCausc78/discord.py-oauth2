@@ -1437,8 +1437,11 @@ class HTTPClient:
 
     # Relationships
 
-    def get_relationships(self) -> Response[List[user.Relationship]]:
-        return self.request(Route('GET', '/users/@me/relationships'))
+    def get_relationships(self, *, with_implicit: Optional[bool] = None) -> Response[List[user.Relationship]]:
+        params = {}
+        if with_implicit is not None:
+            params['with_implicit'] = int(with_implicit)
+        return self.request(Route('GET', '/users/@me/relationships'), params=params)
 
     def remove_relationship(self, user_id: Snowflake) -> Response[None]:
         return self.request(Route('DELETE', '/users/@me/relationships/{user_id}', user_id=user_id))
