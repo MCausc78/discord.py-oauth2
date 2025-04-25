@@ -28,6 +28,7 @@ from copy import copy
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING, Union, overload
 
 from .activity import CustomActivity
+from .color import Color
 from .enums import try_enum, AudioContext, SlayerSDKReceiveInGameDMs, Status
 from .utils import MISSING
 
@@ -55,7 +56,7 @@ class GuildFolder:
         The folder's name.
     guild_ids: List[:class:`int`]
         The guild's IDs in this folder.
-    color Optional[:class:`int`]
+    raw_color: Optional[:class:`int`]
         The folder's color.
     """
 
@@ -64,7 +65,7 @@ class GuildFolder:
         'id',
         'name',
         'guild_ids',
-        'color',
+        'raw_color',
     )
 
     def __init__(self, *, data: GuildFolderPayload, state: ConnectionState) -> None:
@@ -72,7 +73,24 @@ class GuildFolder:
         self.id: Optional[int] = data.get('id')
         self.name: Optional[str] = data.get('name')
         self.guild_ids: List[int] = list(map(int, data.get('guild_ids', ())))
-        self.color: Optional[int] = data.get('color')
+        self.raw_color: Optional[int] = data.get('color')
+
+    @property
+    def color(self) -> Optional[Color]:
+        """Optional[:class:`Color`]: A property that returns the color for the folder.
+
+        There is an alias for this named :attr:`colour`.
+        """
+        if self.raw_color is not None:
+            return Color(self.raw_color)
+
+    @property
+    def colour(self) -> Optional[Color]:
+        """Optional[:class:`Colour`]: A property that returns the colour for the folder.
+
+        This is an alias of :attr:`color`.
+        """
+        return self.color
 
     @property
     def guilds(self) -> List[Guild]:
@@ -109,7 +127,11 @@ class UserSettings:
     show_current_game: :class:`bool`
         Whether to show the current game. Defaults to ``True``.
     guild_folders: List[:class:`GuildFolder`]
-        The guild folders.
+        A list of guild folders.
+
+        .. note::
+
+            A ``'voice'`` OAuth2 scope is required for this attribute to be not ``None``.
     custom_activity: Optional[:class:`CustomActivity`]
         The current custom status.
     allow_activity_party_privacy_friends: :class:`bool`
@@ -124,6 +146,16 @@ class UserSettings:
         A setting for receiving in-game DMs via the social layer API.
 
         Defaults to :attr:`~SlayerSDKReceiveInGameDMs.all`.
+    soundboard_volume: Optional[:class:`float`]
+        The volume of the soundboard (0-100).
+
+        .. warning::
+
+            This attribute is not updated in real-time, and as such may be out of date sometimes.
+
+        .. note::
+
+            A ``'voice'`` OAuth2 scope is required for this attribute to be not ``None``.
     """
 
     __slots__ = (
@@ -135,6 +167,7 @@ class UserSettings:
         'allow_activity_party_privacy_friends',
         'allow_activity_party_privacy_voice_channel',
         'receive_in_game_dms',
+        'soundboard_volume',
     )
 
     def __init__(self, *, data: Union[GatewayUserSettingsPayload, UserSettingsPayload], state: ConnectionState) -> None:
@@ -185,6 +218,12 @@ class UserSettings:
             )
         elif not hasattr(self, 'receive_in_game_dms'):
             self.receive_in_game_dms = SlayerSDKReceiveInGameDMs.all
+
+        # soundboard_volume is voice_and_video.soundboard_settings.volume from protos, which is Voice and Video > Soundboard > Soundboard Volume in client
+        if 'soundboard_volume' in data or from_ready:
+            self.soundboard_volume: Optional[float] = data.get('soundboard_volume')
+        elif not hasattr(self, 'soundboard_volume'):
+            self.soundboard_volume = None
 
     async def edit(
         self,

@@ -26,11 +26,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from . import utils
 from .asset import Asset, AssetMixin
 from .mixins import Hashable
 from .partial_emoji import PartialEmoji
 from .user import User
+from .utils import (
+    _get_as_snowflake,
+    snowflake_time,
+)
 
 if TYPE_CHECKING:
     import datetime
@@ -170,24 +173,34 @@ class SoundboardSound(BaseSoundboardSound):
     ----------
     id: :class:`int`
         The ID of the sound.
+    guild: :class:`Guild`
+        The guild in which the sound is uploaded.
     volume: :class:`float`
         The volume of the sound as floating point percentage (e.g. ``1.0`` for 100%).
+    user_id: :class:`int`
+        The ID of the user who created this sound.
     name: :class:`str`
         The name of the sound.
     emoji: Optional[:class:`PartialEmoji`]
         The emoji of the sound. ``None`` if no emoji is set.
-    guild: :class:`Guild`
-        The guild in which the sound is uploaded.
     available: :class:`bool`
         Whether this sound is available for use.
     """
 
-    __slots__ = ('_state', 'name', 'emoji', '_user', 'available', '_user_id', 'guild')
+    __slots__ = (
+        '_state',
+        'guild',
+        'user_id',
+        '_user',
+        'name',
+        'emoji',
+        'available',
+    )
 
     def __init__(self, *, guild: Guild, state: ConnectionState, data: SoundboardSoundPayload):
         super().__init__(state=state, data=data)
         self.guild = guild
-        self._user_id = utils._get_as_snowflake(data, 'user_id')
+        self.user_id: Optional[int] = _get_as_snowflake(data, 'user_id')
         self._user = data.get('user')
 
         self._update(data)
@@ -209,7 +222,7 @@ class SoundboardSound(BaseSoundboardSound):
         self.name: str = data['name']
         self.emoji: Optional[PartialEmoji] = None
 
-        emoji_id = utils._get_as_snowflake(data, 'emoji_id')
+        emoji_id = _get_as_snowflake(data, 'emoji_id')
         emoji_name = data['emoji_name']
         if emoji_id is not None or emoji_name is not None:
             self.emoji = PartialEmoji(id=emoji_id, name=emoji_name)  # type: ignore # emoji_name cannot be None here
@@ -219,13 +232,13 @@ class SoundboardSound(BaseSoundboardSound):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the snowflake's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def user(self) -> Optional[User]:
         """Optional[:class:`User`]: The user who uploaded the sound."""
         if self._user is None:
-            if self._user_id is None:
+            if self.user_id is None:
                 return None
-            return self._state.get_user(self._user_id)
+            return self._state.get_user(self.user_id)
         return User(state=self._state, data=self._user)

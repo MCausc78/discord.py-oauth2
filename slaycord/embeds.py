@@ -27,9 +27,9 @@ from __future__ import annotations
 import datetime
 from typing import Any, Dict, List, Mapping, Optional, Protocol, TYPE_CHECKING, TypeVar, Union
 
-from . import utils
-from .colour import Colour
+from .color import Color
 from .flags import AttachmentFlags, EmbedFlags
+from .utils import parse_time
 
 # fmt: off
 __all__ = (
@@ -150,8 +150,8 @@ class Embed:
         The timestamp of the embed content. This is an aware datetime.
         If a naive datetime is passed, it is converted to an aware
         datetime with the local timezone.
-    colour: Optional[Union[:class:`Colour`, :class:`int`]]
-        The colour code of the embed. Aliased to ``color`` as well.
+    color: Optional[Union[:class:`Color`, :class:`int`]]
+        The color code of the embed. Aliased to ``colour`` as well.
         This can be set during initialisation.
     """
 
@@ -160,7 +160,7 @@ class Embed:
         'url',
         'type',
         '_timestamp',
-        '_colour',
+        '_color',
         '_footer',
         '_image',
         '_thumbnail',
@@ -175,8 +175,8 @@ class Embed:
     def __init__(
         self,
         *,
-        colour: Optional[Union[int, Colour]] = None,
-        color: Optional[Union[int, Colour]] = None,
+        color: Optional[Union[int, Color]] = None,
+        colour: Optional[Union[int, Color]] = None,
         title: Optional[Any] = None,
         type: EmbedType = 'rich',
         url: Optional[Any] = None,
@@ -184,7 +184,7 @@ class Embed:
         timestamp: Optional[datetime.datetime] = None,
     ):
 
-        self.colour = colour if colour is not None else color
+        self.color = color if color is not None else colour
         self.title: Optional[str] = title
         self.type: EmbedType = type
         self.url: Optional[str] = url
@@ -238,12 +238,12 @@ class Embed:
         # try to fill in the more rich fields
 
         try:
-            self._colour = Colour(value=data['color'])
+            self._color = Color(value=data['color'])
         except KeyError:
             pass
 
         try:
-            self._timestamp = utils.parse_time(data['timestamp'])
+            self._timestamp = parse_time(data['timestamp'])
         except KeyError:
             pass
 
@@ -288,7 +288,7 @@ class Embed:
                 self.title,
                 self.url,
                 self.description,
-                self.colour,
+                self.color,
                 self.fields,
                 self.timestamp,
                 self.author,
@@ -306,7 +306,7 @@ class Embed:
             and self.title == other.title
             and self.url == other.url
             and self.description == other.description
-            and self.colour == other.colour
+            and self.color == other.color
             and self.fields == other.fields
             and self.timestamp == other.timestamp
             and self.author == other.author
@@ -327,21 +327,21 @@ class Embed:
         return EmbedFlags._from_value(self._flags or 0)
 
     @property
-    def colour(self) -> Optional[Colour]:
-        return getattr(self, '_colour', None)
+    def color(self) -> Optional[Color]:
+        return getattr(self, '_color', None)
 
-    @colour.setter
-    def colour(self, value: Optional[Union[int, Colour]]) -> None:
+    @color.setter
+    def color(self, value: Optional[Union[int, Color]]) -> None:
         if value is None:
-            self._colour = None
-        elif isinstance(value, Colour):
-            self._colour = value
+            self._color = None
+        elif isinstance(value, Color):
+            self._color = value
         elif isinstance(value, int):
-            self._colour = Colour(value=value)
+            self._color = Color(value=value)
         else:
-            raise TypeError(f'Expected slaycord.Colour, int, or None but received {value.__class__.__name__} instead.')
+            raise TypeError(f'Expected slaycord.Color, int, or None but received {value.__class__.__name__} instead.')
 
-    color = colour
+    colour = color
 
     @property
     def timestamp(self) -> Optional[datetime.datetime]:
@@ -745,12 +745,12 @@ class Embed:
         # deal with basic convenience wrappers
 
         try:
-            colour = result.pop('colour')
+            color = result.pop('color')
         except KeyError:
             pass
         else:
-            if colour:
-                result['color'] = colour.value
+            if color:
+                result['color'] = color.value
 
         try:
             timestamp = result.pop('timestamp')

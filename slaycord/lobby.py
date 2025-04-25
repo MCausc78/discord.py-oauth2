@@ -48,6 +48,14 @@ if TYPE_CHECKING:
     from .user import User
 
 
+def _extract_user_id(data: LobbyMemberPayload, /) -> int:
+    if 'id' in data:
+        return int(data['id'])
+    if 'user_id' in data:
+        return int(data['user_id'])
+    return 0
+
+
 class LinkedLobby:
     """Represents channel link to a lobby.
 
@@ -135,9 +143,7 @@ class LobbyMember(Hashable):
     def from_dict(cls, *, data: LobbyMemberPayload, lobby: Lobby, state: ConnectionState) -> Self:
         self = cls.__new__(cls)
         self._state = state
-        if 'id' not in data:
-            data['id'] = data['user_id']
-        self.id = int(data['id'])
+        self.id = _extract_user_id(data)
         self.lobby = lobby
         self._update(data)
         return self
@@ -156,15 +162,17 @@ class LobbyMember(Hashable):
 
     @property
     def flags(self) -> LobbyMemberFlags:
-        """:class:`LobbyMemberFlags`: Returns the lobby member's flags.
-
-        .. versionadded:: 2.6
-        """
+        """:class:`LobbyMemberFlags`: Returns the lobby member's flags."""
         return LobbyMemberFlags._from_value(self._flags)
+
+    @property
+    def voice(self) -> Optional[LobbyVoiceState]:
+        """Optional[:class:`LobbyVoiceState`]: Returns the member's current voice state."""
+        return self.lobby._voice_state_for(self.id)
 
 
 class LobbyVoiceState:
-    """Represents a Discord user's voice state.
+    """Represents a Discord user's voice state in a lobby.
 
     Attributes
     ----------
@@ -248,8 +256,6 @@ class LobbyVoiceState:
 class Lobby(Hashable, Messageable):
     """Represents a Discord lobby.
 
-    .. versionadded:: 2.6
-
     Attributes
     ----------
     id: :class:`int`
@@ -284,11 +290,12 @@ class Lobby(Hashable, Messageable):
 
     def _update(self, data: LobbyPayload) -> None:
         metadata = data.get('metadata')
+        if metadata is not None and isinstance(metadata, str):
+            metadata = _from_json(metadata)
+
         state = self._state
 
-        self.metadata: Optional[Dict[str, str]] = (
-            _from_json(metadata) if metadata is not None and isinstance(metadata, str) else metadata
-        )
+        self.metadata: Optional[Dict[str, str]] = metadata
         self.members: List[LobbyMember] = [LobbyMember.from_dict(data=d, lobby=self, state=state) for d in data['members']]
         self.linked_channel: Optional[GuildChannel] = None
 
@@ -334,10 +341,35 @@ class Lobby(Hashable, Messageable):
 
         return before, after
 
+    def _voice_state_for(self, user_id: int, /) -> Optional[LobbyVoiceState]:
+        return self._voice_states.get(user_id)
+
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the lobby's creation time in UTC."""
         return snowflake_time(self.id)
+
+    @property
+    def voice_states(self) -> Dict[int, LobbyVoiceState]:
+        """Returns a mapping of member IDs who have voice states in this lobby.
+
+        .. note::
+
+            This function is intentionally low level to replace :attr:`members`
+            when the member cache is unavailable.
+
+        Returns
+        -------
+        Mapping[:class:`int`, :class:`LobbyVoiceState`]
+            The mapping of member ID to their lobby voice state.
+        """
+        # fmt: off
+        return {
+            key: value
+            for key, value in self._voice_states.items()
+            if value.channel is not None and value.channel.id == self.id
+        }
+        # fmt: on
 
     def get_member(self, user_id: int, /) -> Optional[LobbyMember]:
         """Returns a member with the given ID.

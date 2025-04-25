@@ -26,7 +26,6 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING, Union
 
-
 # fmt: off
 __all__ = (
     'Reaction',

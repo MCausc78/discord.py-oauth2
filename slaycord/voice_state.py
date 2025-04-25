@@ -44,8 +44,17 @@ import logging
 import select
 import socket
 import threading
-
-from typing import Any, Callable, Coroutine, Dict, List, Optional, TYPE_CHECKING, Tuple
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    List,
+    Optional,
+    TYPE_CHECKING,
+    Tuple,
+    Union,
+)
 
 from .backoff import ExponentialBackoff
 from .enums import Enum
@@ -61,6 +70,7 @@ if TYPE_CHECKING:
     from .types.voice import (
         GuildVoiceState as GuildVoiceStatePayload,
         VoiceServerUpdate as VoiceServerUpdatePayload,
+        LobbyVoiceServerUpdate as LobbyVoiceServerUpdatePayload,
         SupportedModes,
     )
     from .voice_client import VoiceClient
@@ -236,7 +246,7 @@ class VoiceConnectionState:
             self._connected.clear()
 
     @property
-    def guild(self) -> Guild:
+    def guild(self) -> Optional[Guild]:
         return self.voice_client.guild
 
     @property
@@ -249,7 +259,11 @@ class VoiceConnectionState:
 
     @property
     def self_voice_state(self) -> Optional[VoiceState]:
-        return self.guild.me.voice
+        g = self.guild
+        me = None if g is None else g.me
+        if me is None:
+            return self.voice_client._state.user.voice  # type: ignore
+        return me.voice
 
     async def voice_state_update(self, data: GuildVoiceStatePayload) -> None:
         channel_id = data['channel_id']
@@ -304,13 +318,16 @@ class VoiceConnectionState:
             else:
                 _log.debug('Ignoring unexpected voice_state_update event')
 
-    async def voice_server_update(self, data: VoiceServerUpdatePayload) -> None:
+    async def voice_server_update(
+        self,
+        data: Union[VoiceServerUpdatePayload, LobbyVoiceServerUpdatePayload],
+    ) -> None:
         previous_token = self.token
         previous_server_id = self.server_id
         previous_endpoint = self.endpoint
 
         self.token = data['token']
-        self.server_id = int(data['guild_id'])
+        self.server_id = int(data.get('guild_id') or data.get('channel_id') or data.get('lobby_id') or 0)
         endpoint = data.get('endpoint')
 
         if self.token is None or endpoint is None:
@@ -520,7 +537,13 @@ class VoiceConnectionState:
         try:
             await self.wait_async(timeout)
         except asyncio.TimeoutError:
-            _log.warning('Timed out trying to move to channel %s in guild %s', channel.id, self.guild.id)
+            guild = self.guild
+
+            _log.warning(
+                'Timed out trying to move to channel %s in guild %s',
+                channel.id,
+                '"private"' if guild is None else guild.id,
+            )
             if self.state is last_state:
                 _log.debug('Reverting to previous state %s', previous_state.name)
                 self.state = previous_state
@@ -682,9 +705,21 @@ class VoiceConnectionState:
             await previous_ws.close()
 
     async def _move_to(self, channel: abc.Snowflake) -> None:
-        # TODO: make alternative for lobbies
-        # await self.voice_client.channel.guild.change_voice_state(channel=channel)
+        guild = self.guild
+        if guild is None:
+            client = self.voice_client._state._get_client()
+            await client.change_voice_state(channel=channel)
+        else:
+            await guild.change_voice_state(channel=channel)
         self.state = ConnectionFlowState.set_guild_voice_state
 
     def _update_voice_channel(self, channel_id: Optional[int]) -> None:
-        self.voice_client.channel = channel_id and self.guild.get_channel(channel_id)  # type: ignore
+        vc = self.voice_client
+        if channel_id is None:
+            vc.channel = None  # type: ignore
+            return
+        g = self.guild
+        if g is None:
+            vc.channel = vc._state._get_private_channel(channel_id)  # type: ignore
+        else:
+            vc.channel = g.get_channel(channel_id)  # type: ignore

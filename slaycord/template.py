@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Any, Optional, TYPE_CHECKING, List
+from typing import Any, List, Optional, TYPE_CHECKING
 
 from .guild import Guild
 from .utils import parse_time

@@ -28,9 +28,9 @@ from datetime import datetime
 from typing import Dict, Optional, TYPE_CHECKING, Union
 
 from .asset import Asset
-from .enums import EventStatus, EntityType, PrivacyLevel, try_enum
+from .enums import try_enum, EntityType, EventStatus, PrivacyLevel
 from .mixins import Hashable
-from .utils import parse_time, _get_as_snowflake
+from .utils import _get_as_snowflake, parse_time
 
 if TYPE_CHECKING:
     from .guild import Guild

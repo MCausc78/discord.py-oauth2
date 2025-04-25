@@ -32,7 +32,7 @@ from .automod import *
 from .channel import *
 from .client import *
 from .client_properties import *
-from .colour import *
+from .color import *
 from .components import *
 from .connections import *
 from .embeds import *

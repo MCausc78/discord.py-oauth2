@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-import copy
+from copy import copy
 import datetime
 from typing import (
     Any,
@@ -40,7 +40,6 @@ from typing import (
     Union,
 )
 
-from . import utils
 from .asset import Asset
 from .channel import *
 from .channel import _guild_channel_factory
@@ -56,17 +55,27 @@ from .enums import (
 )
 from .flags import SystemChannelFlags
 from .invite import Invite
-from .role import Role
 from .member import Member, VoiceState
 from .mixins import Hashable
 from .object import Object
 from .presences import RawPresenceUpdateEvent
+from .role import Role
 from .scheduled_event import ScheduledEvent
 from .soundboard import SoundboardSound
 from .stage_instance import StageInstance
 from .sticker import GuildSticker
 from .threads import Thread
 from .user import User
+from .utils import (
+    DEFAULT_FILE_SIZE_LIMIT_BYTES,
+    MISSING,
+    SequenceProxy,
+    _get_as_snowflake,
+    find,
+    parse_time,
+    snowflake_time,
+    utcnow,
+)
 from .widget import Widget
 
 
@@ -77,7 +86,7 @@ __all__ = (
     'Guild',
 )
 
-MISSING = utils.MISSING
+MISSING = MISSING
 
 if TYPE_CHECKING:
     from .abc import Snowflake
@@ -92,7 +101,7 @@ if TYPE_CHECKING:
     from .types.threads import (
         Thread as ThreadPayload,
     )
-    from .types.voice import GuildVoiceState
+    from .types.voice import BaseVoiceState as VoiceStatePayload
     from .voice_client import VoiceProtocol
 
     VocalGuildChannel = Union[VoiceChannel, StageChannel]
@@ -210,7 +219,7 @@ class GuildPreview(Hashable):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the guild's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def icon(self) -> Optional[Asset]:
@@ -343,7 +352,7 @@ class UserGuild(Hashable):
         """
         state = self._state
         data = await state.http.get_guild_me(self.id)
-        return Member(data=data, guild=self, state=state)  # type: ignore # probably present
+        return Member(data=data, guild=self, state=state)  # type: ignore
 
     async def widget(self) -> Widget:
         """|coro|
@@ -369,6 +378,41 @@ class UserGuild(Hashable):
         data = await self._state.http.get_widget(self.id)
 
         return Widget(state=self._state, data=data)
+
+    async def change_voice_state(
+        self,
+        *,
+        channel: Optional[Snowflake],
+        self_mute: bool = False,
+        self_deaf: bool = False,
+        self_video: bool = False,
+    ) -> None:
+        """|coro|
+
+        Changes client's voice state in the guild.
+
+        .. versionadded:: 1.4
+
+        Parameters
+        ----------
+        channel: Optional[:class:`abc.Snowflake`]
+            Channel the client wants to join. You must explicitly pass ``None`` to disconnect.
+        self_mute: :class:`bool`
+            Indicates if the client should be self-muted.
+        self_deaf: :class:`bool`
+            Indicates if the client should be self-deafened.
+        self_video: :class:`bool`
+            Indicates if the client should show camera.
+        """
+        ws = self._state._get_websocket()
+        channel_id = channel.id if channel else None
+        await ws.voice_state(
+            guild_id=self.id,
+            channel_id=channel_id,
+            self_mute=self_mute,
+            self_deaf=self_deaf,
+            self_video=self_video,
+        )
 
 
 class Guild(UserGuild):
@@ -519,9 +563,9 @@ class Guild(UserGuild):
     )
 
     _PREMIUM_GUILD_LIMITS: ClassVar[Dict[Optional[int], _GuildLimit]] = {
-        None: _GuildLimit(emoji=50, stickers=5, bitrate=96e3, filesize=utils.DEFAULT_FILE_SIZE_LIMIT_BYTES),
-        0: _GuildLimit(emoji=50, stickers=5, bitrate=96e3, filesize=utils.DEFAULT_FILE_SIZE_LIMIT_BYTES),
-        1: _GuildLimit(emoji=100, stickers=15, bitrate=128e3, filesize=utils.DEFAULT_FILE_SIZE_LIMIT_BYTES),
+        None: _GuildLimit(emoji=50, stickers=5, bitrate=96e3, filesize=DEFAULT_FILE_SIZE_LIMIT_BYTES),
+        0: _GuildLimit(emoji=50, stickers=5, bitrate=96e3, filesize=DEFAULT_FILE_SIZE_LIMIT_BYTES),
+        1: _GuildLimit(emoji=100, stickers=15, bitrate=128e3, filesize=DEFAULT_FILE_SIZE_LIMIT_BYTES),
         2: _GuildLimit(emoji=150, stickers=30, bitrate=256e3, filesize=52428800),
         3: _GuildLimit(emoji=250, stickers=60, bitrate=384e3, filesize=104857600),
     }
@@ -595,20 +639,23 @@ class Guild(UserGuild):
         inner = ' '.join('%s=%r' % t for t in attrs)
         return f'<Guild {inner}>'
 
-    def _update_voice_state(self, data: GuildVoiceState, channel_id: int) -> Tuple[Optional[Member], VoiceState, VoiceState]:
+    def _update_voice_state(
+        self, data: VoiceStatePayload, channel_id: Optional[int]
+    ) -> Tuple[Optional[Member], VoiceState, VoiceState]:
+        cache_flags = self._state.member_cache_flags
         user_id = int(data['user_id'])
         channel: Optional[VocalGuildChannel] = self.get_channel(channel_id)  # type: ignore # this will always be a voice channel
         try:
-            # check if we should remove the voice state from cache
+            # Check if we should remove the voice state from cache
             if channel is None:
                 after = self._voice_states.pop(user_id)
             else:
                 after = self._voice_states[user_id]
 
-            before = copy.copy(after)
+            before = copy(after)
             after._update(data, channel)
         except KeyError:
-            # if we're here then we're getting added into the cache
+            # If we're here then add it into the cache
             after = VoiceState(data=data, channel=channel)
             before = VoiceState(data=data, channel=None)
             self._voice_states[user_id] = after
@@ -616,10 +663,12 @@ class Guild(UserGuild):
         member = self.get_member(user_id)
         if member is None:
             try:
-                member_data = data['member']  # pyright: ignore[reportTypedDictNotRequiredAccess]
-                member = Member(data=member_data, state=self._state, guild=self)
+                member = Member(data=data['member'], state=self._state, guild=self)  # type: ignore
             except KeyError:
                 member = None
+
+            if member is not None and cache_flags.voice:
+                self._add_member(member)
 
         return member, before, after
 
@@ -672,7 +721,7 @@ class Guild(UserGuild):
         )
         self.features: List[GuildFeature] = guild.get('features', [])
         self._splash: Optional[str] = guild.get('splash')
-        self._system_channel_id: Optional[int] = utils._get_as_snowflake(guild, 'system_channel_id')
+        self._system_channel_id: Optional[int] = _get_as_snowflake(guild, 'system_channel_id')
         self.description: Optional[str] = guild.get('description')
         self.max_presences: Optional[int] = guild.get('max_presences')
         self.max_members: Optional[int] = guild.get('max_members')
@@ -682,22 +731,22 @@ class Guild(UserGuild):
         self.premium_subscription_count: int = guild.get('premium_subscription_count') or 0
         self.vanity_url_code: Optional[str] = guild.get('vanity_url_code')
         self.widget_enabled: bool = guild.get('widget_enabled', False)
-        self._widget_channel_id: Optional[int] = utils._get_as_snowflake(guild, 'widget_channel_id')
+        self._widget_channel_id: Optional[int] = _get_as_snowflake(guild, 'widget_channel_id')
         self._system_channel_flags: int = guild.get('system_channel_flags', 0)
         self.preferred_locale: Locale = try_enum(Locale, guild.get('preferred_locale', 'en-US'))
         self._discovery_splash: Optional[str] = guild.get('discovery_splash')
-        self._rules_channel_id: Optional[int] = utils._get_as_snowflake(guild, 'rules_channel_id')
-        self._public_updates_channel_id: Optional[int] = utils._get_as_snowflake(guild, 'public_updates_channel_id')
-        self._safety_alerts_channel_id: Optional[int] = utils._get_as_snowflake(guild, 'safety_alerts_channel_id')
+        self._rules_channel_id: Optional[int] = _get_as_snowflake(guild, 'rules_channel_id')
+        self._public_updates_channel_id: Optional[int] = _get_as_snowflake(guild, 'public_updates_channel_id')
+        self._safety_alerts_channel_id: Optional[int] = _get_as_snowflake(guild, 'safety_alerts_channel_id')
         self.nsfw_level: NSFWLevel = try_enum(NSFWLevel, guild.get('nsfw_level', 0))
         self.mfa_level: MFALevel = try_enum(MFALevel, guild.get('mfa_level', 0))
         self.approximate_presence_count: Optional[int] = guild.get('approximate_presence_count')
         self.approximate_member_count: Optional[int] = guild.get('approximate_member_count')
         self.premium_progress_bar_enabled: bool = guild.get('premium_progress_bar_enabled', False)
-        self.owner_id: Optional[int] = utils._get_as_snowflake(guild, 'owner_id')
+        self.owner_id: Optional[int] = _get_as_snowflake(guild, 'owner_id')
         self.is_owner: bool = self.owner_id == state.self_id
         self._large: Optional[bool] = None if self._member_count is None else self._member_count >= 250
-        self._afk_channel_id: Optional[int] = utils._get_as_snowflake(guild, 'afk_channel_id')
+        self._afk_channel_id: Optional[int] = _get_as_snowflake(guild, 'afk_channel_id')
         self._incidents_data: Optional[IncidentData] = guild.get('incidents_data')
 
         if 'channels' in guild:
@@ -708,7 +757,7 @@ class Guild(UserGuild):
                     self._add_channel(factory(guild=self, data=c, state=self._state))  # type: ignore
 
         for obj in guild.get('voice_states', ()):
-            self._update_voice_state(obj, int(obj['channel_id']))
+            self._update_voice_state(obj, int(obj['channel_id']))  # type: ignore
 
         cache_joined = self._state.member_cache_flags.joined
         cache_voice = self._state.member_cache_flags.voice
@@ -749,7 +798,7 @@ class Guild(UserGuild):
     @property
     def channels(self) -> Sequence[GuildChannel]:
         """Sequence[:class:`abc.GuildChannel`]: A list of channels that belongs to this guild."""
-        return utils.SequenceProxy(self._channels.values())
+        return SequenceProxy(self._channels.values())
 
     @property
     def threads(self) -> Sequence[Thread]:
@@ -757,7 +806,7 @@ class Guild(UserGuild):
 
         .. versionadded:: 2.0
         """
-        return utils.SequenceProxy(self._threads.values())
+        return SequenceProxy(self._threads.values())
 
     @property
     def large(self) -> bool:
@@ -1060,7 +1109,7 @@ class Guild(UserGuild):
     @property
     def members(self) -> Sequence[Member]:
         """Sequence[:class:`Member`]: A list of members that belong to this guild."""
-        return utils.SequenceProxy(self._members.values())
+        return SequenceProxy(self._members.values())
 
     def get_member(self, user_id: int, /) -> Optional[Member]:
         """Returns a member with the given ID.
@@ -1093,7 +1142,7 @@ class Guild(UserGuild):
         The first element of this sequence will be the lowest role in the
         hierarchy.
         """
-        return utils.SequenceProxy(self._roles.values(), sorted=True)
+        return SequenceProxy(self._roles.values(), sorted=True)
 
     def get_role(self, role_id: int, /) -> Optional[Role]:
         """Returns a role with the given ID.
@@ -1151,7 +1200,7 @@ class Guild(UserGuild):
 
         .. versionadded:: 2.0
         """
-        return utils.SequenceProxy(self._stage_instances.values())
+        return SequenceProxy(self._stage_instances.values())
 
     def get_stage_instance(self, stage_instance_id: int, /) -> Optional[StageInstance]:
         """Returns a stage instance with the given ID.
@@ -1176,7 +1225,7 @@ class Guild(UserGuild):
 
         .. versionadded:: 2.0
         """
-        return utils.SequenceProxy(self._scheduled_events.values())
+        return SequenceProxy(self._scheduled_events.values())
 
     def get_scheduled_event(self, scheduled_event_id: int, /) -> Optional[ScheduledEvent]:
         """Returns a scheduled event with the given ID.
@@ -1201,7 +1250,7 @@ class Guild(UserGuild):
 
         .. versionadded:: 2.5
         """
-        return utils.SequenceProxy(self._soundboard_sounds.values())
+        return SequenceProxy(self._soundboard_sounds.values())
 
     def get_soundboard_sound(self, sound_id: int, /) -> Optional[SoundboardSound]:
         """Returns a soundboard sound with the given ID.
@@ -1278,7 +1327,7 @@ class Guild(UserGuild):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the guild's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     def get_member_named(self, name: str, /) -> Optional[Member]:
         """Returns the first member found that matches the name provided.
@@ -1322,12 +1371,12 @@ class Guild(UserGuild):
             discriminator, username = username, discriminator
 
         if discriminator == '0' or (len(discriminator) == 4 and discriminator.isdigit()):
-            return utils.find(lambda m: m.name == username and m.discriminator == discriminator, members)
+            return find(lambda m: m.name == username and m.discriminator == discriminator, members)
 
         def pred(m: Member) -> bool:
             return m.nick == name or m.global_name == name or m.name == name
 
-        return utils.find(pred, members)
+        return find(pred, members)
 
     @property
     def vanity_url(self) -> Optional[str]:
@@ -1349,7 +1398,7 @@ class Guild(UserGuild):
         if not self._incidents_data:
             return None
 
-        return utils.parse_time(self._incidents_data.get('invites_disabled_until'))
+        return parse_time(self._incidents_data.get('invites_disabled_until'))
 
     @property
     def dms_paused_until(self) -> Optional[datetime.datetime]:
@@ -1361,7 +1410,7 @@ class Guild(UserGuild):
         if not self._incidents_data:
             return None
 
-        return utils.parse_time(self._incidents_data.get('dms_disabled_until'))
+        return parse_time(self._incidents_data.get('dms_disabled_until'))
 
     @property
     def dm_spam_detected_at(self) -> Optional[datetime.datetime]:
@@ -1372,7 +1421,7 @@ class Guild(UserGuild):
         if not self._incidents_data:
             return None
 
-        return utils.parse_time(self._incidents_data.get('dm_spam_detected_at'))
+        return parse_time(self._incidents_data.get('dm_spam_detected_at'))
 
     @property
     def raid_detected_at(self) -> Optional[datetime.datetime]:
@@ -1383,7 +1432,7 @@ class Guild(UserGuild):
         if not self._incidents_data:
             return None
 
-        return utils.parse_time(self._incidents_data.get('raid_detected_at'))
+        return parse_time(self._incidents_data.get('raid_detected_at'))
 
     def invites_paused(self) -> bool:
         """:class:`bool`: Whether invites are paused in the guild.
@@ -1393,7 +1442,7 @@ class Guild(UserGuild):
         if not self.invites_paused_until:
             return 'INVITES_DISABLED' in self.features
 
-        return self.invites_paused_until > utils.utcnow()
+        return self.invites_paused_until > utcnow()
 
     def dms_paused(self) -> bool:
         """:class:`bool`: Whether DMs are paused in the guild.
@@ -1403,7 +1452,7 @@ class Guild(UserGuild):
         if not self.dms_paused_until:
             return False
 
-        return self.dms_paused_until > utils.utcnow()
+        return self.dms_paused_until > utcnow()
 
     def is_dm_spam_detected(self) -> bool:
         """:class:`bool`: Whether DM spam was detected in the guild.
@@ -1413,7 +1462,7 @@ class Guild(UserGuild):
         if not self.dm_spam_detected_at:
             return False
 
-        return self.dm_spam_detected_at > utils.utcnow()
+        return self.dm_spam_detected_at > utcnow()
 
     def is_raid_detected(self) -> bool:
         """:class:`bool`: Whether a raid was detected in the guild.
@@ -1423,4 +1472,35 @@ class Guild(UserGuild):
         if not self.raid_detected_at:
             return False
 
-        return self.raid_detected_at > utils.utcnow()
+        return self.raid_detected_at > utcnow()
+
+    async def change_voice_state(
+        self,
+        *,
+        channel: Optional[Snowflake],
+        self_mute: bool = False,
+        self_deaf: bool = False,
+        self_video: bool = False,
+    ) -> None:
+        """|coro|
+
+        Changes client's voice state in the guild.
+
+        .. versionadded:: 1.4
+
+        Parameters
+        -----------
+        channel: Optional[:class:`abc.Snowflake`]
+            Channel the client wants to join. Use ``None`` to disconnect.
+        self_mute: :class:`bool`
+            Indicates if the client should be self-muted.
+        self_deaf: :class:`bool`
+            Indicates if the client should be self-deafened.
+        self_video: :class:`bool`
+            Indicates if the client is using video. Do not use.
+        """
+        state = self._state
+        ws = state._get_websocket()
+        channel_id = channel.id if channel else None
+
+        await ws.voice_state(self.id, channel_id, self_mute, self_deaf, self_video)

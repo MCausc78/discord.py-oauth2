@@ -27,6 +27,7 @@ from __future__ import annotations
 import datetime
 from typing import (
     Any,
+    Callable,
     Dict,
     List,
     Literal,
@@ -41,18 +42,19 @@ from typing import (
 
 import slaycord.abc
 
-from . import utils
 from .asset import Asset
+from .calls import PrivateCall, GroupCall
 from .enums import (
+    try_enum,
     ChannelType,
+    EntityType,
     ForumLayoutType,
     ForumOrderType,
-    try_enum,
+    SafetyWarningType,
     VideoQualityMode,
-    EntityType,
     VoiceChannelEffectAnimationType,
 )
-from .flags import ChannelFlags
+from .flags import ChannelFlags, RecipientFlags
 from .lobby import LinkedLobby
 from .mixins import Hashable
 from .object import Object
@@ -62,6 +64,17 @@ from .scheduled_event import ScheduledEvent
 from .soundboard import BaseSoundboardSound
 from .stage_instance import StageInstance
 from .threads import Thread
+from .utils import (
+    DISCORD_EPOCH,
+    SequenceProxy,
+    _get_as_snowflake,
+    copy_doc,
+    find,
+    get,
+    parse_time,
+    snowflake_time,
+)
+from .voice_client import VoiceClient
 
 __all__ = (
     'TextChannel',
@@ -74,6 +87,7 @@ __all__ = (
     'GroupChannel',
     'EphemeralDMChannel',
     'PartialMessageable',
+    'SafetyWarning',
     'VoiceChannelEffect',
     'VoiceChannelSoundEffect',
     '_guild_channel_factory',
@@ -86,7 +100,8 @@ __all__ = (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from .abc import Snowflake
+    from .abc import Snowflake, T
+    from .client import Client
     from .guild import Guild, GuildChannel as GuildChannelType
     from .member import Member, VoiceState
     from .message import Message, PartialMessage, EmojiInputType
@@ -97,6 +112,7 @@ if TYPE_CHECKING:
         NewsChannel as NewsChannelPayload,
         VoiceChannel as VoiceChannelPayload,
         StageChannel as StageChannelPayload,
+        SafetyWarning as SafetyWarningPayload,
         DMChannel as DMChannelPayload,
         CategoryChannel as CategoryChannelPayload,
         GroupDMChannel as GroupChannelPayload,
@@ -169,12 +185,12 @@ class VoiceChannelSoundEffect(BaseSoundboardSound):
         if self.is_default():
             return None
         else:
-            return utils.snowflake_time(self.id)
+            return snowflake_time(self.id)
 
     def is_default(self) -> bool:
         """:class:`bool`: Whether it's a default sound or not."""
         # if it's smaller than the Discord Epoch it cannot be a snowflake
-        return self.id < utils.DISCORD_EPOCH
+        return self.id < DISCORD_EPOCH
 
 
 class VoiceChannelEffect:
@@ -184,9 +200,9 @@ class VoiceChannelEffect:
 
     Attributes
     ----------
-    channel: :class:`VoiceChannel`
+    channel: Union[:class:`DMChannel`, :class:`GroupChannel`, :class:`VoiceChannel`]
         The channel in which the effect is sent.
-    user: Optional[:class:`Member`]
+    user: Optional[Union[:class:`Member`, :class:`User`]]
         The user who sent the effect. ``None`` if not found in cache.
     animation: Optional[:class:`VoiceChannelEffectAnimation`]
         The animation the effect has. Returns ``None`` if the effect has no animation.
@@ -198,9 +214,20 @@ class VoiceChannelEffect:
 
     __slots__ = ('channel', 'user', 'animation', 'emoji', 'sound')
 
-    def __init__(self, *, state: ConnectionState, data: VoiceChannelEffectPayload, guild: Guild):
-        self.channel: VoiceChannel = guild.get_channel(int(data['channel_id']))  # type: ignore # will always be a VoiceChannel
-        self.user: Optional[Member] = guild.get_member(int(data['user_id']))
+    def __init__(self, *, state: ConnectionState, data: VoiceChannelEffectPayload, guild: Optional[Guild] = None) -> None:
+        channel_id = int(data['channel_id'])
+        user_id = int(data['user_id'])
+
+        if guild is None:
+            channel = state._get_private_channel(channel_id)
+            user = state.get_user(user_id)
+        else:
+            channel = guild.get_channel(channel_id)
+            user = guild.get_member(user_id)
+            if user is None:
+                user = state.get_user(user_id)
+        self.channel: Union[DMChannel, GroupChannel, VoiceChannel] = channel  # type: ignore # Will always be either a DMChannel, GroupChannel or VoiceChannel
+        self.user: Optional[Union[Member, User]] = user
         self.animation: Optional[VoiceChannelEffectAnimation] = None
 
         animation_id = data.get('animation_id')
@@ -212,7 +239,7 @@ class VoiceChannelEffect:
         self.emoji: Optional[PartialEmoji] = PartialEmoji.from_dict(emoji) if emoji is not None else None
         self.sound: Optional[VoiceChannelSoundEffect] = None
 
-        sound_id: Optional[int] = utils._get_as_snowflake(data, 'sound_id')
+        sound_id: Optional[int] = _get_as_snowflake(data, 'sound_id')
         if sound_id is not None:
             sound_volume = data.get('sound_volume') or 0.0
             self.sound = VoiceChannelSoundEffect(state=state, id=sound_id, volume=sound_volume)
@@ -330,7 +357,7 @@ class TextChannel(slaycord.abc.Messageable, slaycord.abc.GuildChannel, Hashable)
     def _update(self, guild: Guild, data: Union[TextChannelPayload, NewsChannelPayload]) -> None:
         self.guild: Guild = guild
         self.name: str = data['name']
-        self.category_id: Optional[int] = utils._get_as_snowflake(data, 'parent_id')
+        self.category_id: Optional[int] = _get_as_snowflake(data, 'parent_id')
         self.topic: Optional[str] = data.get('topic')
         self.position: int = data['position']
         self.nsfw: bool = data.get('nsfw', False)
@@ -339,7 +366,7 @@ class TextChannel(slaycord.abc.Messageable, slaycord.abc.GuildChannel, Hashable)
         self.default_auto_archive_duration: ThreadArchiveDuration = data.get('default_auto_archive_duration', 1440)
         self.default_thread_slowmode_delay: int = data.get('default_thread_rate_limit_per_user', 0)
         self._type: Literal[0, 5] = data.get('type', self._type)
-        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
+        self.last_message_id: Optional[int] = _get_as_snowflake(data, 'last_message_id')
 
         linked_lobby_data = data.get('linked_lobby')
         if linked_lobby_data is None:
@@ -372,7 +399,7 @@ class TextChannel(slaycord.abc.Messageable, slaycord.abc.GuildChannel, Hashable)
     def _scheduled_event_entity_type(self) -> Optional[EntityType]:
         return None
 
-    @utils.copy_doc(slaycord.abc.GuildChannel.permissions_for)
+    @copy_doc(slaycord.abc.GuildChannel.permissions_for)
     def permissions_for(self, obj: Union[Member, Role], /) -> Permissions:
         base = super().permissions_for(obj)
         self._apply_implicit_permissions(base)
@@ -474,22 +501,28 @@ class TextChannel(slaycord.abc.Messageable, slaycord.abc.GuildChannel, Hashable)
         return self.guild.get_thread(thread_id)
 
 
-class VocalGuildChannel(slaycord.abc.GuildChannel, Hashable):
+class VocalGuildChannel(
+    slaycord.abc.Connectable,
+    slaycord.abc.GuildChannel,
+    Hashable,
+):
     __slots__ = (
-        'name',
+        '_state',
         'id',
         'guild',
+        'name',
         'nsfw',
-        'bitrate',
-        'user_limit',
-        '_state',
-        'position',
-        'slowmode_delay',
-        '_overwrites',
         'category_id',
+        'position',
+        'bitrate',
         'rtc_region',
+        'user_limit',
         'video_quality_mode',
         'last_message_id',
+        'slowmode_delay',
+        'hd_streaming_until',
+        'hd_streaming_buyer_id',
+        '_overwrites',
     )
 
     def __init__(self, *, state: ConnectionState, guild: Guild, data: Union[VoiceChannelPayload, StageChannelPayload]):
@@ -507,14 +540,16 @@ class VocalGuildChannel(slaycord.abc.GuildChannel, Hashable):
         self.guild: Guild = guild
         self.name: str = data['name']
         self.nsfw: bool = data.get('nsfw', False)
-        self.rtc_region: Optional[str] = data.get('rtc_region')
-        self.video_quality_mode: VideoQualityMode = try_enum(VideoQualityMode, data.get('video_quality_mode', 1))
-        self.category_id: Optional[int] = utils._get_as_snowflake(data, 'parent_id')
-        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
+        self.category_id: Optional[int] = _get_as_snowflake(data, 'parent_id')
         self.position: int = data['position']
-        self.slowmode_delay = data.get('rate_limit_per_user', 0)
         self.bitrate: int = data['bitrate']
+        self.rtc_region: Optional[str] = data.get('rtc_region')
         self.user_limit: int = data['user_limit']
+        self.video_quality_mode: VideoQualityMode = try_enum(VideoQualityMode, data.get('video_quality_mode', 1))
+        self.last_message_id: Optional[int] = _get_as_snowflake(data, 'last_message_id')
+        self.slowmode_delay = data.get('rate_limit_per_user', 0)
+        self.hd_streaming_until: Optional[datetime.datetime] = parse_time(data.get('hd_streaming_until'))
+        self.hd_streaming_buyer_id: Optional[int] = _get_as_snowflake(data, 'hd_streaming_buyer_id')
         self._fill_overwrites(data)
 
     @property
@@ -571,7 +606,7 @@ class VocalGuildChannel(slaycord.abc.GuildChannel, Hashable):
         """
         return [event for event in self.guild.scheduled_events if event.channel_id == self.id]
 
-    @utils.copy_doc(slaycord.abc.GuildChannel.permissions_for)
+    @copy_doc(slaycord.abc.GuildChannel.permissions_for)
     def permissions_for(self, obj: Union[Member, Role], /) -> Permissions:
         base = super().permissions_for(obj)
         self._apply_implicit_permissions(base)
@@ -654,12 +689,12 @@ class VoiceChannel(VocalGuildChannel):
 
     Attributes
     ----------
-    name: :class:`str`
-        The channel name.
-    guild: :class:`Guild`
-        The guild the channel belongs to.
     id: :class:`int`
         The channel ID.
+    guild: :class:`Guild`
+        The guild the channel belongs to.
+    name: :class:`str`
+        The channel name.
     nsfw: :class:`bool`
         If the channel is marked as "not safe for work" or "age restricted".
 
@@ -671,8 +706,6 @@ class VoiceChannel(VocalGuildChannel):
         top channel is position 0.
     bitrate: :class:`int`
         The channel's preferred audio bitrate in bits per second.
-    user_limit: :class:`int`
-        The channel's limit for number of members that can be in a voice channel.
     rtc_region: Optional[:class:`str`]
         The region for the voice channel's voice communication.
         A value of ``None`` indicates automatic voice region detection.
@@ -681,6 +714,8 @@ class VoiceChannel(VocalGuildChannel):
 
         .. versionchanged:: 2.0
             The type of this attribute has changed to :class:`str`.
+    user_limit: :class:`int`
+        The channel's limit for number of members that can be in a voice channel.
     video_quality_mode: :class:`VideoQualityMode`
         The camera video quality for the voice channel's participants.
 
@@ -701,6 +736,10 @@ class VoiceChannel(VocalGuildChannel):
         The status of the voice channel. ``None`` if no status is set.
         This is not available for the fetch methods such as :func:`Guild.fetch_channel`
         or :func:`Client.fetch_channel`.
+    hd_streaming_until: Optional[:class:`~datetime.datetime`]
+        When the HD streaming entitlement expires.
+    hd_streaming_buyer_id: Optional[:class:`int`]
+        The user's ID who purchased HD streaming for this stage channel.
     """
 
     __slots__ = ('status',)
@@ -758,18 +797,16 @@ class StageChannel(VocalGuildChannel):
 
     Attributes
     ----------
-    name: :class:`str`
-        The channel name.
-    guild: :class:`Guild`
-        The guild the channel belongs to.
     id: :class:`int`
         The channel ID.
+    guild: :class:`Guild`
+        The guild the channel belongs to.
+    name: :class:`str`
+        The channel name.
     nsfw: :class:`bool`
         If the channel is marked as "not safe for work" or "age restricted".
 
         .. versionadded:: 2.0
-    topic: Optional[:class:`str`]
-        The channel's topic. ``None`` if it isn't set.
     category_id: Optional[:class:`int`]
         The category channel ID this channel belongs to, if applicable.
     position: :class:`int`
@@ -777,11 +814,11 @@ class StageChannel(VocalGuildChannel):
         top channel is position 0.
     bitrate: :class:`int`
         The channel's preferred audio bitrate in bits per second.
-    user_limit: :class:`int`
-        The channel's limit for number of members that can be in a stage channel.
     rtc_region: Optional[:class:`str`]
         The region for the stage channel's voice communication.
         A value of ``None`` indicates automatic voice region detection.
+    user_limit: :class:`int`
+        The channel's limit for number of members that can be in a stage channel.
     video_quality_mode: :class:`VideoQualityMode`
         The camera video quality for the stage channel's participants.
 
@@ -798,6 +835,12 @@ class StageChannel(VocalGuildChannel):
         :attr:`~Permissions.manage_messages` bypass slowmode.
 
         .. versionadded:: 2.2
+    topic: Optional[:class:`str`]
+        The channel's topic. ``None`` if it isn't set.
+    hd_streaming_until: Optional[:class:`~datetime.datetime`]
+        When the HD streaming entitlement expires.
+    hd_streaming_buyer_id: Optional[:class:`int`]
+        The user's ID who purchased HD streaming for this stage channel.
     """
 
     __slots__ = ('topic',)
@@ -806,13 +849,13 @@ class StageChannel(VocalGuildChannel):
         attrs = [
             ('id', self.id),
             ('name', self.name),
-            ('topic', self.topic),
-            ('rtc_region', self.rtc_region),
+            ('category_id', self.category_id),
             ('position', self.position),
             ('bitrate', self.bitrate),
-            ('video_quality_mode', self.video_quality_mode),
+            ('rtc_region', self.rtc_region),
             ('user_limit', self.user_limit),
-            ('category_id', self.category_id),
+            ('video_quality_mode', self.video_quality_mode),
+            ('topic', self.topic),
         ]
         joined = ' '.join('%s=%r' % t for t in attrs)
         return f'<{self.__class__.__name__} {joined}>'
@@ -870,7 +913,7 @@ class StageChannel(VocalGuildChannel):
 
         .. versionadded:: 2.0
         """
-        return utils.get(self.guild.stage_instances, channel_id=self.id)
+        return get(self.guild.stage_instances, channel_id=self.id)
 
 
 class CategoryChannel(slaycord.abc.GuildChannel, Hashable):
@@ -928,7 +971,7 @@ class CategoryChannel(slaycord.abc.GuildChannel, Hashable):
     def _update(self, guild: Guild, data: CategoryChannelPayload) -> None:
         self.guild: Guild = guild
         self.name: str = data['name']
-        self.category_id: Optional[int] = utils._get_as_snowflake(data, 'parent_id')
+        self.category_id: Optional[int] = _get_as_snowflake(data, 'parent_id')
         self.nsfw: bool = data.get('nsfw', False)
         self.position: int = data['position']
         self._fill_overwrites(data)
@@ -1059,7 +1102,7 @@ class ForumTag(Hashable):
         self.moderated = data.get('moderated', False)
 
         emoji_name = data['emoji_name'] or ''
-        emoji_id = utils._get_as_snowflake(data, 'emoji_id') or None  # Coerce 0 -> None
+        emoji_id = _get_as_snowflake(data, 'emoji_id') or None  # Coerce 0 -> None
         if not emoji_name and not emoji_id:
             self.emoji = None
         else:
@@ -1203,13 +1246,13 @@ class ForumChannel(slaycord.abc.GuildChannel, Hashable):
     def _update(self, guild: Guild, data: Union[ForumChannelPayload, MediaChannelPayload]) -> None:
         self.guild: Guild = guild
         self.name: str = data['name']
-        self.category_id: Optional[int] = utils._get_as_snowflake(data, 'parent_id')
+        self.category_id: Optional[int] = _get_as_snowflake(data, 'parent_id')
         self.topic: Optional[str] = data.get('topic')
         self.position: int = data['position']
         self.nsfw: bool = data.get('nsfw', False)
         self.slowmode_delay: int = data.get('rate_limit_per_user', 0)
         self.default_auto_archive_duration: ThreadArchiveDuration = data.get('default_auto_archive_duration', 1440)
-        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
+        self.last_message_id: Optional[int] = _get_as_snowflake(data, 'last_message_id')
         # This takes advantage of the fact that dicts are ordered since Python 3.7
         tags = [ForumTag.from_data(state=self._state, data=tag) for tag in data.get('available_tags', ())]
         self.default_thread_slowmode_delay: int = data.get('default_thread_rate_limit_per_user', 0)
@@ -1221,7 +1264,7 @@ class ForumChannel(slaycord.abc.GuildChannel, Hashable):
         if default_reaction_emoji:
             self.default_reaction_emoji = PartialEmoji.with_state(
                 state=self._state,
-                id=utils._get_as_snowflake(default_reaction_emoji, 'emoji_id') or None,  # Coerce 0 -> None
+                id=_get_as_snowflake(default_reaction_emoji, 'emoji_id') or None,  # Coerce 0 -> None
                 name=default_reaction_emoji.get('emoji_name') or '',
             )
 
@@ -1256,7 +1299,7 @@ class ForumChannel(slaycord.abc.GuildChannel, Hashable):
     def _scheduled_event_entity_type(self) -> Optional[EntityType]:
         return None
 
-    @utils.copy_doc(slaycord.abc.GuildChannel.permissions_for)
+    @copy_doc(slaycord.abc.GuildChannel.permissions_for)
     def permissions_for(self, obj: Union[Member, Role], /) -> Permissions:
         base = super().permissions_for(obj)
         self._apply_implicit_permissions(base)
@@ -1310,7 +1353,7 @@ class ForumChannel(slaycord.abc.GuildChannel, Hashable):
 
         .. versionadded:: 2.1
         """
-        return utils.SequenceProxy(self._available_tags.values())
+        return SequenceProxy(self._available_tags.values())
 
     def get_tag(self, tag_id: int, /) -> Optional[ForumTag]:
         """Returns the tag with the given ID.
@@ -1339,6 +1382,53 @@ class ForumChannel(slaycord.abc.GuildChannel, Hashable):
         .. versionadded:: 2.4
         """
         return self._type == ChannelType.media.value
+
+
+class SafetyWarning:
+    """Represents a safety warning.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two safety warnings are equal.
+
+        .. describe:: x != y
+
+            Checks if two safety warnings are not equal.
+
+        .. describe:: hash(x)
+
+            Returns the safety warning's hash.
+
+        .. describe:: str(x)
+
+            Returns a string representation of the safety warning.
+
+    Attributes
+    ----------
+    id: :class:`str`
+        The warning's ID.
+    type: :class:`SafetyWarningType`
+        The warning's type.
+    expires_at: :class:`~datetime.datetime`
+        When the warning expires.
+    dismissed_at: Optional[:class:`~datetime.datetime`]
+        When the warning was dismissed by the user.
+    """
+
+    __slots__ = (
+        'id',
+        'type',
+        'expires_at',
+        'dismissed_at',
+    )
+
+    def __init__(self, *, data: SafetyWarningPayload) -> None:
+        self.id: str = data['id']
+        self.type: SafetyWarningType = try_enum(SafetyWarningType, data['type'])
+        self.expires_at: datetime.datetime = parse_time(data['expiry'])
+        self.dismissed_at: Optional[datetime.datetime] = parse_time(data.get('dismiss_timestamp'))
 
 
 class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc.PrivateChannel, Hashable):
@@ -1373,12 +1463,10 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
     last_message_id: Optional[:class:`int`]
         The last message ID of the message sent to this channel. It may
         *not* point to an existing or valid message.
-
-        .. versionadded:: 2.0
     last_pin_timestamp: Optional[:class:`datetime.datetime`]
         When the last pinned message was pinned. ``None`` if there are no pinned messages.
-
-        .. versionadded:: 2.0
+    safety_warnings: List[:class:`SafetyWarning`]
+        The safety warnings for this direct message channel.
     """
 
     __slots__ = (
@@ -1387,8 +1475,11 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
         'me',
         'last_message_id',
         'last_pin_timestamp',
+        'safety_warnings',
+        '_flags',
         '_message_request',
         '_requested_at',
+        '_recipient_flags',
         '_spam',
         '_state',
     )
@@ -1409,10 +1500,13 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
         self._update(data)
 
     def _update(self, data: DMChannelPayload) -> None:
-        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
-        self.last_pin_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('last_pin_timestamp'))
+        self.last_message_id: Optional[int] = _get_as_snowflake(data, 'last_message_id')
+        self.last_pin_timestamp: Optional[datetime.datetime] = parse_time(data.get('last_pin_timestamp'))
+        self.safety_warnings: List[SafetyWarning] = [SafetyWarning(data=d) for d in data.get('safety_warnings', ())]
+        self._flags: int = data.get('flags', 0)
         self._message_request: Optional[bool] = data.get('is_message_request')
-        self._requested_at: Optional[datetime.datetime] = utils.parse_time(data.get('is_message_request_timestamp'))
+        self._requested_at: Optional[datetime.datetime] = parse_time(data.get('is_message_request_timestamp'))
+        self._recipient_flags: int = data.get('recipient_flags', 0)
         self._spam: bool = data.get('is_spam', False)
 
     def _get_voice_client_key(self) -> Tuple[int, str]:
@@ -1421,6 +1515,9 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
     def _get_voice_state_pair(self) -> Tuple[int, int]:
         return self.me.id, self.id
 
+    def _add_call(self, **kwargs) -> PrivateCall:
+        return PrivateCall(**kwargs)
+
     async def _get_messageable_destination(
         self,
     ) -> Tuple[int, slaycord.abc.MessageableDestinationType,]:
@@ -1428,6 +1525,17 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
         if recipient is None:
             return (self.id, 'channel')
         return (recipient.id, 'user')
+
+    async def _initial_ring(self) -> None:
+        call = self.call
+        if not call or (call.connected and len(call.voice_states) == 1):
+            ring = self.recipient is not None and self.recipient.is_friend()
+            if not ring:
+                data = await self._state.http.get_ringability(self.id)
+                ring = data['ringable']
+
+            if ring:
+                await self._state.http.ring(self.id)
 
     def __str__(self) -> str:
         if self.recipient:
@@ -1451,6 +1559,16 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
         self._requested_at = None
         self._spam = False
         return self
+
+    @property
+    def call(self) -> Optional[PrivateCall]:
+        """Optional[:class:`PrivateCall`]: The channel's currently active call."""
+        return self._state._calls.get(self.id)
+
+    @property
+    def flags(self) -> ChannelFlags:
+        """:class:`ChannelFlags`: The flags associated with this DM channel."""
+        return ChannelFlags._from_value(self._flags)
 
     @property
     def type(self) -> Literal[ChannelType.private]:
@@ -1478,7 +1596,11 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the direct message channel's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
+
+    @property
+    def recipient_flags(self) -> RecipientFlags:
+        return RecipientFlags._from_value(self._recipient_flags)
 
     @property
     def requested_at(self) -> Optional[datetime.datetime]:
@@ -1561,8 +1683,56 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
 
         return PartialMessage(channel=self, id=message_id)
 
+    async def connect(
+        self,
+        *,
+        timeout: float = 60.0,
+        reconnect: bool = True,
+        cls: Callable[[Client, slaycord.abc.VocalChannel], T] = VoiceClient,
+        ring: bool = True,
+    ) -> T:
+        """|coro|
 
-class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
+        Connects to voice and creates a :class:`~slaycord.VoiceClient` to establish
+        your connection to the voice server.
+
+        Parameters
+        ----------
+        timeout: :class:`float`
+            The timeout in seconds to wait for the voice endpoint.
+        reconnect: :class:`bool`
+            Whether the bot should automatically attempt
+            a reconnect if a part of the handshake fails
+            or the gateway goes down.
+        cls: Type[:class:`~slaycord.VoiceProtocol`]
+            A type that subclasses :class:`~slaycord.VoiceProtocol` to connect with.
+            Defaults to :class:`~slaycord.VoiceClient`.
+        ring: :class:`bool`
+            Whether to ring the other member(s) to join the call, if starting a new call.
+            Defaults to ``True``.
+
+        Raises
+        ------
+        asyncio.TimeoutError
+            Could not connect to the voice channel in time.
+        ~slaycord.ClientException
+            You are already connected to a voice channel.
+        ~slaycord.opus.OpusNotLoaded
+            The opus library has not been loaded.
+
+        Returns
+        -------
+        :class:`~slaycord.VoiceProtocol`
+            A voice client that is fully connected to the voice server.
+        """
+        ret = await super().connect(timeout=timeout, reconnect=reconnect, cls=cls)
+
+        if ring:
+            await self._initial_ring()
+        return ret
+
+
+class GroupChannel(slaycord.abc.PrivateChannel, slaycord.abc.Connectable, Hashable):
     """Represents a Discord group channel.
 
     .. container:: operations
@@ -1585,6 +1755,12 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
 
     Attributes
     ----------
+    id: :class:`int`
+        The group channel ID.
+    me: :class:`ClientUser`
+        The user presenting yourself.
+    name: Optional[:class:`str`]
+        The group channel's name if provided.
     last_message_id: Optional[:class:`int`]
         The last message ID of the message sent to this channel. It may
         *not* point to an existing or valid message.
@@ -1592,10 +1768,6 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
         When the last pinned message was pinned. ``None`` if there are no pinned messages.
     recipients: List[:class:`User`]
         The users you are participating with in the group channel.
-    me: :class:`ClientUser`
-        The user presenting yourself.
-    id: :class:`int`
-        The group channel ID.
     owner_id: :class:`int`
         The owner ID that owns the group channel.
     managed: :class:`bool`
@@ -1605,19 +1777,25 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
         and means :attr:`owner` will usually be ``None``.
     application_id: Optional[:class:`int`]
         The ID of the managing application, if any.
-    name: Optional[:class:`str`]
-        The group channel's name if provided.
     nicks: Dict[:class:`User`, :class:`str`]
         A mapping of users to their respective nicknames in the group channel.
     origin_channel_id: Optional[:class:`int`]
         The ID of the DM this group channel originated from, if any.
+
         This can only be accurately received in :func:`on_private_channel_create`
         due to a Discord limitation.
+    blocked_user_warning_dismissed: :class:`bool`
+        Whether the user has acknowledged the presence of blocked users in the group channel.
+
+        This can only be accurately received in :func:`on_private_channel_create`, :func:`on_private_channel_update`,
+        and :func:`on_private_channel_delete` due to a Discord limitation.
     """
 
     __slots__ = (
         '_state',
         'id',
+        'me',
+        'name',
         'last_message_id',
         'last_pin_timestamp',
         'recipients',
@@ -1626,9 +1804,8 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
         'application_id',
         'nicks',
         'origin_channel_id',
+        'blocked_user_warning_dismissed',
         '_icon',
-        'name',
-        'me',
     )
 
     def __init__(self, *, me: ClientUser, state: ConnectionState, data: GroupChannelPayload):
@@ -1652,12 +1829,13 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
                 self.recipients.append(recipient)  # type: ignore
         elif not hasattr(self, 'recipients'):
             self.recipients = []
-        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
-        self.last_pin_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('last_pin_timestamp'))
+        self.last_message_id: Optional[int] = _get_as_snowflake(data, 'last_message_id')
+        self.last_pin_timestamp: Optional[datetime.datetime] = parse_time(data.get('last_pin_timestamp'))
         self.managed: bool = data.get('managed', False)
-        self.application_id: Optional[int] = utils._get_as_snowflake(data, 'application_id')
+        self.application_id: Optional[int] = _get_as_snowflake(data, 'application_id')
         self.nicks: Dict[User, str] = self._unroll_nicks(data.get('nicks', ()))
-        self.origin_channel_id: Optional[int] = utils._get_as_snowflake(data, 'origin_channel_id')
+        self.origin_channel_id: Optional[int] = _get_as_snowflake(data, 'origin_channel_id')
+        self.blocked_user_warning_dismissed: bool = data.get('blocked_user_warning_dismissed', False)
 
     def _unroll_nicks(
         self, data: Union[List[GroupDMNicknamePayload], Tuple[GroupDMNicknamePayload, ...]]
@@ -1665,10 +1843,22 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
         ret = {}
         for entry in data:
             user_id = int(entry['id'])
-            user = utils.get(self.recipients, id=user_id)
+            user = get(self.recipients, id=user_id)
             if user:
                 ret[user] = entry['nick']
         return ret
+
+    def _get_voice_client_key(self) -> Tuple[int, str]:
+        return self.me.id, 'self_id'
+
+    def _get_voice_state_pair(self) -> Tuple[int, int]:
+        return self.me.id, self.id
+
+    def _initial_ring(self):
+        return self._state.http.ring(self.id)
+
+    def _add_call(self, **kwargs) -> GroupCall:
+        return GroupCall(**kwargs)
 
     def __str__(self) -> str:
         if self.name:
@@ -1681,6 +1871,11 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
 
     def __repr__(self) -> str:
         return f'<GroupChannel id={self.id} name={self.name!r}>'
+
+    @property
+    def call(self) -> Optional[PrivateCall]:
+        """Optional[:class:`PrivateCall`]: The channel's currently active call."""
+        return self._state._calls.get(self.id)
 
     @property
     def type(self) -> Literal[ChannelType.group]:
@@ -1716,7 +1911,7 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the channel's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def jump_url(self) -> str:
@@ -1771,6 +1966,21 @@ class GroupChannel(slaycord.abc.PrivateChannel, Hashable):
 
         return base
 
+    @copy_doc(DMChannel.connect)
+    async def connect(
+        self,
+        *,
+        timeout: float = 60.0,
+        reconnect: bool = True,
+        cls: Callable[[Client, slaycord.abc.VocalChannel], T] = VoiceClient,
+        ring: bool = True,
+    ) -> T:
+        ret = await super().connect(timeout=timeout, reconnect=reconnect, cls=cls)
+
+        if ring:
+            await self._initial_ring()
+        return ret
+
 
 class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc.PrivateChannel, Hashable):
     """Represents a Discord ephemeral direct message channel.
@@ -1797,12 +2007,12 @@ class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, sla
     ----------
     id: :class:`int`
         The direct message channel ID.
+    me: :class:`ClientUser`
+        The user presenting yourself.
     recipients: Tuple[:class:`User`, ...]
         The users participating in the ephemral direct message channel.
     recipient: :class:`User`
         The user you are participating with in the direct message channel.
-    me: :class:`ClientUser`
-        The user presenting yourself.
     last_message_id: Optional[:class:`int`]
         The last message ID of the message sent to this channel. It may
         *not* point to an existing or valid message.
@@ -1816,9 +2026,9 @@ class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, sla
 
     __slots__ = (
         'id',
+        'me',
         'recipient',
         'recipients',
-        'me',
         'last_message_id',
         'last_pin_timestamp',
         '_message_request',
@@ -1833,20 +2043,20 @@ class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, sla
         recipients_data = data.get('recipients')
         if recipients_data:
             self.recipients: Tuple[User, ...] = tuple(state.store_user(d, dispatch=False) for d in recipients_data)
-            self.recipient: Optional[User] = utils.find(lambda recipient: recipient.id != me.id, self.recipients)
+            self.recipient: Optional[User] = find(lambda recipient: recipient.id != me.id, self.recipients)
         else:
             self.recipients = ()
             self.recipient = None
 
-        self.me: ClientUser = me
         self.id: int = int(data['id'])
+        self.me: ClientUser = me
         self._update(data)
 
     def _update(self, data: DMChannelPayload) -> None:
-        self.last_message_id: Optional[int] = utils._get_as_snowflake(data, 'last_message_id')
-        self.last_pin_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('last_pin_timestamp'))
+        self.last_message_id: Optional[int] = _get_as_snowflake(data, 'last_message_id')
+        self.last_pin_timestamp: Optional[datetime.datetime] = parse_time(data.get('last_pin_timestamp'))
         self._message_request: Optional[bool] = data.get('is_message_request')
-        self._requested_at: Optional[datetime.datetime] = utils.parse_time(data.get('is_message_request_timestamp'))
+        self._requested_at: Optional[datetime.datetime] = parse_time(data.get('is_message_request_timestamp'))
         self._spam: bool = data.get('is_spam', False)
 
     def _get_voice_client_key(self) -> Tuple[int, str]:
@@ -1912,7 +2122,7 @@ class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, sla
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the direct message channel's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def requested_at(self) -> Optional[datetime.datetime]:
@@ -2066,7 +2276,7 @@ class PartialMessageable(slaycord.abc.Messageable, Hashable):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the channel's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     def permissions_for(self, obj: Any = None, /) -> Permissions:
         """Handles permission resolution for a :class:`User`.

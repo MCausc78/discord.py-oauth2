@@ -68,6 +68,7 @@ class _BaseGuildChannel(_BaseChannel):
 
 class PartialChannel(_BaseChannel):
     type: ChannelType
+    name: str
 
 
 class _BaseTextChannel(_BaseGuildChannel, total=False):
@@ -188,11 +189,21 @@ class _BaseDMChannel(_BaseChannel):
     recipients: List[PartialUser]
 
 
+class SafetyWarning(TypedDict):
+    id: str
+    type: Literal[1, 2, 3, 4]
+    expiry: str
+    dismiss_timestamp: Optional[str]
+
+
 class DMChannel(_BaseDMChannel):
     type: Literal[1]
+    flags: NotRequired[int]
+    recipient_flags: NotRequired[int]
     is_message_request: NotRequired[bool]
     is_message_request_timestamp: NotRequired[str]
     is_spam: NotRequired[bool]
+    safety_warnings: NotRequired[List[SafetyWarning]]
 
 
 class EphemeralDMChannel(_BaseDMChannel):
@@ -230,3 +241,7 @@ class StageInstance(TypedDict):
     privacy_level: PrivacyLevel
     discoverable_disabled: bool
     guild_scheduled_event_id: Optional[int]
+
+
+class CallEligibility(TypedDict):
+    ringable: bool

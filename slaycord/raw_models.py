@@ -27,16 +27,20 @@ from __future__ import annotations
 import datetime
 from typing import List, Literal, Optional, Set, TYPE_CHECKING, Union
 
-from .colour import Colour
+from .color import Color
 from .enums import ChannelType, try_enum, ReactionType
 from .presences import RawPresenceUpdateEvent
-from .utils import _get_as_snowflake, MISSING, _RawReprMixin
+from .utils import (
+    MISSING,
+    _RawReprMixin,
+    _get_as_snowflake,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .guild import Guild
-    from .member import Member
+    from .member import VoiceState, Member
     from .message import Message, LobbyMessage
     from .partial_emoji import PartialEmoji
     from .state import ConnectionState
@@ -263,8 +267,8 @@ class RawReactionActionEvent(_RawReprMixin):
         Whether the reaction was a burst reaction, also known as a "super reaction".
 
         .. versionadded:: 2.4
-    burst_colours: List[:class:`Colour`]
-        A list of colours used for burst reaction animation. Only available if ``burst`` is ``True``
+    burst_colors: List[:class:`Color`]
+        A list of colors used for burst reaction animation. Only available if ``burst`` is ``True``
         and if ``event_type`` is ``REACTION_ADD``.
 
         .. versionadded:: 2.0
@@ -284,7 +288,7 @@ class RawReactionActionEvent(_RawReprMixin):
         'member',
         'message_author_id',
         'burst',
-        'burst_colours',
+        'burst_colors',
         'type',
     )
 
@@ -297,17 +301,17 @@ class RawReactionActionEvent(_RawReprMixin):
         self.member: Optional[Member] = None
         self.message_author_id: Optional[int] = _get_as_snowflake(data, 'message_author_id')
         self.burst: bool = data.get('burst', False)
-        self.burst_colours: List[Colour] = [Colour.from_str(c) for c in data.get('burst_colours', ())]
+        self.burst_colors: List[Color] = list(map(Color.from_str, data.get('burst_colors', ())))
         self.type: ReactionType = try_enum(ReactionType, data['type'])
         self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
 
     @property
-    def burst_colors(self) -> List[Colour]:
-        """An alias of :attr:`burst_colours`.
+    def burst_colours(self) -> List[Color]:
+        """An alias of :attr:`burst_colors`.
 
         .. versionadded:: 2.4
         """
-        return self.burst_colours
+        return self.burst_colors
 
 
 class RawReactionClearEvent(_RawReprMixin):
@@ -619,7 +623,7 @@ class RawVoiceChannelStatusUpdateEvent(_RawReprMixin):
     def __init__(self, data: VoiceChannelStatusUpdateEvent):
         self.channel_id: int = int(data['id'])
         self.guild_id: int = int(data['guild_id'])
-        self.status: Optional[str] = data['status'] or None
+        self.status: Optional[str] = data.get('status') or None
         self.cached_status: Optional[str] = MISSING
 
 
@@ -631,9 +635,21 @@ class SupplementalGuild:
     id: :class:`int`
         The guild's ID.
     members: List[:class:`.Member`]
-        The guild's members. May be empty, or partial.
+        The guild's members.
+
+        .. note::
+
+        You must have ``guilds.members.read``
+
     presences: List[:class:`RawPresenceUpdateEvent`]
         The presences for guild members.
+    voice_states: List[:class:`VoiceState`]
+        The guild's voice states.
+
+        .. note::
+
+            You must have ``voice`` OAuth2 scope to receive non-empty value.
+
     underlying: :class:`.Guild`
         The underlying guild.
     """
@@ -642,6 +658,7 @@ class SupplementalGuild:
         'id',
         'members',
         'presences',
+        'voice_states',
         'underlying',
     )
 
@@ -651,11 +668,13 @@ class SupplementalGuild:
         id: int,
         members: List[Member],
         presences: List[RawPresenceUpdateEvent],
+        voice_states: List[VoiceState],
         underlying: Guild,
     ) -> None:
         self.id: int = id
         self.members: List[Member] = members
         self.presences: List[RawPresenceUpdateEvent] = presences
+        self.voice_states: List[VoiceState] = voice_states
         self.underlying: Guild = underlying
 
 

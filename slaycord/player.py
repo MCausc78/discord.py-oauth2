@@ -34,9 +34,8 @@ import subprocess
 import sys
 import time
 import threading
-import warnings
-
 from typing import Any, Callable, Generic, IO, Optional, TYPE_CHECKING, Tuple, TypeVar, Union
+import warnings
 
 from .enums import SpeakingState
 from .errors import ClientException

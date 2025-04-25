@@ -27,10 +27,13 @@ import datetime
 
 from typing import TYPE_CHECKING, Any, Dict, Optional, List, Set, Union, overload, Literal
 
-from . import utils
 from .enums import AutoModRuleTriggerType, AutoModRuleActionType, AutoModRuleEventType, try_enum
 from .flags import AutoModPresets
-from .utils import cached_slot_property
+from .utils import (
+    _get_as_snowflake,
+    _unique,
+    cached_slot_property,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -433,13 +436,13 @@ class AutoModRule:
             if role is not None:
                 result.append(role)
 
-        return utils._unique(result)
+        return _unique(result)
 
     @cached_slot_property('_cs_exempt_channels')
     def exempt_channels(self) -> List[Union[GuildChannel, Thread]]:
         """List[Union[:class:`abc.GuildChannel`, :class:`Thread`]]: The channels that are exempt from this rule."""
         it = filter(None, map(self.guild._resolve_channel, self.exempt_channel_ids))
-        return utils._unique(it)
+        return _unique(it)
 
     @cached_slot_property('_cs_actions')
     def actions(self) -> List[AutoModRuleAction]:
@@ -513,14 +516,14 @@ class AutoModAction:
 
     def __init__(self, *, data: AutoModerationActionExecutionPayload, state: ConnectionState) -> None:
         self._state: ConnectionState = state
-        self.message_id: Optional[int] = utils._get_as_snowflake(data, 'message_id')
+        self.message_id: Optional[int] = _get_as_snowflake(data, 'message_id')
         self.action: AutoModRuleAction = AutoModRuleAction.from_data(data['action'])
         self.rule_id: int = int(data['rule_id'])
         self.rule_trigger_type: AutoModRuleTriggerType = try_enum(AutoModRuleTriggerType, data['rule_trigger_type'])
         self.guild_id: int = int(data['guild_id'])
-        self.channel_id: Optional[int] = utils._get_as_snowflake(data, 'channel_id')
+        self.channel_id: Optional[int] = _get_as_snowflake(data, 'channel_id')
         self.user_id: int = int(data['user_id'])
-        self.alert_system_message_id: Optional[int] = utils._get_as_snowflake(data, 'alert_system_message_id')
+        self.alert_system_message_id: Optional[int] = _get_as_snowflake(data, 'alert_system_message_id')
         self.content: str = data.get('content', '')
         self.matched_keyword: Optional[str] = data['matched_keyword']
         self.matched_content: Optional[str] = data.get('matched_content')

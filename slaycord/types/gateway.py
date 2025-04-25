@@ -50,7 +50,7 @@ from .sticker import GuildSticker
 from .subscription import Subscription
 from .threads import Thread, ThreadMember
 from .user import User, AvatarDecorationData, RelationshipType, Relationship, GameRelationshipType, GameRelationship
-from .voice import GuildVoiceState
+from .voice import GuildVoiceState, VoiceState
 
 
 class SessionStartLimit(TypedDict):
@@ -67,6 +67,11 @@ class Gateway(TypedDict):
 class GatewayBot(Gateway):
     shards: int
     session_start_limit: SessionStartLimit
+
+
+class CreateHeadlessSessionResponse(TypedDict):
+    activities: List[Activity]
+    token: str
 
 
 class GatewayFeatureFlags(TypedDict):
@@ -95,6 +100,7 @@ class ReadyEvent(TypedDict):
 
 class SupplementalGuild(TypedDict):
     id: int
+    voice_states: NotRequired[List[GuildVoiceState]]
 
 
 class ClientInfo(TypedDict):
@@ -108,7 +114,9 @@ class Session(TypedDict):
     active: NotRequired[bool]
     client_info: ClientInfo
     status: StatusType
-    activities: List[Activity]
+    # Not truly not required, just for sanity
+    activities: NotRequired[List[Activity]]
+    hidden_activities: NotRequired[List[Activity]]
 
 
 class MergedPresences(TypedDict):
@@ -399,7 +407,8 @@ class GuildSoundBoardSoundDeleteEvent(TypedDict):
 
 class VoiceServerUpdateEvent(TypedDict):
     token: str
-    guild_id: Snowflake
+    guild_id: Optional[Snowflake]
+    channel_id: NotRequired[Snowflake]
     endpoint: Optional[str]
 
 
@@ -448,6 +457,30 @@ class PollVoteActionEvent(TypedDict):
 
 SubscriptionCreateEvent = SubscriptionUpdateEvent = SubscriptionDeleteEvent = Subscription
 
+
+class CallCreateEvent(TypedDict):
+    channel_id: Snowflake
+    message_id: Snowflake
+    embedded_activities: List[dict]
+    region: str
+    ringing: List[Snowflake]
+    voice_states: List[VoiceState]
+    unavailable: NotRequired[bool]
+
+
+class CallUpdateEvent(TypedDict):
+    channel_id: Snowflake
+    guild_id: Optional[Snowflake]  # ???
+    message_id: Snowflake
+    region: str
+    ringing: List[Snowflake]
+
+
+class CallDeleteEvent(TypedDict):
+    channel_id: Snowflake
+    unavailable: NotRequired[bool]
+
+
 LobbyCreateEvent = LobbyUpdateEvent = Lobby
 
 
@@ -470,6 +503,11 @@ class LobbyMemberConnectEvent(TypedDict):
     lobby_id: Snowflake
 
 
+class LobbyMemberDisconnectEvent(TypedDict):
+    member: LobbyMember
+    lobby_id: Snowflake
+
+
 LobbyMessageCreateEvent = LobbyMessage
 
 
@@ -479,7 +517,21 @@ class LobbyMessageDeleteEvent(TypedDict):
 
 
 LobbyMessageUpdateEvent = LobbyMessageCreateEvent
+
+
+class LobbyVoiceServerUpdateEvent(TypedDict):
+    token: str
+    lobby_id: Snowflake
+    endpoint: Optional[str]
+
+
 LobbyVoiceStateUpdateEvent = LobbyVoiceState
+
+
+class UpdateLobbyVoiceState(TypedDict):
+    lobby_id: Snowflake
+    self_mute: bool
+    self_deaf: bool
 
 
 class RelationshipAddEvent(Relationship):

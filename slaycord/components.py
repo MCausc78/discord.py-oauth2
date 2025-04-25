@@ -28,7 +28,7 @@ from typing import ClassVar, List, Literal, Optional, TYPE_CHECKING, Tuple, Unio
 
 from .enums import try_enum, ComponentType, ButtonStyle, TextStyle, ChannelType, SelectDefaultValueType
 from .partial_emoji import PartialEmoji, _EmojiTag
-from .utils import get_slots, MISSING
+from .utils import MISSING, get_slots
 
 if TYPE_CHECKING:
     from typing_extensions import Self

@@ -51,12 +51,18 @@ from urllib.parse import quote as _uriquote
 import aiohttp
 from multidict import CIMultiDict
 
-from . import __version__, utils
+from . import __version__
 from .errors import HTTPException, RateLimited, Forbidden, NotFound, LoginFailure, DiscordServerError, GatewayNotFound
 from .file import File
 from .gateway import DiscordClientWebSocketResponse
 from .mentions import AllowedMentions
-from .utils import MISSING
+from .utils import (
+    MISSING,
+    _from_json,
+    _to_json,
+    snowflake_time,
+    utcnow,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -72,9 +78,11 @@ if TYPE_CHECKING:
     from .poll import Poll
 
     from .types import (
+        activity,
         channel,
         command,
         connections,
+        gateway,
         guild,
         invite,
         lobby,
@@ -87,7 +95,6 @@ if TYPE_CHECKING:
         user,
         widget,
     )
-    from .types.gateway import SessionStartLimit
     from .types.snowflake import Snowflake, SnowflakeList
 
     T = TypeVar('T')
@@ -99,7 +106,7 @@ async def json_or_text(response: aiohttp.ClientResponse) -> Union[Dict[str, Any]
     text = await response.text(encoding='utf-8')
     try:
         if response.headers['content-type'] == 'application/json':
-            return utils._from_json(text)
+            return _from_json(text)
     except KeyError:
         # Thanks Cloudflare
         pass
@@ -261,7 +268,7 @@ def handle_message_parameters(
 
     multipart = []
     if files:
-        multipart.append({'name': 'payload_json', 'value': utils._to_json(payload)})
+        multipart.append({'name': 'payload_json', 'value': _to_json(payload)})
         payload = None
         for index, file in enumerate(files):
             multipart.append(
@@ -626,7 +633,7 @@ class HTTPClient:
         # some checking if it's a JSON request
         if 'json' in kwargs:
             headers['Content-Type'] = 'application/json'
-            kwargs['data'] = utils._to_json(kwargs.pop('json'))
+            kwargs['data'] = _to_json(kwargs.pop('json'))
 
         try:
             reason = kwargs.pop('reason')
@@ -947,7 +954,7 @@ class HTTPClient:
         # Special case certain sub-rate limits
         # https://github.com/discord/discord-api-docs/issues/1092
         # https://github.com/discord/discord-api-docs/issues/1295
-        difference = utils.utcnow() - utils.snowflake_time(int(message_id))
+        difference = utcnow() - snowflake_time(int(message_id))
         metadata: Optional[str] = None
         if difference <= datetime.timedelta(seconds=10):
             metadata = 'sub-10-seconds'
@@ -968,7 +975,7 @@ class HTTPClient:
         # Special case certain sub-rate limits
         # https://github.com/discord/discord-api-docs/issues/1092
         # https://github.com/discord/discord-api-docs/issues/1295
-        difference = utils.utcnow() - utils.snowflake_time(int(message_id))
+        difference = utcnow() - snowflake_time(int(message_id))
         metadata: Optional[str] = None
         if difference <= datetime.timedelta(seconds=10):
             metadata = 'sub-10-seconds'
@@ -1435,6 +1442,21 @@ class HTTPClient:
 
         return self.request(route, json=payload)
 
+    def get_ringability(self, channel_id: Snowflake) -> Response[channel.CallEligibility]:
+        return self.request(Route('GET', '/channels/{channel_id}/call', channel_id=channel_id))
+
+    def ring(self, channel_id: Snowflake, *recipients: Snowflake) -> Response[None]:
+        payload = {'recipients': recipients or None}
+        return self.request(Route('POST', '/channels/{channel_id}/call/ring', channel_id=channel_id), json=payload)
+
+    def stop_ringing(self, channel_id: Snowflake, *recipients: Snowflake) -> Response[None]:
+        payload = {'recipients': recipients}
+        return self.request(Route('POST', '/channels/{channel_id}/call/stop-ringing', channel_id=channel_id), json=payload)
+
+    def change_call_voice_region(self, channel_id: int, voice_region: str) -> Response[None]:
+        payload = {'region': voice_region}
+        return self.request(Route('PATCH', '/channels/{channel_id}/call', channel_id=channel_id), json=payload)
+
     # Relationships
 
     def get_relationships(self, *, with_implicit: Optional[bool] = None) -> Response[List[user.Relationship]]:
@@ -1506,19 +1528,61 @@ class HTTPClient:
         # TODO: POST /external/science
         return self.request(Route('POST', '/science'), json=payload)
 
+    def create_headless_session(
+        self,
+        activities: List[activity.Activity],
+        *,
+        token: Optional[str] = None,
+    ) -> Response[gateway.CreateHeadlessSessionResponse]:
+        payload: Dict[str, Any] = {
+            'activities': activities,
+        }
+        if token is not None:
+            payload['token'] = token
+
+        route = Route('POST', '/users/@me/headless-sessions')
+        return self.request(route, json=payload)
+
+    def delete_headless_session(self, token: str) -> Response[None]:
+        payload = {'token': token}
+        return self.request(Route('POST', '/users/@me/headless-sessions/delete'), json=payload)
+
+    def get_activity_secret(
+        self,
+        user_id: Snowflake,
+        session_id: str,
+        application_id: Snowflake,
+        activity_action_type: Literal[1],
+        *,
+        channel_id: Optional[Snowflake] = None,
+        message_id: Optional[Snowflake] = None,
+    ) -> Response[Dict[Literal['secret'], str]]:
+        # Usable in OAuth2 context, unsure what scopes it requires however (perhaps activities.read?)
+        params = {}
+        if channel_id is not None:
+            params['channel_id'] = channel_id
+        if message_id is not None:
+            params['message_id'] = message_id
+        route = Route(
+            'GET',
+            '/users/{user_id}/sessions/{session_id}/activities/{application_id}/{activity_action_type}',
+            user_id=user_id,
+            session_id=session_id,
+            application_id=application_id,
+            activity_action_type=activity_action_type,
+        )
+        return self.request(route, params=params)
+
     def get_connections(self) -> Response[list[connections.Connection]]:
         return self.request(Route('GET', '/users/@me/connections'))
 
     def modify_user_settings(self, /, **payload) -> Response[settings.UserSettings]:
         return self.request(Route('PATCH', '/users/@me/settings'), json=payload)
 
-    async def get_bot_gateway(self) -> Tuple[int, str, SessionStartLimit]:
+    async def get_bot_gateway(self) -> Tuple[int, str, gateway.SessionStartLimit]:
         try:
             data = await self.request(Route('GET', '/gateway/bot'))
         except HTTPException as exc:
             raise GatewayNotFound() from exc
 
         return data['shards'], data['url'], data['session_start_limit']
-
-    def get_user(self, user_id: Snowflake) -> Response[user.User]:
-        return self.request(Route('GET', '/users/{user_id}', user_id=user_id))

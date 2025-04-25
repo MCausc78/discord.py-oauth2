@@ -29,10 +29,10 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 import slaycord.abc
 
 from .asset import Asset
-from .colour import Colour
+from .color import Color
 from .enums import try_enum, DefaultAvatar, PremiumType, RelationshipType
 from .flags import PublicUserFlags
-from .utils import snowflake_time, MISSING, _get_as_snowflake
+from .utils import MISSING, _get_as_snowflake, snowflake_time
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -42,11 +42,17 @@ if TYPE_CHECKING:
     from .channel import DMChannel, EphemeralDMChannel
     from .game_relationship import GameRelationship
     from .guild import Guild
+    from .member import VoiceState
     from .message import Message
     from .relationship import Relationship
     from .state import ConnectionState
     from .types.channel import DMChannel as DMChannelPayload
-    from .types.user import PartialUser as PartialUserPayload, User as UserPayload, AvatarDecorationData
+    from .types.user import (
+        PartialUser as PartialUserPayload,
+        User as UserPayload,
+        AvatarDecorationData as AvatarDecorationDataPayload,
+        PrimaryUserGuild as PrimaryUserGuildPayload,
+    )
 
 
 __all__ = (
@@ -60,6 +66,75 @@ class _UserTag:
     id: int
 
 
+class PrimaryUserGuild:
+    """Represents a partial primary guild accessible via a user.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two primary user guilds are equal.
+
+        .. describe:: x != y
+
+            Checks if two primary user guilds are not equal.
+
+
+    Attributes
+    ----------
+    enabled: :class:`bool`
+        Whether the user is displaying their clan tag.
+    guild_id: Optional[:class:`int`]
+        The guild ID the clan is from.
+        .. note::
+            This will be ``None`` if :attr:`.enabled` is ``False``.
+    tag: Optional[:class:`str`]
+        The clan tag.
+        .. note::
+            This will be ``None`` if :attr:`.enabled` is ``False``.
+    """
+
+    __slots__ = (
+        '_state',
+        'guild_id',
+        'enabled',
+        'tag',
+        '_badge_hash',
+    )
+
+    def __init__(self, *, data: PrimaryUserGuildPayload, state: ConnectionState) -> None:
+        self._state: ConnectionState = state
+        self.guild_id: Optional[int] = _get_as_snowflake(data, 'identity_guild_id')
+        self.enabled: bool = data['identity_enabled']
+        self.tag: Optional[str] = data.get('tag')
+        self._badge_hash: Optional[str] = data.get('badge')
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__) and self.tag == other.tag and self.guild_id == other.guild_id
+
+    def __ne__(self, other: object) -> bool:
+        return not self.__eq__(other)
+
+    def __repr__(self) -> str:
+        return f'<PrimaryUserGuild enabled={self.enabled} guild_id={self.guild_id} tag={self.tag!r}>'
+
+    @property
+    def guild(self) -> Optional[Guild]:
+        """Optional[:class:`Guild`]: Returns the cached primary guild."""
+        return self._state._get_guild(self.guild_id)
+
+    @property
+    def badge(self) -> Optional[Asset]:
+        """Optional[:class:`Asset`]: Returns the primary guild badge asset.
+
+        .. note::
+            This will be ``None`` if :attr:`.enabled` is ``False``.
+        """
+        if self._badge_hash is None or self.guild_id is None:
+            return None
+        return Asset._from_clan_badge(self._state, self.guild_id, self._badge_hash)
+
+
 class BaseUser(_UserTag):
     __slots__ = (
         'name',
@@ -68,12 +143,13 @@ class BaseUser(_UserTag):
         'global_name',
         '_avatar',
         '_banner',
-        '_accent_colour',
+        '_accent_color',
         'bot',
         'system',
         '_public_flags',
         '_state',
         '_avatar_decoration_data',
+        'primary_guild',
     )
 
     if TYPE_CHECKING:
@@ -86,9 +162,10 @@ class BaseUser(_UserTag):
         _state: ConnectionState
         _avatar: Optional[str]
         _banner: Optional[str]
-        _accent_colour: Optional[int]
+        _accent_color: Optional[int]
         _public_flags: int
-        _avatar_decoration_data: Optional[AvatarDecorationData]
+        _avatar_decoration_data: Optional[AvatarDecorationDataPayload]
+        primary_guild: Optional[PrimaryUserGuild]
 
     def __init__(self, *, state: ConnectionState, data: Union[UserPayload, PartialUserPayload]) -> None:
         self._state = state
@@ -115,29 +192,34 @@ class BaseUser(_UserTag):
         return self.id >> 22
 
     def _update(self, data: Union[UserPayload, PartialUserPayload]) -> None:
-        self.name = data['username']
         self.id = int(data['id'])
+        self.name = data['username']
         self.discriminator = data['discriminator']
         self.global_name = data.get('global_name')
         self._avatar = data['avatar']
-        self._banner = data.get('banner', None)
-        self._accent_colour = data.get('accent_color', None)
+        self._banner = data.get('banner')
+        self._accent_color = data.get('accent_color')
         self._public_flags = data.get('public_flags', 0)
         self.bot = data.get('bot', False)
         self.system = data.get('system', False)
         self._avatar_decoration_data = data.get('avatar_decoration_data')
 
+        primary_guild_data = data.get('primary_guild')
+        self.primary_guild = (
+            None if primary_guild_data is None else PrimaryUserGuild(data=primary_guild_data, state=self._state)
+        )
+
     @classmethod
     def _copy(cls, user: Self) -> Self:
         self = cls.__new__(cls)  # bypass __init__
 
-        self.name = user.name
         self.id = user.id
+        self.name = user.name
         self.discriminator = user.discriminator
         self.global_name = user.global_name
         self._avatar = user._avatar
         self._banner = user._banner
-        self._accent_colour = user._accent_colour
+        self._accent_color = user._accent_color
         self.bot = user.bot
         self._state = user._state
         self._public_flags = user._public_flags
@@ -146,14 +228,22 @@ class BaseUser(_UserTag):
         return self
 
     def _to_minimal_user_json(self) -> Dict[str, Any]:
-        return {
-            'username': self.name,
+        payload: Dict[str, Any] = {
             'id': self.id,
-            'avatar': self._avatar,
+            'username': self.name,
             'discriminator': self.discriminator,
+            'avatar': self._avatar,
+            'banner': self._banner,
+            'accent_color': self._accent_color,
             'global_name': self.global_name,
             'bot': self.bot,
         }
+        return payload
+
+    @property
+    def voice(self) -> Optional[VoiceState]:
+        """Optional[:class:`VoiceState`]: Returns the user's current voice state."""
+        return self._state._voice_state_for(self.id)
 
     @property
     def public_flags(self) -> PublicUserFlags:
@@ -230,27 +320,8 @@ class BaseUser(_UserTag):
         return Asset._from_user_banner(self._state, self.id, self._banner)
 
     @property
-    def accent_colour(self) -> Optional[Colour]:
-        """Optional[:class:`Colour`]: Returns the user's accent colour, if applicable.
-
-        A user's accent colour is only shown if they do not have a banner.
-        This will only be available if the user explicitly sets a colour.
-
-        There is an alias for this named :attr:`accent_color`.
-
-        .. versionadded:: 2.0
-
-        .. note::
-
-            This information is only available via :meth:`Client.fetch_user`.
-        """
-        if self._accent_colour is None:
-            return None
-        return Colour(self._accent_colour)
-
-    @property
-    def accent_color(self) -> Optional[Colour]:
-        """Optional[:class:`Colour`]: Returns the user's accent color, if applicable.
+    def accent_color(self) -> Optional[Color]:
+        """Optional[:class:`Color`]: Returns the user's accent color, if applicable.
 
         A user's accent color is only shown if they do not have a banner.
         This will only be available if the user explicitly sets a color.
@@ -263,25 +334,44 @@ class BaseUser(_UserTag):
 
             This information is only available via :meth:`Client.fetch_user`.
         """
-        return self.accent_colour
+        if self._accent_color is None:
+            return None
+        return Color(self._accent_color)
 
     @property
-    def colour(self) -> Colour:
-        """:class:`Colour`: A property that returns a colour denoting the rendered colour
-        for the user. This always returns :meth:`Colour.default`.
+    def accent_colour(self) -> Optional[Color]:
+        """Optional[:class:`Color`]: Returns the user's accent colour, if applicable.
 
-        There is an alias for this named :attr:`color`.
+        A user's accent colour is only shown if they do not have a banner.
+        This will only be available if the user explicitly sets a colour.
+
+        There is an alias for this named :attr:`accent_color`.
+
+        .. versionadded:: 2.0
+
+        .. note::
+
+            This information is only available via :meth:`Client.fetch_user`.
         """
-        return Colour.default()
+        return self.accent_color
 
     @property
-    def color(self) -> Colour:
-        """:class:`Colour`: A property that returns a color denoting the rendered color
-        for the user. This always returns :meth:`Colour.default`.
+    def color(self) -> Color:
+        """:class:`Color`: A property that returns a color denoting the rendered color
+        for the user. This always returns :meth:`Color.default`.
 
         There is an alias for this named :attr:`colour`.
         """
-        return self.colour
+        return Color.default()
+
+    @property
+    def colour(self) -> Color:
+        """:class:`Colour`: A property that returns a colour denoting the rendered colour
+        for the user. This always returns :meth:`Colour.default`.
+
+        This is an alias of :attr:`color`.
+        """
+        return self.color
 
     @property
     def mention(self) -> str:
@@ -406,6 +496,8 @@ class ClientUser(BaseUser):
 
         .. versionadded:: 1.3
 
+    primary_guild: Optional[:class:`PrimaryUserGuild`]
+        The primary guild the user is frequently participates in.
     verified: :class:`bool`
         Specifies if the user's email is verified.
     email: Optional[:class:`str`]
@@ -539,6 +631,8 @@ class User(BaseUser, slaycord.abc.Messageable):
         Specifies if the user is a bot account.
     system: :class:`bool`
         Specifies if the user is a system user (i.e. represents Discord officially).
+    primary_guild: Optional[:class:`PrimaryUserGuild`]
+        The primary guild the user is frequently participates in.
     """
 
     __slots__ = ('__weakref__',)

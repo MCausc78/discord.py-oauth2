@@ -34,7 +34,7 @@ from .enums import ChannelType, try_enum
 from .flags import ChannelFlags
 from .mixins import Hashable
 from .permissions import Permissions
-from .utils import parse_time, _get_as_snowflake
+from .utils import _get_as_snowflake, parse_time
 
 __all__ = (
     'Thread',
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from .channel import TextChannel, CategoryChannel, ForumChannel, ForumTag
     from .guild import Guild
     from .member import Member
-    from .message import Message  # , PartialMessage
+    from .message import Message
     from .role import Role
     from .state import ConnectionState
     from .types.threads import (

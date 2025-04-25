@@ -44,8 +44,8 @@ from typing import (
     Union,
 )
 
-from . import utils
 from .asset import Asset
+from .calls import CallMessage
 from .channel import PartialMessageable
 from .components import _component_factory
 from .embeds import Embed
@@ -63,7 +63,20 @@ from .poll import Poll
 from .reaction import Reaction
 from .sticker import StickerItem
 from .threads import Thread
-from .utils import escape_mentions, MISSING, deprecated
+from .utils import (
+    MISSING,
+    _base64_to_bytes,
+    _get_as_snowflake,
+    _unique,
+    cached_slot_property,
+    deprecated,
+    escape_mentions,
+    find,
+    format_dt,
+    get,
+    parse_time,
+    snowflake_time,
+)
 
 
 if TYPE_CHECKING:
@@ -116,7 +129,6 @@ __all__ = (
     'MessageApplication',
     'RoleSubscriptionInfo',
     'MessageInteractionMetadata',
-    'CallMessage',
     'GuildProductPurchase',
     'PurchaseNotification',
 )
@@ -241,7 +253,7 @@ class Attachment(Hashable):
         self.title: Optional[str] = data.get('title')
 
         waveform = data.get('waveform')
-        self.waveform: Optional[bytes] = utils._base64_to_bytes(waveform) if waveform is not None else None
+        self.waveform: Optional[bytes] = _base64_to_bytes(waveform) if waveform is not None else None
 
         self._flags: int = data.get('flags', 0)
 
@@ -524,8 +536,8 @@ class MessageSnapshot:
         self.content: str = data['content']
         self.embeds: List[Embed] = list(map(Embed.from_dict, data.get('embeds', ())))
         self.attachments: List[Attachment] = [Attachment(data=a, state=state) for a in data.get('attachments', ())]
-        self.created_at: datetime.datetime = utils.parse_time(data['timestamp'])
-        self._edited_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('edited_timestamp'))
+        self.created_at: datetime.datetime = parse_time(data['timestamp'])
+        self._edited_timestamp: Optional[datetime.datetime] = parse_time(data.get('edited_timestamp'))
         self.flags: MessageFlags = MessageFlags._from_value(data.get('flags', 0))
         self.stickers: List[StickerItem] = [StickerItem(data=d, state=state) for d in data.get('sticker_items', ())]
 
@@ -541,7 +553,7 @@ class MessageSnapshot:
         name = self.__class__.__name__
         return f'<{name} type={self.type!r} created_at={self.created_at!r} flags={self.flags!r}>'
 
-    @utils.cached_slot_property('_cs_raw_mentions')
+    @cached_slot_property('_cs_raw_mentions')
     def raw_mentions(self) -> List[int]:
         """List[:class:`int`]: A property that returns an array of user IDs matched with
         the syntax of ``<@user_id>`` in the message content.
@@ -551,26 +563,26 @@ class MessageSnapshot:
         """
         return [int(x) for x in re.findall(r'<@!?([0-9]{15,20})>', self.content)]
 
-    @utils.cached_slot_property('_cs_raw_channel_mentions')
+    @cached_slot_property('_cs_raw_channel_mentions')
     def raw_channel_mentions(self) -> List[int]:
         """List[:class:`int`]: A property that returns an array of channel IDs matched with
         the syntax of ``<#channel_id>`` in the message content.
         """
         return [int(x) for x in re.findall(r'<#([0-9]{15,20})>', self.content)]
 
-    @utils.cached_slot_property('_cs_raw_role_mentions')
+    @cached_slot_property('_cs_raw_role_mentions')
     def raw_role_mentions(self) -> List[int]:
         """List[:class:`int`]: A property that returns an array of role IDs matched with
         the syntax of ``<@&role_id>`` in the message content.
         """
         return [int(x) for x in re.findall(r'<@&([0-9]{15,20})>', self.content)]
 
-    @utils.cached_slot_property('_cs_cached_message')
+    @cached_slot_property('_cs_cached_message')
     def cached_message(self) -> Optional[Message]:
         """Optional[:class:`Message`]: Returns the cached message this snapshot points to, if any."""
         state = self._state
         return (
-            utils.find(
+            find(
                 lambda m: (
                     m.created_at == self.created_at
                     and m.edited_at == self.edited_at
@@ -657,9 +669,9 @@ class MessageReference:
     def with_state(cls, state: ConnectionState, data: MessageReferencePayload) -> Self:
         self = cls.__new__(cls)
         self.type = try_enum(MessageReferenceType, data.get('type', 0))
-        self.message_id = utils._get_as_snowflake(data, 'message_id')
+        self.message_id = _get_as_snowflake(data, 'message_id')
         self.channel_id = int(data['channel_id'])
-        self.guild_id = utils._get_as_snowflake(data, 'guild_id')
+        self.guild_id = _get_as_snowflake(data, 'guild_id')
         self.fail_if_not_exists = data.get('fail_if_not_exists', True)
         self._state = state
         self.resolved = None
@@ -795,7 +807,7 @@ class MessageInteraction(Hashable):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: The interaction's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
 
 class MessageInteractionMetadata(Hashable):
@@ -905,7 +917,7 @@ class MessageInteractionMetadata(Hashable):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: The interaction's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def original_response_message(self) -> Optional[Message]:
@@ -1005,53 +1017,6 @@ class MessageApplication:
                 state=self._state, object_id=self.id, icon_hash=self._cover_image, asset_type='cover_image'
             )
         return None
-
-
-class CallMessage:
-    """Represents a message's call data in a private channel from a :class:`~slaycord.Message`.
-
-    .. versionadded:: 2.5
-
-    Attributes
-    ----------
-    ended_timestamp: Optional[:class:`datetime.datetime`]
-        The timestamp the call has ended.
-    participants: List[:class:`User`]
-        A list of users that participated in the call.
-    participant_ids: List[:class:`int`]
-        A list of IDs of users that participated in the call.
-    """
-
-    __slots__ = ('_message', 'ended_timestamp', 'participants', 'participant_ids')
-
-    def __repr__(self) -> str:
-        return f'<CallMessage participants={self.participants!r}>'
-
-    def __init__(self, *, state: ConnectionState, message: Message, data: CallMessagePayload):
-        self._message: Message = message
-        self.ended_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('ended_timestamp'))
-        self.participants: List[User] = []
-        self.participant_ids: List[int] = list(map(int, data['participants']))
-
-        for user_id in self.participant_ids:
-            if user_id == self._message.author.id:
-                self.participants.append(self._message.author)  # type: ignore # can't be a Member here
-            else:
-                user = state.get_user(user_id)
-                if user is not None:
-                    self.participants.append(user)
-
-    @property
-    def duration(self) -> datetime.timedelta:
-        """:class:`datetime.timedelta`: The duration the call has lasted or is already ongoing."""
-        if self.ended_timestamp is None:
-            return utils.utcnow() - self._message.created_at
-        else:
-            return self.ended_timestamp - self._message.created_at
-
-    def is_ended(self) -> bool:
-        """:class:`bool`: Whether the call is ended or not."""
-        return self.ended_timestamp is not None
 
 
 class RoleSubscriptionInfo:
@@ -1219,7 +1184,7 @@ class PartialMessage(Hashable):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: The partial message's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def jump_url(self) -> str:
@@ -1659,12 +1624,12 @@ class Message(PartialMessage, Hashable):
         self.channel: MessageableChannel = channel
         self.id: int = int(data['id'])
         self._state: ConnectionState = state
-        self.webhook_id: Optional[int] = utils._get_as_snowflake(data, 'webhook_id')
+        self.webhook_id: Optional[int] = _get_as_snowflake(data, 'webhook_id')
         self.reactions: List[Reaction] = [Reaction(message=self, data=d) for d in data.get('reactions', ())]
         self.attachments: List[Attachment] = [Attachment(data=a, state=self._state) for a in data.get('attachments', ())]
         self.embeds: List[Embed] = [Embed.from_dict(a) for a in data.get('embeds', ())]
         self.activity: Optional[MessageActivityPayload] = data.get('activity')
-        self._edited_timestamp: Optional[datetime.datetime] = utils.parse_time(data.get('edited_timestamp'))
+        self._edited_timestamp: Optional[datetime.datetime] = parse_time(data.get('edited_timestamp'))
         self.type: MessageType = try_enum(MessageType, data.get('type', 0))
         self.pinned: bool = data.get('pinned', False)
         self.flags: MessageFlags = MessageFlags._from_value(data.get('flags', 0))
@@ -1673,7 +1638,7 @@ class Message(PartialMessage, Hashable):
         self.content: str = data['content']
         self.nonce: Optional[Union[int, str]] = data.get('nonce')
         self.position: Optional[int] = data.get('position')
-        self.application_id: Optional[int] = utils._get_as_snowflake(data, 'application_id')
+        self.application_id: Optional[int] = _get_as_snowflake(data, 'application_id')
         self.stickers: List[StickerItem] = [StickerItem(data=d, state=state) for d in data.get('sticker_items', ())]
         self.message_snapshots: List[MessageSnapshot] = MessageSnapshot._from_value(state, data.get('message_snapshots'))
 
@@ -1688,7 +1653,7 @@ class Message(PartialMessage, Hashable):
             # if the channel doesn't have a guild attribute, we handle that
             self.guild = channel.guild
         except AttributeError:
-            self.guild = state._get_guild(utils._get_as_snowflake(data, 'guild_id'))
+            self.guild = state._get_guild(_get_as_snowflake(data, 'guild_id'))
 
         self._thread: Optional[Thread] = None
 
@@ -1788,7 +1753,7 @@ class Message(PartialMessage, Hashable):
             self.disclosure_type = try_enum(ApplicationDisclosureType, disclosure_type)
 
         self.metadata: Optional[Dict[str, str]] = data.get('metadata')
-        self.recipient_id: Optional[int] = utils._get_as_snowflake(data, 'recipient_id')
+        self.recipient_id: Optional[int] = _get_as_snowflake(data, 'recipient_id')
 
         for handler in ('author', 'member', 'mentions', 'mention_roles', 'components', 'call'):
             try:
@@ -1814,7 +1779,7 @@ class Message(PartialMessage, Hashable):
                 setattr(self, key, transform(value))
 
     def _add_reaction(self, data, emoji, user_id) -> Reaction:
-        reaction = utils.find(lambda r: r.emoji == emoji, self.reactions)
+        reaction = find(lambda r: r.emoji == emoji, self.reactions)
         is_me = data['me'] = user_id == self._state.self_id
 
         if reaction is None:
@@ -1828,7 +1793,7 @@ class Message(PartialMessage, Hashable):
         return reaction
 
     def _remove_reaction(self, data: MessageReactionRemoveEvent, emoji: EmojiInputType, user_id: int) -> Reaction:
-        reaction = utils.find(lambda r: r.emoji == emoji, self.reactions)
+        reaction = find(lambda r: r.emoji == emoji, self.reactions)
 
         if reaction is None:
             # Already removed?
@@ -1878,7 +1843,7 @@ class Message(PartialMessage, Hashable):
                 pass
 
     def _handle_edited_timestamp(self, value: str) -> None:
-        self._edited_timestamp = utils.parse_time(value)
+        self._edited_timestamp = parse_time(value)
 
     def _handle_pinned(self, value: bool) -> None:
         self.pinned = value
@@ -1978,7 +1943,11 @@ class Message(PartialMessage, Hashable):
     def _handle_call(self, data: CallMessagePayload):
         self.call: Optional[CallMessage]
         if data is not None:
-            self.call = CallMessage(state=self._state, message=self, data=data)
+            self.call = CallMessage(
+                message=self,
+                participant_ids=list(map(int, data['participants'])),
+                ended_timestamp=parse_time(data.get('ended_timestamp')),
+            )
         else:
             self.call = None
 
@@ -1990,7 +1959,7 @@ class Message(PartialMessage, Hashable):
         self.guild = new_guild
         self.channel = new_channel  # type: ignore # Not all "GuildChannel" are messageable at the moment
 
-    @utils.cached_slot_property('_cs_raw_mentions')
+    @cached_slot_property('_cs_raw_mentions')
     def raw_mentions(self) -> List[int]:
         """List[:class:`int`]: A property that returns an array of user IDs matched with
         the syntax of ``<@user_id>`` in the message content.
@@ -2000,28 +1969,28 @@ class Message(PartialMessage, Hashable):
         """
         return [int(x) for x in re.findall(r'<@!?([0-9]{15,20})>', self.content)]
 
-    @utils.cached_slot_property('_cs_raw_channel_mentions')
+    @cached_slot_property('_cs_raw_channel_mentions')
     def raw_channel_mentions(self) -> List[int]:
         """List[:class:`int`]: A property that returns an array of channel IDs matched with
         the syntax of ``<#channel_id>`` in the message content.
         """
         return [int(x) for x in re.findall(r'<#([0-9]{15,20})>', self.content)]
 
-    @utils.cached_slot_property('_cs_raw_role_mentions')
+    @cached_slot_property('_cs_raw_role_mentions')
     def raw_role_mentions(self) -> List[int]:
         """List[:class:`int`]: A property that returns an array of role IDs matched with
         the syntax of ``<@&role_id>`` in the message content.
         """
         return [int(x) for x in re.findall(r'<@&([0-9]{15,20})>', self.content)]
 
-    @utils.cached_slot_property('_cs_channel_mentions')
+    @cached_slot_property('_cs_channel_mentions')
     def channel_mentions(self) -> List[Union[GuildChannel, Thread]]:
         if self.guild is None:
             return []
         it = filter(None, map(self.guild._resolve_channel, self.raw_channel_mentions))
-        return utils._unique(it)
+        return _unique(it)
 
-    @utils.cached_slot_property('_cs_clean_content')
+    @cached_slot_property('_cs_clean_content')
     def clean_content(self) -> str:
         """:class:`str`: A property that returns the content in a "cleaned up"
         manner. This basically means that mentions are transformed
@@ -2041,11 +2010,11 @@ class Message(PartialMessage, Hashable):
         if self.guild:
 
             def resolve_member(id: int) -> str:
-                m = self.guild.get_member(id) or utils.get(self.mentions, id=id)  # type: ignore
+                m = self.guild.get_member(id) or get(self.mentions, id=id)  # type: ignore
                 return f'@{m.display_name}' if m else '@deleted-user'
 
             def resolve_role(id: int) -> str:
-                r = self.guild.get_role(id) or utils.get(self.role_mentions, id=id)  # type: ignore
+                r = self.guild.get_role(id) or get(self.role_mentions, id=id)  # type: ignore
                 return f'@{r.name}' if r else '@deleted-role'
 
             def resolve_channel(id: int) -> str:
@@ -2055,7 +2024,7 @@ class Message(PartialMessage, Hashable):
         else:
 
             def resolve_member(id: int) -> str:
-                m = utils.get(self.mentions, id=id)
+                m = get(self.mentions, id=id)
                 return f'@{m.display_name}' if m else '@deleted-user'
 
             def resolve_role(id: int) -> str:
@@ -2084,7 +2053,7 @@ class Message(PartialMessage, Hashable):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: The message's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def edited_at(self) -> Optional[datetime.datetime]:
@@ -2134,7 +2103,7 @@ class Message(PartialMessage, Hashable):
             MessageType.poll_result,
         )
 
-    @utils.cached_slot_property('_cs_system_content')
+    @cached_slot_property('_cs_system_content')
     def system_content(self) -> str:
         r""":class:`str`: A property that returns the content that is rendered
         regardless of the :attr:`Message.type`.
@@ -2274,8 +2243,8 @@ class Message(PartialMessage, Hashable):
             return f'{self.author.name} changed Stage topic: **{self.content}**.'
 
         if self.type is MessageType.guild_incident_alert_mode_enabled:
-            dt = utils.parse_time(self.content)
-            dt_content = utils.format_dt(dt)
+            dt = parse_time(self.content)
+            dt_content = format_dt(dt)
             return f'{self.author.name} enabled security actions until {dt_content}.'
 
         if self.type is MessageType.guild_incident_alert_mode_disabled:
@@ -2292,7 +2261,7 @@ class Message(PartialMessage, Hashable):
             missed = self._state.user not in self.call.participants  # type: ignore # call can't be None here
 
             if call_ended:
-                duration = utils._format_call_duration(self.call.duration)  # type: ignore # call can't be None here
+                duration = _format_call_duration(self.call.duration)  # type: ignore # call can't be None here
                 if missed:
                     return 'You missed a call from {0.author.name} that lasted {1}.'.format(self, duration)
                 else:
@@ -2310,7 +2279,7 @@ class Message(PartialMessage, Hashable):
 
         if self.type is MessageType.poll_result:
             embed = self.embeds[0]  # Will always have 1 embed
-            poll_title = utils.get(
+            poll_title = get(
                 embed.fields,
                 name='poll_question_text',
             )
@@ -2509,9 +2478,6 @@ class LobbyMessage(Message):
     """
 
     # TODO make LobbyChannel class in future to replace PartialMessageable
-
-    if TYPE_CHECKING:
-        lobby_id: int
 
     __slots__ = ('lobby_id',)
 

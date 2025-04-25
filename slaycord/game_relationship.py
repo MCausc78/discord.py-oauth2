@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING, Tuple
 
-from .enums import RelationshipType, Status, try_enum
+from .enums import try_enum, RelationshipType, Status
 from .mixins import Hashable
 from .object import Object
 from .presences import ClientStatus

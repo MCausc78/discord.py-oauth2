@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import asyncio
-import copy
+from copy import copy
 from datetime import datetime
 from typing import (
     Any,
@@ -44,7 +44,6 @@ from typing import (
     runtime_checkable,
 )
 
-from . import utils
 from .enums import ChannelType
 from .errors import ClientException
 from .file import File
@@ -53,6 +52,12 @@ from .mentions import AllowedMentions
 from .object import Object
 from .permissions import PermissionOverwrite, Permissions
 from .role import Role
+from .utils import (
+    MISSING,
+    _get_as_snowflake,
+    get,
+    snowflake_time,
+)
 from .voice_client import VoiceClient, VoiceProtocol
 
 __all__ = (
@@ -80,20 +85,19 @@ if TYPE_CHECKING:
     from .guild import Guild
     from .member import Member
     from .message import Message
+    from .state import ConnectionState
     from .types.channel import (
         PermissionOverwrite as PermissionOverwritePayload,
         GuildChannel as GuildChannelPayload,
         OverwriteType,
     )
-    from .state import ConnectionState
     from .user import ClientUser
 
     PartialMessageableChannel = Union[TextChannel, DMChannel, GroupChannel, EphemeralDMChannel, PartialMessageable]
     MessageableChannel = PartialMessageableChannel
     MessageableDestinationType = Literal['channel', 'lobby', 'user']
     SnowflakeTime = Union["Snowflake", datetime]
-
-MISSING = utils.MISSING
+    VocalChannel = Union[DMChannel, GroupChannel]
 
 
 @runtime_checkable
@@ -233,6 +237,9 @@ class PrivateChannel:
     id: int
     me: ClientUser
 
+    def _add_call(self, **kwargs):
+        raise NotImplementedError
+
 
 class _Overwrites:
     __slots__ = ('id', 'allow', 'deny', 'type')
@@ -347,7 +354,7 @@ class GuildChannel:
             if role is None:
                 continue
 
-            role = copy.copy(role)
+            role = copy(role)
             role.permissions.handle_overwrite(overwrite.allow, overwrite.deny)
             ret.append(role)
         return ret
@@ -368,7 +375,7 @@ class GuildChannel:
     @property
     def created_at(self) -> datetime:
         """:class:`datetime.datetime`: Returns the channel's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     def overwrites_for(self, obj: Union[Role, User, Object]) -> PermissionOverwrite:
         """Returns the channel-specific overwrites for a member or a role.
@@ -563,7 +570,7 @@ class GuildChannel:
             if obj.is_default():
                 return base
 
-            overwrite = utils.get(self._overwrites, type=_Overwrites.ROLE, id=obj.id)
+            overwrite = get(self._overwrites, type=_Overwrites.ROLE, id=obj.id)
             if overwrite is not None:
                 base.handle_overwrite(overwrite.allow, overwrite.deny)
 
@@ -767,7 +774,7 @@ class Messageable:
         else:
             if destination_type == 'lobby':
                 channel, _ = state._get_lobby_channel(
-                    utils._get_as_snowflake(data, 'channel_id'),
+                    _get_as_snowflake(data, 'channel_id'),
                     int(data['lobby_id']),
                 )
             elif destination_type == 'user':
@@ -785,7 +792,7 @@ class Messageable:
                     )
             else:
                 channel_id = int(data['channel_id'])
-                guild_id = utils._get_as_snowflake(data, 'guild_id')
+                guild_id = _get_as_snowflake(data, 'guild_id')
 
                 tmp = None
                 if guild_id is None:
@@ -819,12 +826,19 @@ class Connectable(Protocol):
 
     The following implement this ABC:
 
+    - :class:`~slaycord.DMChannel`
+    - :class:`~slaycord.GroupChannel`
     - :class:`~slaycord.VoiceChannel`
     - :class:`~slaycord.StageChannel`
+    - :class:`~slaycord.User`
+    - :class:`~slaycord.Member`
     """
 
     __slots__ = ()
     _state: ConnectionState
+
+    async def _get_channel(self) -> VocalChannel:
+        raise NotImplementedError
 
     def _get_voice_client_key(self) -> Tuple[int, str]:
         raise NotImplementedError
@@ -837,9 +851,11 @@ class Connectable(Protocol):
         *,
         timeout: float = 30.0,
         reconnect: bool = True,
-        cls: Callable[[Client, Connectable], T] = VoiceClient,
+        cls: Callable[[Client, VocalChannel], T] = VoiceClient,
+        _channel: Optional[Connectable] = None,
         self_deaf: bool = False,
         self_mute: bool = False,
+        self_video: bool = False,
     ) -> T:
         """|coro|
 
@@ -861,12 +877,10 @@ class Connectable(Protocol):
             Defaults to :class:`~slaycord.VoiceClient`.
         self_mute: :class:`bool`
             Indicates if the client should be self-muted.
-
-            .. versionadded:: 2.0
         self_deaf: :class:`bool`
             Indicates if the client should be self-deafened.
-
-            .. versionadded:: 2.0
+        self_video: :class:`bool`
+            Indicates if the client should show camera.
 
         Raises
         ------
@@ -885,15 +899,16 @@ class Connectable(Protocol):
 
         key_id, _ = self._get_voice_client_key()
         state = self._state
+        connectable = _channel or self
+        channel = await connectable._get_channel()
 
         if state._get_voice_client(key_id):
-            raise ClientException('Already connected to a voice channel.')
+            raise ClientException('Already connected to a voice channel')
 
-        client = state._get_client()
-        voice: T = cls(client, self)
+        voice: T = cls(state._get_client(), channel)
 
         if not isinstance(voice, VoiceProtocol):
-            raise TypeError('Type must meet VoiceProtocol abstract base class.')
+            raise TypeError('Type must meet VoiceProtocol abstract base class')
 
         state._add_voice_client(key_id, voice)
 
@@ -903,8 +918,7 @@ class Connectable(Protocol):
             try:
                 await voice.disconnect(force=True)
             except Exception:
-                # we don't care if disconnect failed because connection failed
-                pass
-            raise  # re-raise
+                pass  # We don't care if disconnect failed because connection failed
+            raise  # Re-raise
 
         return voice

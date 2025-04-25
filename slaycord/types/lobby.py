@@ -57,7 +57,8 @@ class Lobby(TypedDict):
 
 
 class LobbyMember(TypedDict):
-    id: Snowflake
+    id: NotRequired[Snowflake]
+    user_id: NotRequired[Snowflake]
     metadata: NotRequired[Optional[Dict[str, str]]]
     flags: NotRequired[int]
     connected: NotRequired[bool]

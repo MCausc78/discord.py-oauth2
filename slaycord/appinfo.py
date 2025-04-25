@@ -26,11 +26,10 @@ from __future__ import annotations
 
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING
 
-from . import utils
 from .asset import Asset
 from .flags import ApplicationFlags
 from .permissions import Permissions
-
+from .utils import _get_as_snowflake
 
 if TYPE_CHECKING:
     from .guild import Guild
@@ -200,9 +199,8 @@ class AppInfo:
 
         self.verify_key: str = data['verify_key']
 
-        self.guild_id: Optional[int] = utils._get_as_snowflake(data, 'guild_id')
-
-        self.primary_sku_id: Optional[int] = utils._get_as_snowflake(data, 'primary_sku_id')
+        self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
+        self.primary_sku_id: Optional[int] = _get_as_snowflake(data, 'primary_sku_id')
         self.slug: Optional[str] = data.get('slug')
         self._flags: int = data.get('flags', 0)
         self._cover_image: Optional[str] = data.get('cover_image')

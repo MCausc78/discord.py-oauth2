@@ -32,7 +32,7 @@ from .enums import ChannelType, NSFWLevel, VerificationLevel, InviteTarget, Invi
 from .mixins import Hashable
 from .object import Object
 from .scheduled_event import ScheduledEvent
-from .utils import parse_time, snowflake_time, _get_as_snowflake
+from .utils import _get_as_snowflake, parse_time, snowflake_time
 
 __all__ = (
     'PartialInviteChannel',

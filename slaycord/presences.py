@@ -27,7 +27,7 @@ from typing import Optional, TYPE_CHECKING, Tuple, Union
 
 from .activity import create_activity
 from .enums import try_enum, Status
-from .utils import MISSING, _get_as_snowflake, _RawReprMixin
+from .utils import MISSING, _RawReprMixin, _get_as_snowflake
 
 if TYPE_CHECKING:
     from typing_extensions import Self
