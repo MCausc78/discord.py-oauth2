@@ -27,9 +27,9 @@ from __future__ import annotations
 import datetime
 from typing import List, Optional, TYPE_CHECKING
 
-from . import utils
 from .enums import try_enum, SubscriptionStatus
 from .mixins import Hashable
+from .utils import parse_time, snowflake_time
 
 if TYPE_CHECKING:
     from .state import ConnectionState
@@ -96,10 +96,10 @@ class Subscription(Hashable):
         self.sku_ids: List[int] = list(map(int, data['sku_ids']))
         self.entitlement_ids: List[int] = list(map(int, data['entitlement_ids']))
         self.renewal_sku_ids: List[int] = list(map(int, data['renewal_sku_ids'] or []))
-        self.current_period_start: datetime.datetime = utils.parse_time(data['current_period_start'])
-        self.current_period_end: datetime.datetime = utils.parse_time(data['current_period_end'])
+        self.current_period_start: datetime.datetime = parse_time(data['current_period_start'])
+        self.current_period_end: datetime.datetime = parse_time(data['current_period_end'])
         self.status: SubscriptionStatus = try_enum(SubscriptionStatus, data['status'])
-        self.canceled_at: Optional[datetime.datetime] = utils.parse_time(data['canceled_at'])
+        self.canceled_at: Optional[datetime.datetime] = parse_time(data['canceled_at'])
         self.country: Optional[str] = data.get('country')
 
     def __repr__(self) -> str:
@@ -108,7 +108,7 @@ class Subscription(Hashable):
     @property
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the subscription's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def user(self) -> Optional[User]:

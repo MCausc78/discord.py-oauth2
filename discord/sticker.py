@@ -23,12 +23,12 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
-from typing import Literal, TYPE_CHECKING, List, Optional, Tuple, Type, Union
+from typing import List, Literal, Optional, TYPE_CHECKING, Tuple, Type, Union
 
 from .asset import Asset, AssetMixin
-from .enums import StickerType, StickerFormatType, try_enum
+from .enums import try_enum, StickerFormatType, StickerType
 from .mixins import Hashable
-from .utils import cached_slot_property, snowflake_time, get, _get_as_snowflake
+from .utils import _get_as_snowflake, cached_slot_property, get, snowflake_time
 
 __all__ = (
     'StickerPack',

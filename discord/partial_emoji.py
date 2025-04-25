@@ -24,11 +24,14 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, TYPE_CHECKING, Union
 import re
+from typing import Any, Dict, Optional, TYPE_CHECKING, Union
 
-from . import utils
 from .asset import Asset, AssetMixin
+from .utils import (
+    _get_as_snowflake,
+    snowflake_time,
+)
 
 # fmt: off
 __all__ = (
@@ -109,7 +112,7 @@ class PartialEmoji(_EmojiTag, AssetMixin):
     def from_dict(cls, data: Union[PartialEmojiPayload, ActivityEmoji, Dict[str, Any]]) -> Self:
         return cls(
             animated=data.get('animated', False),
-            id=utils._get_as_snowflake(data, 'id'),
+            id=_get_as_snowflake(data, 'id'),
             name=data.get('name') or '',
         )
 
@@ -228,7 +231,7 @@ class PartialEmoji(_EmojiTag, AssetMixin):
         if self.id is None:
             return None
 
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     @property
     def url(self) -> str:

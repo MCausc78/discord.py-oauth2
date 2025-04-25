@@ -26,11 +26,11 @@ from __future__ import annotations
 from typing import Any, List, Optional, TYPE_CHECKING, Union
 
 from .asset import Asset
-from .colour import Colour
+from .color import Color
 from .flags import RoleFlags
 from .mixins import Hashable
 from .permissions import Permissions
-from .utils import snowflake_time, _get_as_snowflake, MISSING
+from .utils import MISSING, _get_as_snowflake, snowflake_time
 
 __all__ = (
     'RoleTags',
@@ -211,7 +211,7 @@ class Role(Hashable):
         'id',
         'name',
         '_permissions',
-        '_colour',
+        '_color',
         'position',
         '_icon',
         'unicode_emoji',
@@ -276,7 +276,7 @@ class Role(Hashable):
         self.name: str = data['name']
         self._permissions: int = int(data.get('permissions', 0))
         self.position: int = data.get('position', 0)
-        self._colour: int = data.get('color', 0)
+        self._color: int = data.get('color', 0)
         self.hoist: bool = data.get('hoist', False)
         self._icon: Optional[str] = data.get('icon')
         self.unicode_emoji: Optional[str] = data.get('unicode_emoji')
@@ -329,14 +329,17 @@ class Role(Hashable):
         return Permissions(self._permissions)
 
     @property
-    def colour(self) -> Colour:
-        """:class:`Colour`: Returns the role colour. An alias exists under ``color``."""
-        return Colour(self._colour)
+    def color(self) -> Color:
+        """:class:`Color`: Returns the role color. An alias exists under ``colour``."""
+        return Color(self._color)
 
     @property
-    def color(self) -> Colour:
-        """:class:`Colour`: Returns the role color. An alias exists under ``colour``."""
-        return self.colour
+    def colour(self) -> Color:
+        """:class:`Colour`: Returns the role colour.
+
+        This is an alias of :attr:`color`.
+        """
+        return self.color
 
     @property
     def icon(self) -> Optional[Asset]:

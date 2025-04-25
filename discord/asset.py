@@ -28,11 +28,12 @@ import io
 import os
 from typing import Any, Literal, Optional, TYPE_CHECKING, Tuple, Union
 
-from . import utils
+import yarl
+
 from .errors import DiscordException
 from .file import File
+from .utils import MISSING, valid_icon_size
 
-import yarl
 
 # fmt: off
 __all__ = (
@@ -53,9 +54,6 @@ if TYPE_CHECKING:
 
 VALID_STATIC_FORMATS = frozenset({"jpeg", "jpg", "webp", "png"})
 VALID_ASSET_FORMATS = VALID_STATIC_FORMATS | {"gif"}
-
-
-MISSING = utils.MISSING
 
 
 class AssetMixin:
@@ -347,6 +345,33 @@ class Asset(AssetMixin):
             animated=animated,
         )
 
+    @classmethod
+    def _from_clan_badge(cls, state: _State, guild_id: int, badge_hash: str) -> Self:
+        return cls(
+            state,
+            url=f'{cls.BASE}/clan-badges/{guild_id}/{badge_hash}.png',
+            key=badge_hash,
+            animated=False,
+        )
+
+    @classmethod
+    def _from_discovery_splash(cls, state: _State, guild_id: int, splash_hash: str) -> Self:
+        return cls(
+            state,
+            url=f'{cls.BASE}/discovery-splash/{guild_id}/{splash_hash}.png',
+            key=splash_hash,
+            animated=False,
+        )
+
+    # Deprecated
+    # def _from_clan_banner(cls, state: _State, guild_id: int, banner_hash: str) -> Self:
+    #     return cls(
+    #         state,
+    #         url=f'{cls.BASE}/clan-banners/{guild_id}/{banner_hash}.png',
+    #         key=banner_hash,
+    #         animated=False,
+    #     )
+
     def __str__(self) -> str:
         return self._url
 
@@ -434,7 +459,7 @@ class Asset(AssetMixin):
             url = url.with_path(f'{path}.{static_format}')
 
         if size is not MISSING:
-            if not utils.valid_icon_size(size):
+            if not valid_icon_size(size):
                 raise ValueError('size must be a power of 2 between 16 and 4096')
             url = url.with_query(size=size)
         else:
@@ -465,7 +490,7 @@ class Asset(AssetMixin):
         :class:`Asset`
             The new updated asset.
         """
-        if not utils.valid_icon_size(size):
+        if not valid_icon_size(size):
             raise ValueError('size must be a power of 2 between 16 and 4096')
 
         url = str(yarl.URL(self._url).with_query(size=size))

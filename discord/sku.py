@@ -29,11 +29,17 @@ from typing import AsyncIterator, Optional, TYPE_CHECKING
 
 from datetime import datetime
 
-from . import utils
 from .enums import try_enum, SKUType, EntitlementType
 from .flags import SKUFlags
 from .object import Object
 from .subscription import Subscription
+from .utils import (
+    _get_as_snowflake,
+    parse_time,
+    snowflake_time,
+    time_snowflake,
+    utcnow,
+)
 
 if TYPE_CHECKING:
     from .abc import SnowflakeTime, Snowflake
@@ -100,7 +106,7 @@ class SKU:
     @property
     def created_at(self) -> datetime:
         """:class:`datetime.datetime`: Returns the sku's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     async def fetch_subscription(self, subscription_id: int, /) -> Subscription:
         """|coro|
@@ -219,9 +225,9 @@ class SKU:
             return data, after, limit
 
         if isinstance(before, datetime):
-            before = Object(id=utils.time_snowflake(before, high=False))
+            before = Object(id=time_snowflake(before, high=False))
         if isinstance(after, datetime):
-            after = Object(id=utils.time_snowflake(after, high=True))
+            after = Object(id=time_snowflake(after, high=True))
 
         if before:
             strategy, state = _before_strategy, before
@@ -291,12 +297,12 @@ class Entitlement:
         self.id: int = int(data['id'])
         self.sku_id: int = int(data['sku_id'])
         self.application_id: int = int(data['application_id'])
-        self.user_id: Optional[int] = utils._get_as_snowflake(data, 'user_id')
+        self.user_id: Optional[int] = _get_as_snowflake(data, 'user_id')
         self.type: EntitlementType = try_enum(EntitlementType, data['type'])
         self.deleted: bool = data['deleted']
-        self.starts_at: Optional[datetime] = utils.parse_time(data.get('starts_at', None))
-        self.ends_at: Optional[datetime] = utils.parse_time(data.get('ends_at', None))
-        self.guild_id: Optional[int] = utils._get_as_snowflake(data, 'guild_id')
+        self.starts_at: Optional[datetime] = parse_time(data.get('starts_at', None))
+        self.ends_at: Optional[datetime] = parse_time(data.get('ends_at', None))
+        self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
         self.consumed: bool = data.get('consumed', False)
 
     def __repr__(self) -> str:
@@ -317,13 +323,13 @@ class Entitlement:
     @property
     def created_at(self) -> datetime:
         """:class:`datetime.datetime`: Returns the entitlement's creation time in UTC."""
-        return utils.snowflake_time(self.id)
+        return snowflake_time(self.id)
 
     def is_expired(self) -> bool:
         """:class:`bool`: Returns ``True`` if the entitlement is expired. Will be always False for test entitlements."""
         if self.ends_at is None:
             return False
-        return utils.utcnow() >= self.ends_at
+        return utcnow() >= self.ends_at
 
     async def consume(self) -> None:
         """|coro|

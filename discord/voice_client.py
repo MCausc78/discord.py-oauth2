@@ -45,8 +45,11 @@ if TYPE_CHECKING:
     from .opus import Encoder, APPLICATION_CTL, BAND_CTL, SIGNAL_CTL
     from .state import ConnectionState
     from .types.voice import (
+        PrivateVoiceState as PrivateVoiceStatePayload,
         GuildVoiceState as GuildVoiceStatePayload,
+        LobbyVoiceState as LobbyVoiceStatePayload,
         VoiceServerUpdate as VoiceServerUpdatePayload,
+        LobbyVoiceServerUpdate as LobbyVoiceServerUpdatePayload,
         SupportedModes,
     )
     from .user import ClientUser
@@ -98,7 +101,9 @@ class VoiceProtocol:
         self.client: Client = client
         self.channel: abc.Connectable = channel
 
-    async def on_voice_state_update(self, data: GuildVoiceStatePayload, /) -> None:
+    async def on_voice_state_update(
+        self, data: Union[GuildVoiceStatePayload, PrivateVoiceStatePayload, LobbyVoiceStatePayload], /
+    ) -> None:
         """|coro|
 
         An abstract method that is called when the client's voice state
@@ -116,6 +121,19 @@ class VoiceProtocol:
         raise NotImplementedError
 
     async def on_voice_server_update(self, data: VoiceServerUpdatePayload, /) -> None:
+        """|coro|
+
+        An abstract method that is called when initially connecting to voice.
+        This corresponds to ``VOICE_SERVER_UPDATE``.
+
+        Parameters
+        ----------
+        data: :class:`dict`
+            The raw :ddocs:`voice server update payload <topics/gateway-events#voice-server-update>`.
+        """
+        raise NotImplementedError
+
+    async def on_lobby_voice_server_update(self, data: LobbyVoiceServerUpdatePayload, /) -> None:
         """|coro|
 
         An abstract method that is called when initially connecting to voice.

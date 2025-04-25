@@ -35,15 +35,20 @@ import time
 import threading
 import traceback
 
-from typing import Any, Callable, Coroutine, Deque, Dict, List, TYPE_CHECKING, NamedTuple, Optional, TypeVar, Tuple
+from typing import Any, Callable, Coroutine, Deque, Dict, List, NamedTuple, Optional, TYPE_CHECKING, Tuple, TypeVar
 
 import aiohttp
 import yarl
 
-from . import utils
 from .activity import BaseActivity
 from .enums import SpeakingState
 from .errors import ConnectionClosed
+from .utils import (
+    _ActiveDecompressionContext,
+    _DecompressionContext,
+    _from_json,
+    _to_json,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -61,6 +66,7 @@ if TYPE_CHECKING:
     from .client import Client
     from .client_properties import ClientProperties
     from .state import ConnectionState
+    from .types.gateway import UpdateLobbyVoiceState as UpdateLobbyVoiceStatePayload
     from .voice_state import VoiceConnectionState
 
 
@@ -327,7 +333,7 @@ class DiscordWebSocket:
         # ws related stuff
         self.session_id: Optional[str] = None
         self.sequence: Optional[int] = None
-        self._decompressor: utils._DecompressionContext = utils._ActiveDecompressionContext()
+        self._decompressor: _DecompressionContext = _ActiveDecompressionContext()
         self._close_code: Optional[int] = None
         self._rate_limiter: GatewayRatelimiter = GatewayRatelimiter()
 
@@ -370,7 +376,7 @@ class DiscordWebSocket:
             params = {
                 'v': INTERNAL_API_VERSION,
                 'encoding': encoding,
-                'compress': utils._ActiveDecompressionContext.COMPRESSION_TYPE,
+                'compress': _ActiveDecompressionContext.COMPRESSION_TYPE,
             }
         else:
             params = {
@@ -450,6 +456,7 @@ class DiscordWebSocket:
         properties = self.client_properties.get_client_properties()
         if isawaitable(properties):
             properties = await properties
+
         payload = {
             'op': self.IDENTIFY,
             'd': {
@@ -493,7 +500,7 @@ class DiscordWebSocket:
                 return
 
         self.log_receive(msg)
-        msg = utils._from_json(msg)
+        msg = _from_json(msg)
 
         _log.debug('WebSocket Event: %s', msg)
 
@@ -659,7 +666,7 @@ class DiscordWebSocket:
 
     async def send_as_json(self, data: Any) -> None:
         try:
-            await self.send(utils._to_json(data))
+            await self.send(_to_json(data))
         except RuntimeError as exc:
             if not self._can_handle_close():
                 raise ConnectionClosed(self.socket) from exc
@@ -667,7 +674,7 @@ class DiscordWebSocket:
     async def send_heartbeat(self, data: Any) -> None:
         # This bypasses the rate limit handling code since it has a higher priority
         try:
-            await self.socket.send_str(utils._to_json(data))
+            await self.socket.send_str(_to_json(data))
         except RuntimeError as exc:
             if not self._can_handle_close():
                 raise ConnectionClosed(self.socket) from exc
@@ -699,7 +706,7 @@ class DiscordWebSocket:
             },
         }
 
-        sent = utils._to_json(payload)
+        sent = _to_json(payload)
         _log.debug('Sending "%s" to change status', sent)
         await self.send(sent)
 
@@ -735,10 +742,11 @@ class DiscordWebSocket:
 
     async def voice_state(
         self,
-        guild_id: int,
+        guild_id: Optional[int],
         channel_id: Optional[int],
         self_mute: bool = False,
         self_deaf: bool = False,
+        self_video: bool = False,
     ) -> None:
         payload = {
             'op': self.VOICE_STATE,
@@ -747,6 +755,7 @@ class DiscordWebSocket:
                 'channel_id': channel_id,
                 'self_mute': self_mute,
                 'self_deaf': self_deaf,
+                'self_video': self_video,
             },
         }
 
@@ -762,6 +771,15 @@ class DiscordWebSocket:
         }
 
         _log.debug('Attemping to discover a call in %s.', payload)
+        await self.send_as_json(payload)
+
+    async def lobby_voice_states(self, voice_states: List[UpdateLobbyVoiceStatePayload]) -> None:
+        payload = {
+            'op': self.LOBBY_VOICE_STATES,
+            'd': voice_states,
+        }
+
+        _log.debug('Updating our lobby voice states to %s.', payload)
         await self.send_as_json(payload)
 
     async def close(self, code: int = 4000) -> None:
@@ -849,7 +867,7 @@ class DiscordVoiceWebSocket:
 
     async def send_as_json(self, data: Any) -> None:
         _log.debug('Sending voice websocket frame: %s.', data)
-        await self.ws.send_str(utils._to_json(data))
+        await self.ws.send_str(_to_json(data))
 
     send_heartbeat = send_as_json
 
@@ -1050,7 +1068,7 @@ class DiscordVoiceWebSocket:
         # This exception is handled up the chain
         msg = await asyncio.wait_for(self.ws.receive(), timeout=30.0)
         if msg.type is aiohttp.WSMsgType.TEXT:
-            await self.received_message(utils._from_json(msg.data))
+            await self.received_message(_from_json(msg.data))
         elif msg.type is aiohttp.WSMsgType.ERROR:
             _log.debug('Received voice %s', msg)
             raise ConnectionClosed(self.ws) from msg.data

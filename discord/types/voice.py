@@ -37,7 +37,7 @@ SupportedModes = Literal[
 ]
 
 
-class _VoiceState(TypedDict):
+class BaseVoiceState(TypedDict):
     user_id: Snowflake
     session_id: str
     deaf: bool
@@ -50,18 +50,21 @@ class _VoiceState(TypedDict):
     self_stream: NotRequired[bool]
 
 
-class GuildVoiceState(_VoiceState):
+class VoiceState(BaseVoiceState):
     channel_id: Snowflake
 
 
-class LobbyVoiceState(_VoiceState):
+class PrivateVoiceState(BaseVoiceState):
+    channel_id: Optional[Snowflake]
+
+
+class GuildVoiceState(PrivateVoiceState):
+    guild_id: Snowflake
+
+
+class LobbyVoiceState(BaseVoiceState):
     channel_id: Snowflake
     lobby_id: Snowflake
-
-
-class VoiceState(_VoiceState, total=False):
-    channel_id: Optional[Snowflake]
-    guild_id: Snowflake
 
 
 class VoiceRegion(TypedDict):
@@ -75,7 +78,14 @@ class VoiceRegion(TypedDict):
 
 class VoiceServerUpdate(TypedDict):
     token: str
-    guild_id: Snowflake
+    guild_id: Optional[Snowflake]
+    channel_id: NotRequired[Snowflake]
+    endpoint: Optional[str]
+
+
+class LobbyVoiceServerUpdate(TypedDict):
+    token: str
+    lobby_id: Snowflake
     endpoint: Optional[str]
 
 

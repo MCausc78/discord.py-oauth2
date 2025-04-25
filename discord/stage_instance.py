@@ -26,9 +26,9 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from .enums import PrivacyLevel, try_enum
+from .enums import try_enum, PrivacyLevel
 from .mixins import Hashable
-from .utils import cached_slot_property, _get_as_snowflake
+from .utils import _get_as_snowflake, cached_slot_property
 
 # fmt: off
 __all__ = (

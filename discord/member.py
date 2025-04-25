@@ -32,14 +32,19 @@ from typing import Awaitable, Callable, List, Optional, TYPE_CHECKING, Tuple, Ty
 
 import discord.abc
 
-from . import utils
 from .asset import Asset
-from .colour import Colour
+from .color import Color
 from .enums import Status
 from .flags import MemberFlags
 from .permissions import Permissions
 from .presences import ClientStatus
 from .user import BaseUser, ClientUser, User, _UserTag
+from .utils import (
+    SnowflakeList,
+    copy_doc,
+    parse_time,
+    utcnow,
+)
 
 __all__ = (
     'VoiceState',
@@ -52,7 +57,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .activity import ActivityTypes
-    from .channel import DMChannel, VoiceChannel, StageChannel
+    from .channel import DMChannel, GroupChannel, VoiceChannel, StageChannel
     from .flags import PublicUserFlags
     from .guild import UserGuild, Guild
     from .message import Message
@@ -66,12 +71,10 @@ if TYPE_CHECKING:
         UserWithMember as UserWithMemberPayload,
     )
     from .types.user import User as UserPayload, AvatarDecorationData
-    from .types.voice import (
-        GuildVoiceState as GuildVoiceStatePayload,
-        VoiceState as VoiceStatePayload,
-    )
+    from .types.voice import BaseVoiceState as VoiceStatePayload
 
     VocalGuildChannel = Union[VoiceChannel, StageChannel]
+    ConnectableChannel = Union[VocalGuildChannel, DMChannel, GroupChannel]
 
 
 class VoiceState:
@@ -79,10 +82,8 @@ class VoiceState:
 
     Attributes
     ----------
-    deaf: :class:`bool`
-        Indicates if the user is currently deafened by the guild.
-    mute: :class:`bool`
-        Indicates if the user is currently muted by the guild.
+    session_id: Optional[:class:`str`]
+        The Gateway session's ID the voice state is tied to.
     self_mute: :class:`bool`
         Indicates if the user is currently muted by their own accord.
     self_deaf: :class:`bool`
@@ -91,16 +92,24 @@ class VoiceState:
         Indicates if the user is currently streaming via 'Go Live' feature.
 
         .. versionadded:: 1.3
-
     self_video: :class:`bool`
         Indicates if the user is currently broadcasting video.
+    afk: :class:`bool`
+        Indicates if the user is currently in the AFK channel in the guild.
+    mute: :class:`bool`
+        Indicates if the user is currently muted by the guild.
+
+        Doesn't apply to private channels.
+    deaf: :class:`bool`
+        Indicates if the user is currently deafened by the guild.
+
+        Doesn't apply to private channels.
     suppress: :class:`bool`
         Indicates if the user is suppressed from speaking.
 
         Only applies to stage channels.
 
         .. versionadded:: 1.7
-
     requested_to_speak_at: Optional[:class:`datetime.datetime`]
         An aware datetime object that specifies the date and time in UTC that the member
         requested to speak. It will be ``None`` if they are not requesting to speak
@@ -109,35 +118,38 @@ class VoiceState:
         Only applicable to stage channels.
 
         .. versionadded:: 1.7
-
-    afk: :class:`bool`
-        Indicates if the user is currently in the AFK channel in the guild.
-    channel: Optional[Union[:class:`VoiceChannel`, :class:`StageChannel`]]
+    volume: Optional[:class:`float`]
+        The user's volume.
+    channel: Optional[Union[:class:`VoiceChannel`, :class:`StageChannel`, :class:`DMChannel`, :class:`GroupChannel`]]
         The voice channel that the user is currently connected to. ``None`` if the user
         is not currently in a voice channel.
     """
 
     __slots__ = (
         'session_id',
-        'deaf',
-        'mute',
         'self_mute',
+        'self_deaf',
         'self_stream',
         'self_video',
-        'self_deaf',
         'afk',
-        'channel',
-        'requested_to_speak_at',
+        'mute',
+        'deaf',
         'suppress',
+        'requested_to_speak_at',
+        'volume',
+        'channel',
     )
 
     def __init__(
-        self, *, data: Union[VoiceStatePayload, GuildVoiceStatePayload], channel: Optional[VocalGuildChannel] = None
+        self,
+        *,
+        data: VoiceStatePayload,
+        channel: Optional[ConnectableChannel] = None,
     ):
         self.session_id: Optional[str] = data.get('session_id')
         self._update(data, channel)
 
-    def _update(self, data: Union[VoiceStatePayload, GuildVoiceStatePayload], channel: Optional[VocalGuildChannel]):
+    def _update(self, data: VoiceStatePayload, channel: Optional[ConnectableChannel]):
         self.self_mute: bool = data.get('self_mute', False)
         self.self_deaf: bool = data.get('self_deaf', False)
         self.self_stream: bool = data.get('self_stream', False)
@@ -146,8 +158,9 @@ class VoiceState:
         self.mute: bool = data.get('mute', False)
         self.deaf: bool = data.get('deaf', False)
         self.suppress: bool = data.get('suppress', False)
-        self.requested_to_speak_at: Optional[datetime.datetime] = utils.parse_time(data.get('request_to_speak_timestamp'))
-        self.channel: Optional[VocalGuildChannel] = channel
+        self.requested_to_speak_at: Optional[datetime.datetime] = parse_time(data.get('request_to_speak_timestamp'))
+        self.volume: Optional[float] = data.get('user_volume')
+        self.channel: Optional[ConnectableChannel] = channel
 
     def __repr__(self) -> str:
         attrs = [
@@ -198,7 +211,7 @@ def flatten_user(cls: T) -> T:
                 return general
 
             func = generate_function(attr)
-            func = utils.copy_doc(value)(func)
+            func = copy_doc(value)(func)
             setattr(cls, attr, func)
 
     return cls
@@ -300,8 +313,8 @@ class Member(discord.abc.Messageable, _UserTag):
         mutual_guilds: List[Guild]
         public_flags: PublicUserFlags
         banner: Optional[Asset]
-        accent_color: Optional[Colour]
-        accent_colour: Optional[Colour]
+        accent_color: Optional[Color]
+        accent_colour: Optional[Color]
         avatar_decoration: Optional[Asset]
         avatar_decoration_sku_id: Optional[int]
 
@@ -312,9 +325,9 @@ class Member(discord.abc.Messageable, _UserTag):
         elif 'user_id' in data:
             self._user: User = state._users[int(data['user_id'])]
         self.guild: Union[UserGuild, Guild] = guild
-        self.joined_at: Optional[datetime.datetime] = utils.parse_time(data.get('joined_at'))
-        self.premium_since: Optional[datetime.datetime] = utils.parse_time(data.get('premium_since'))
-        self._roles: utils.SnowflakeList = utils.SnowflakeList(map(int, data['roles']))
+        self.joined_at: Optional[datetime.datetime] = parse_time(data.get('joined_at'))
+        self.premium_since: Optional[datetime.datetime] = parse_time(data.get('premium_since'))
+        self._roles: SnowflakeList = SnowflakeList(map(int, data['roles']))
         self.client_status: ClientStatus = ClientStatus()
         self.activities: Tuple[ActivityTypes, ...] = ()
         self.nick: Optional[str] = data.get('nick', None)
@@ -329,7 +342,7 @@ class Member(discord.abc.Messageable, _UserTag):
         except KeyError:
             self._permissions = None
 
-        self.timed_out_until: Optional[datetime.datetime] = utils.parse_time(data.get('communication_disabled_until'))
+        self.timed_out_until: Optional[datetime.datetime] = parse_time(data.get('communication_disabled_until'))
 
     def __str__(self) -> str:
         return str(self._user)
@@ -365,12 +378,12 @@ class Member(discord.abc.Messageable, _UserTag):
         return cls(data=data, guild=guild, state=state)  # type: ignore
 
     def _update_from_message(self, data: MemberPayload) -> None:
-        self.joined_at = utils.parse_time(data.get('joined_at'))
-        self.premium_since = utils.parse_time(data.get('premium_since'))
-        self._roles = utils.SnowflakeList(map(int, data['roles']))
+        self.joined_at = parse_time(data.get('joined_at'))
+        self.premium_since = parse_time(data.get('premium_since'))
+        self._roles = SnowflakeList(map(int, data['roles']))
         self.nick = data.get('nick', None)
         self.pending = data.get('pending', False)
-        self.timed_out_until = utils.parse_time(data.get('communication_disabled_until'))
+        self.timed_out_until = parse_time(data.get('communication_disabled_until'))
         self._flags = data.get('flags', 0)
 
     @classmethod
@@ -390,7 +403,7 @@ class Member(discord.abc.Messageable, _UserTag):
     def _copy(cls, member: Self) -> Self:
         self = cls.__new__(cls)  # to bypass __init__
 
-        self._roles = utils.SnowflakeList(member._roles, is_sorted=True)
+        self._roles = SnowflakeList(member._roles, is_sorted=True)
         self.joined_at = member.joined_at
         self.premium_since = member.premium_since
         self.client_status = member.client_status
@@ -428,9 +441,9 @@ class Member(discord.abc.Messageable, _UserTag):
         except KeyError:
             pass
 
-        self.premium_since = utils.parse_time(data.get('premium_since'))
-        self.timed_out_until = utils.parse_time(data.get('communication_disabled_until'))
-        self._roles = utils.SnowflakeList(map(int, data['roles']))
+        self.premium_since = parse_time(data.get('premium_since'))
+        self.timed_out_until = parse_time(data.get('communication_disabled_until'))
+        self._roles = SnowflakeList(map(int, data['roles']))
         self._avatar = data.get('avatar')
         self._banner = data.get('banner')
         self._flags = data.get('flags', 0)
@@ -525,33 +538,33 @@ class Member(discord.abc.Messageable, _UserTag):
         return self.client_status.is_on_mobile()
 
     @property
-    def colour(self) -> Colour:
-        """:class:`Colour`: A property that returns a colour denoting the rendered colour
-        for the member. If the default colour is the one rendered then an instance
-        of :meth:`Colour.default` is returned.
+    def color(self) -> Color:
+        """:class:`Color`: A property that returns a color denoting the rendered color
+        for the member. If the default color is the one rendered then an instance
+        of :meth:`Color.default` is returned.
 
         There is an alias for this named :attr:`color`.
         """
 
         roles = self.roles[1:]  # remove @everyone
 
-        # highest order of the colour is the one that gets rendered.
-        # if the highest is the default colour then the next one with a colour
+        # highest order of the color is the one that gets rendered.
+        # if the highest is the default color then the next one with a color
         # is chosen instead
         for role in reversed(roles):
-            if role.colour.value:
-                return role.colour
-        return Colour.default()
+            if role.color.value:
+                return role.color
+        return Color.default()
 
     @property
-    def color(self) -> Colour:
-        """:class:`Colour`: A property that returns a color denoting the rendered color for
-        the member. If the default color is the one rendered then an instance of :meth:`Colour.default`
+    def colour(self) -> Color:
+        """:class:`Colour`: A property that returns a colour denoting the rendered colour for
+        the member. If the default colour is the one rendered then an instance of :meth:`Colour.default`
         is returned.
 
-        There is an alias for this named :attr:`colour`.
+        This is an alias of :attr:`color`.
         """
-        return self.colour
+        return self.color
 
     @property
     def roles(self) -> List[Role]:
@@ -561,6 +574,8 @@ class Member(discord.abc.Messageable, _UserTag):
 
         These roles are sorted by their position in the role hierarchy.
         """
+        from .guild import Guild
+
         result = []
         g = self.guild
         if not isinstance(g, Guild):
@@ -703,6 +718,8 @@ class Member(discord.abc.Messageable, _UserTag):
         TypeError
             The guild is detached, meaning it's partial and role cache is missing.
         """
+        from .guild import Guild
+
         guild = self.guild
         if not isinstance(guild, Guild):
             raise TypeError('Guild is detached')
@@ -727,6 +744,7 @@ class Member(discord.abc.Messageable, _UserTag):
         .. versionchanged:: 2.0
             Member timeouts are taken into consideration.
         """
+        from .guild import UserGuild
 
         g = self.guild
         if isinstance(g, UserGuild):
@@ -768,6 +786,8 @@ class Member(discord.abc.Messageable, _UserTag):
     @property
     def voice(self) -> Optional[VoiceState]:
         """Optional[:class:`VoiceState`]: Returns the member's current voice state."""
+        from .guild import Guild
+
         if not isinstance(self.guild, Guild):
             return None
         return self.guild._voice_state_for(self._user.id)
@@ -795,6 +815,8 @@ class Member(discord.abc.Messageable, _UserTag):
         Optional[:class:`Role`]
             The role or ``None`` if not found in the member's roles.
         """
+        from .guild import Guild
+
         g = self.guild
         if not isinstance(g, Guild):
             return None
@@ -811,5 +833,5 @@ class Member(discord.abc.Messageable, _UserTag):
             ``True`` if the member is timed out. ``False`` otherwise.
         """
         if self.timed_out_until is not None:
-            return utils.utcnow() < self.timed_out_until
+            return utcnow() < self.timed_out_until
         return False

@@ -30,7 +30,7 @@ from .activity import BaseActivity, Spotify, create_activity
 from .enums import Status, try_enum
 from .invite import Invite
 from .user import BaseUser
-from .utils import snowflake_time, _get_as_snowflake, resolve_invite
+from .utils import _get_as_snowflake, resolve_invite, snowflake_time
 
 if TYPE_CHECKING:
     import datetime

@@ -29,10 +29,10 @@ from typing import Dict, List, Optional, TYPE_CHECKING, Union
 
 import datetime
 
-from . import utils
 from .emoji import PartialEmoji, Emoji
 from .enums import PollLayoutType, try_enum, MessageType
 from .errors import ClientException
+from .utils import parse_time
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -56,7 +56,6 @@ __all__ = (
     'PollMedia',
 )
 
-MISSING = utils.MISSING
 PollMediaEmoji = Union[PartialEmoji, Emoji, str]
 
 
@@ -356,7 +355,7 @@ class Poll:
         layout_type = try_enum(PollLayoutType, data.get('layout_type', 1))
         question_data = data.get('question')
         question = question_data.get('text')
-        expiry = utils.parse_time(data['expiry'])  # If obtained via API, then expiry is set.
+        expiry = parse_time(data['expiry'])  # If obtained via API, then expiry is set.
         # expiry - message.created_at may be a few nanos away from the actual duration
         duration = datetime.timedelta(hours=round((expiry - message.created_at).total_seconds() / 3600))
         # self.created_at = message.created_at

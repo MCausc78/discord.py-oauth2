@@ -24,14 +24,15 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
+from copy import copy
 import datetime
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, overload
 
 from .asset import Asset
-from .colour import Colour
+from .color import Color
 from .enums import try_enum, ActivityType, ClientType, OperatingSystem, Status
 from .partial_emoji import PartialEmoji
-from .utils import _get_as_snowflake, parse_time
+from .utils import MISSING, _get_as_snowflake, parse_time
 
 __all__ = (
     'BaseActivity',
@@ -670,18 +671,20 @@ class Spotify:
             return datetime.datetime.fromtimestamp(self._created_at / 1000, tz=datetime.timezone.utc)
 
     @property
-    def colour(self) -> Colour:
-        """:class:`Colour`: Returns the Spotify integration colour, as a :class:`Colour`.
+    def color(self) -> Color:
+        """:class:`Color`: Returns the Spotify integration color, as a :class:`Colour`.
 
-        There is an alias for this named :attr:`color`"""
-        return Colour(0x1DB954)
+        There is an alias for this named :attr:`color`.
+        """
+        return Color(0x1DB954)
 
     @property
-    def color(self) -> Colour:
+    def colour(self) -> Color:
         """:class:`Colour`: Returns the Spotify integration colour, as a :class:`Colour`.
 
-        There is an alias for this named :attr:`colour`"""
-        return self.colour
+        This is an alias of :attr:`color`.
+        """
+        return self.color
 
     def to_dict(self) -> ActivityPayload:
         return {
@@ -975,9 +978,12 @@ class Session:
         The status of the session.
     activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
         The activities the session is currently doing.
+    hidden_activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
+        The hidden activities the session is currently doing. Consider using this when :attr:`status` is :attr:`~Status.invisible`.
     """
 
     __slots__ = (
+        '_state',
         'id',
         'active',
         'os',
@@ -985,7 +991,7 @@ class Session:
         'version',
         'status',
         'activities',
-        '_state',
+        'hidden_activities',
     )
 
     def __init__(self, *, data: SessionPayload, state: ConnectionState):
@@ -1005,7 +1011,10 @@ class Session:
         self.active: bool = data.get('active', False)
         self.status: Status = try_enum(Status, data['status'])
         self.activities: Tuple[ActivityTypes, ...] = tuple(
-            create_activity(activity, state) for activity in data['activities']
+            create_activity(activity, state) for activity in data.get('activities', ())
+        )
+        self.hidden_activities: Tuple[ActivityTypes, ...] = tuple(
+            create_activity(activity, state) for activity in data.get('hidden_activities', ())
         )
 
     def __repr__(self) -> str:
@@ -1050,6 +1059,93 @@ class Session:
         """:class:`bool`: Whether the session is the current session."""
         ws = self._state._get_websocket()
         return False if ws is None else self.id == ws.session_id
+
+
+class HeadlessSession:
+    """Represents a headless session.
+
+    A headless session is a session that does not have Gateway connection (nor requires it) and primarily used to set Rich Presence.
+
+    Attributes
+    ----------
+    id: Optional[:class:`str`]
+        The ID of the headless session.
+    token: :class:`str`
+        The session's token.
+    activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`], ...]
+        The activities.
+    """
+
+    __slots__ = (
+        '_state',
+        'id',
+        'token',
+        'activities',
+    )
+
+    def __init__(self, *, token: str, activities: Tuple[ActivityTypes, ...], state: ConnectionState) -> None:
+        self._state: ConnectionState = state
+
+        # Headless session IDs are generally in following format: ``h:733035e1465e89eee843bdc1c240``
+        session_id = None
+        for activity in activities:
+            if hasattr(activity, 'session_id'):
+                session_id = activity.session_id  # type: ignore
+                if session_id is not None:
+                    break
+
+        self.id: Optional[str] = session_id
+        self.token: str = token
+        self.activities: Tuple[ActivityTypes, ...] = activities
+
+    async def delete(self) -> None:
+        """|coro|
+
+        Deletes the headless session.
+
+        Raises
+        ------
+        HTTPException
+            The session token is invalid, or deleting the headless session failed.
+        """
+        await self._state.http.delete_headless_session(self.token)
+
+    async def edit(self, *, activities: List[ActivityTypes] = MISSING) -> HeadlessSession:
+        """|coro|
+
+        Edits the headless session.
+
+        All parameters are optional. If no parameters were passed, a HTTP request will be not done;
+        instead, this method will return ``copy(self)``.
+
+        Parameters
+        ----------
+        activities: List[Union[:class:`BaseActivity`, :class:`Spotify`], ...]
+            The new activities. This must contain exactly single activity.
+
+        Raises
+        ------
+        HTTPException
+            The session token is invalid, or editing the headless session failed.
+
+        Returns
+        -------
+        :class:`HeadlessSession`
+            The newly updated session.
+        """
+        if activities is MISSING:
+            return copy(self)
+
+        state = self._state
+        data = await state.http.create_headless_session(
+            activities=[a.to_dict() for a in activities],
+            token=self.token,
+        )
+        return HeadlessSession(
+            token=data['token'],
+            activities=tuple(create_activity(d, state) for d in data['activities']),
+            state=state,
+        )
 
 
 ActivityTypes = Union[Activity, Game, CustomActivity, Streaming, Spotify]

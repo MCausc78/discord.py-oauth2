@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import Optional, TYPE_CHECKING, Tuple, Union
 
 from .enums import RelationshipType, Status, try_enum
 from .mixins import Hashable

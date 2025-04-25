@@ -24,8 +24,8 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-import types
 from collections import namedtuple
+import types
 from typing import Any, ClassVar, Dict, List, Iterator, Mapping, Optional, TYPE_CHECKING, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
@@ -880,6 +880,13 @@ class SKUType(Enum):
     consumable = 3
     subscription = 5
     subscription_group = 6
+
+
+class SafetyWarningType(Enum):
+    stranger_danger = 1
+    inappropriate_conversation_tier_1 = 2
+    inappropriate_conversation_tier_2 = 3
+    likely_ato = 4
 
 
 class SelectDefaultValueType(Enum):

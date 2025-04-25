@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from .mixins import Hashable
-from .utils import snowflake_time, MISSING
+from .utils import MISSING, snowflake_time
 
 from typing import (
     SupportsInt,

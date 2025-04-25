@@ -62,6 +62,7 @@ __all__ = (
     'MemberFlags',
     'MessageFlags',
     'PublicUserFlags',
+    'RecipientFlags',
     'RoleFlags',
     'SKUFlags',
     'SystemChannelFlags',
@@ -1096,18 +1097,44 @@ class Intents(BaseFlags):
 
     @classmethod
     def none(cls: Type[Intents]) -> Intents:
-        """A factory method that creates a :class:`Intents` with everything disabled."""
+        """A factory method that creates a :class:`Intents` instance with everything disabled."""
         self = cls.__new__(cls)
         self.value = self.DEFAULT_VALUE
         return self
 
     @classmethod
     def default(cls: Type[Intents]) -> Intents:
-        """A factory method that creates a :class:`Intents` with everything enabled
+        """A factory method that creates a :class:`Intents` instance with everything enabled
         except :attr:`members`, :attr:`presences`, and :attr:`message_content`.
         """
         self = cls.all()
         self.message_content = False
+        return self
+
+    @classmethod
+    def sdk(cls: Type[Intents]) -> Intents:
+        """A factory method that creates a :class:`Intents` instance with intents the official SDK
+        enables.
+
+        The following intents are enabled by the SDK:
+
+        - :attr:`~.dm_messages`
+        - :attr:`~.private_channels`
+        - :attr:`~.unknown_19`
+        - :attr:`~.relationships`
+        - :attr:`~.user_presences`
+        - :attr:`~.lobbies`
+        - :attr:`~.lobby_delete`
+        """
+
+        self = cls.none()
+        self.dm_messages = True
+        self.private_channels = True
+        self.unknown_19 = True
+        self.relationships = True
+        self.user_presences = True
+        self.lobbies = True
+        self.lobby_delete = True
         return self
 
     @flag_value
@@ -2576,8 +2603,74 @@ class PublicUserFlags(BaseFlags):
 
 
 @fill_with_flags()
+class RecipientFlags(BaseFlags):
+    r"""Wraps up the Discord DM channel recipient flags.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two RecipientFlags are equal.
+
+        .. describe:: x != y
+
+            Checks if two RecipientFlags are not equal.
+
+        .. describe:: x | y, x |= y
+
+            Returns a RecipientFlags instance with all enabled flags from
+            both x and y.
+
+        .. describe:: x & y, x &= y
+
+            Returns a RecipientFlags instance with only flags enabled on
+            both x and y.
+
+        .. describe:: x ^ y, x ^= y
+
+            Returns a RecipientFlags instance with only flags enabled on
+            only one of x or y, not on both.
+
+        .. describe:: ~x
+
+            Returns a RecipientFlags instance with all flags inverted from x.
+
+        .. describe:: hash(x)
+
+            Return the flag's hash.
+
+        .. describe:: iter(x)
+
+            Returns an iterator of ``(name, value)`` pairs. This allows it
+            to be, for example, constructed as a dict or a list of pairs.
+            Note that aliases are not shown.
+
+        .. describe:: bool(b)
+
+            Returns whether any flag is set to ``True``.
+
+
+    Attributes
+    ----------
+    value: :class:`int`
+        The raw value. You should query flags via the properties
+        rather than using this raw value.
+    """
+
+    @flag_value
+    def dismissed_in_game_message_nux(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user dismissed :attr:`~MessageType.in_game_message_nux` message."""
+        return 1 << 0
+
+    @flag_value
+    def dismissed_current_chat_wallpaper(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user dismissed current chat wallpaper."""
+        return 1 << 1
+
+
+@fill_with_flags()
 class RoleFlags(BaseFlags):
-    r"""Wraps up the Discord Role flags
+    r"""Wraps up the Discord Role flags.
 
     .. versionadded:: 2.4
 

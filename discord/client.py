@@ -48,9 +48,7 @@ from typing import (
 
 import aiohttp
 
-from . import utils
-
-from .activity import BaseActivity, Spotify, ActivityTypes, Session, create_activity
+from .activity import BaseActivity, Spotify, ActivityTypes, Session, HeadlessSession, create_activity
 from .appinfo import AppInfo
 from .backoff import ExponentialBackoff
 from .channel import PartialMessageable
@@ -75,7 +73,14 @@ from .sticker import GuildSticker
 from .threads import Thread
 from .template import Template
 from .user import _UserTag, User, ClientUser
-from .utils import MISSING, time_snowflake
+from .utils import (
+    MISSING,
+    SequenceProxy,
+    resolve_invite,
+    resolve_template,
+    setup_logging,
+    time_snowflake,
+)
 from .voice_client import VoiceClient
 from .widget import Widget
 
@@ -403,7 +408,7 @@ class Client:
 
         When connected, this includes a representation of the library's session and an "all" session representing the user's overall presence.
         """
-        return utils.SequenceProxy(self._connection._sessions.values())
+        return SequenceProxy(self._connection._sessions.values())
 
     @property
     def soundboard_sounds(self) -> List[SoundboardSound]:
@@ -419,12 +424,12 @@ class Client:
 
         .. versionadded:: 1.1
         """
-        return utils.SequenceProxy(self._connection._messages or [])
+        return SequenceProxy(self._connection._messages or [])
 
     @property
     def cached_lobby_messages(self) -> Sequence[LobbyMessage]:
         """Sequence[:class:`.LobbyMessage`]: Read-only list of lobby messages the connected client has cached."""
-        return utils.SequenceProxy(self._connection._lobby_messages or [])
+        return SequenceProxy(self._connection._lobby_messages or [])
 
     @property
     def private_channels(self) -> Sequence[PrivateChannel]:
@@ -440,12 +445,12 @@ class Client:
     @property
     def relationships(self) -> Sequence[Relationship]:
         """Sequence[:class:`.Relationship`]: Returns all the relationships that the connected client has."""
-        return utils.SequenceProxy(self._connection._relationships.values())
+        return SequenceProxy(self._connection._relationships.values())
 
     @property
     def game_relationships(self) -> Sequence[GameRelationship]:
         """Sequence[:class:`.GameRelationship`]: Returns all the game relationships that the connected client has."""
-        return utils.SequenceProxy(self._connection._game_relationships.values())
+        return SequenceProxy(self._connection._game_relationships.values())
 
     @property
     def friends(self) -> List[Relationship]:
@@ -575,7 +580,7 @@ class Client:
     @property
     def disclose(self) -> Sequence[str]:
         """Sequence[:class:`str`]: Upcoming changes to the user's account."""
-        return utils.SequenceProxy(self._connection.disclose)
+        return SequenceProxy(self._connection.disclose)
 
     @property
     def av_sf_protocol_floor(self) -> int:
@@ -1001,7 +1006,7 @@ class Client:
                 await self.start(token, reconnect=reconnect)
 
         if log_handler is not None:
-            utils.setup_logging(
+            setup_logging(
                 handler=log_handler,
                 formatter=log_formatter,
                 level=log_level,
@@ -2338,6 +2343,42 @@ class Client:
 
             me.status = status
 
+    async def create_headless_session(
+        self, *, activities: List[ActivityTypes], token: Optional[str] = None
+    ) -> HeadlessSession:
+        """|coro|
+
+        Creates, or updates a headless session.
+
+        Parameters
+        ----------
+        activities: List[Union[:class:`BaseActivity`, :class:`Spotify`], ...]
+            The activities. This must contain exactly single activity.
+        token: Optional[:class:`str`]
+            The ID of the headless session to update. ``None`` denotes creating a new headless session.
+
+        Raises
+        ------
+        HTTPException
+            The session token is invalid, or creating or editing the headless session failed.
+
+        Returns
+        -------
+        :class:`HeadlessSession`
+            The created headless session.
+        """
+
+        state = self._connection
+        data = await state.http.create_headless_session(
+            activities=[a.to_dict() for a in activities],
+            token=token,
+        )
+        return HeadlessSession(
+            token=data['token'],
+            activities=tuple(create_activity(d, state) for d in data['activities']),
+            state=state,
+        )
+
     # Connections
 
     async def fetch_connections(self) -> List[Connection]:
@@ -2360,6 +2401,35 @@ class Client:
         state = self._connection
         data = await state.http.get_connections()
         return [Connection(data=d, state=state) for d in data]
+
+    async def change_voice_state(
+        self,
+        *,
+        channel: Optional[Snowflake],
+        self_mute: bool = False,
+        self_deaf: bool = False,
+        self_video: bool = False,
+    ) -> None:
+        """|coro|
+
+        Changes client's private channel voice state.
+
+        Parameters
+        ----------
+        channel: Optional[:class:`~discord.abc.Snowflake`]
+            Channel the client wants to join (must be a private channel). Use ``None`` to disconnect.
+        self_mute: :class:`bool`
+            Indicates if the client should be self-muted.
+        self_deaf: :class:`bool`
+            Indicates if the client should be self-deafened.
+        self_video: :class:`bool`
+            Indicates if the client should show camera.
+        """
+        state = self._connection
+        ws = self.ws
+        channel_id = channel.id if channel else None
+
+        await ws.voice_state(None, channel_id, self_mute, self_deaf, self_video)
 
     # Guild stuff
 
@@ -2515,7 +2585,7 @@ class Client:
         :class:`.Template`
             The template from the URL/code.
         """
-        code = utils.resolve_template(code)
+        code = resolve_template(code)
         data = await self.http.get_template(code)
         return Template(data=data, state=self._connection)
 
@@ -2572,7 +2642,7 @@ class Client:
             The invite from the URL/ID.
         """
 
-        resolved = utils.resolve_invite(url)
+        resolved = resolve_invite(url)
 
         if scheduled_event_id and resolved.event:
             raise ValueError('Cannot specify scheduled_event_id and contain an event_id in the url.')

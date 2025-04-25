@@ -23,6 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
+
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 
 if TYPE_CHECKING:
