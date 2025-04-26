@@ -23,6 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from __future__ import annotations
+
 from typing import Any, List, Optional, TYPE_CHECKING, Union
 
 from .asset import Asset
@@ -30,23 +31,90 @@ from .color import Color
 from .flags import RoleFlags
 from .mixins import Hashable
 from .permissions import Permissions
-from .utils import MISSING, _get_as_snowflake, snowflake_time
+from .utils import _get_as_snowflake, snowflake_time
 
 __all__ = (
+    'PRIMARY_HOLOGRAPHIC_ROLE_COLOR',
+    'SECONDARY_HOLOGRAPHIC_ROLE_COLOR',
+    'TERTIARY_HOLOGRAPHIC_ROLE_COLOR',
+    'RoleColors',
     'RoleTags',
     'Role',
 )
 
 if TYPE_CHECKING:
     import datetime
+    from typing_extensions import Self
 
     from .guild import Guild
     from .member import Member
     from .state import ConnectionState
     from .types.role import (
         Role as RolePayload,
-        RoleTags as RoleTagPayload,
+        RoleColors as RoleColorsPayload,
+        RoleTags as RoleTagsPayload,
     )
+
+PRIMARY_HOLOGRAPHIC_ROLE_COLOR: int = 0xA9C9FF
+SECONDARY_HOLOGRAPHIC_ROLE_COLOR: int = 0xFFBBEC
+TERTIARY_HOLOGRAPHIC_ROLE_COLOR: int = 0xFFC3A0
+
+
+class RoleColors:
+    """Represents colors of a role.
+
+    Attributes
+    ----------
+    primary_color: :class:`int`
+        The primary role color.
+    secondary_color: :class:`int`
+        The secondary role color.
+    tertiary_color: :class:`int`
+        The tertiary role color.
+
+    """
+
+    __slots__ = (
+        'primary_color',
+        'secondary_color',
+        'tertiary_color',
+    )
+
+    def __init__(
+        self,
+        *,
+        primary_color: int,
+        secondary_color: Optional[int] = None,
+        tertiary_color: Optional[int] = None,
+    ) -> None:
+        self.primary_color: int = primary_color
+        self.secondary_color: Optional[int] = secondary_color
+        self.tertiary_color: Optional[int] = tertiary_color
+
+    @classmethod
+    def from_dict(cls, data: RoleColorsPayload) -> Self:
+        return cls(
+            primary_color=data['primary_color'],
+            secondary_color=data.get('secondary_color'),
+            tertiary_color=data.get('tertiary_color'),
+        )
+
+    def is_holographic(self) -> bool:
+        """:class:`bool`: Whether the role colors are holographic."""
+        return (
+            self.primary_color == PRIMARY_HOLOGRAPHIC_ROLE_COLOR
+            and self.secondary_color == SECONDARY_HOLOGRAPHIC_ROLE_COLOR
+            and self.tertiary_color == TERTIARY_HOLOGRAPHIC_ROLE_COLOR
+        )
+
+    @classmethod
+    def holographic(cls) -> Self:
+        """A factory method that returns a :class:`RoleColors` instance with holographic colors."""
+        return cls(
+            primary_color=PRIMARY_HOLOGRAPHIC_ROLE_COLOR,
+            secondary_color=SECONDARY_HOLOGRAPHIC_ROLE_COLOR,
+            tertiary_color=TERTIARY_HOLOGRAPHIC_ROLE_COLOR,
+        )
 
 
 class RoleTags:
@@ -81,7 +149,7 @@ class RoleTags:
         '_guild_connections',
     )
 
-    def __init__(self, data: RoleTagPayload):
+    def __init__(self, data: RoleTagsPayload):
         self.bot_id: Optional[int] = _get_as_snowflake(data, 'bot_id')
         self.integration_id: Optional[int] = _get_as_snowflake(data, 'integration_id')
         self.subscription_listing_id: Optional[int] = _get_as_snowflake(data, 'subscription_listing_id')
@@ -90,9 +158,9 @@ class RoleTags:
         # This is different from other fields where "null" means "not there".
         # So in this case, a value of None is the same as True.
         # Which means we would need a different sentinel.
-        self._premium_subscriber: bool = data.get('premium_subscriber', MISSING) is None
-        self._available_for_purchase: bool = data.get('available_for_purchase', MISSING) is None
-        self._guild_connections: bool = data.get('guild_connections', MISSING) is None
+        self._premium_subscriber: bool = 'premium_subscriber' in data
+        self._available_for_purchase: bool = 'available_for_purchase' in data
+        self._guild_connections: bool = 'guild_connections' in data
 
     def is_bot_managed(self) -> bool:
         """:class:`bool`: Whether the role is associated with a bot."""
@@ -168,12 +236,14 @@ class Role(Hashable):
     ----------
     id: :class:`int`
         The ID for the role.
-    name: :class:`str`
-        The name of the role.
     guild: :class:`Guild`
         The guild the role belongs to.
+    name: :class:`str`
+        The name of the role.
     hoist: :class:`bool`
-         Indicates if the role will be displayed separately from other members.
+        Indicates if the role will be displayed separately from other members.
+    colors: :class:`RoleColors`
+        The role colors.
     position: :class:`int`
         The position of the role. This number is usually positive. The bottom
         role has a position of 0.
@@ -208,20 +278,21 @@ class Role(Hashable):
     """
 
     __slots__ = (
+        '_state',
+        '_flags',
         'id',
+        'guild',
         'name',
+        'hoist',
         '_permissions',
         '_color',
+        'colors',
         'position',
         '_icon',
         'unicode_emoji',
         'managed',
         'mentionable',
-        'hoist',
-        'guild',
         'tags',
-        '_flags',
-        '_state',
     )
 
     def __init__(self, *, guild: Guild, state: ConnectionState, data: RolePayload):
@@ -241,7 +312,7 @@ class Role(Hashable):
             return NotImplemented
 
         if self.guild != other.guild:
-            raise RuntimeError('cannot compare roles from two different guilds.')
+            raise RuntimeError('Cannot compare roles from two different guilds')
 
         # the @everyone role is always the lowest role in hierarchy
         guild_id = self.guild.id
@@ -272,11 +343,19 @@ class Role(Hashable):
             return NotImplemented
         return not r
 
-    def _update(self, data: RolePayload):
+    def _update(self, data: RolePayload) -> None:
         self.name: str = data['name']
         self._permissions: int = int(data.get('permissions', 0))
         self.position: int = data.get('position', 0)
         self._color: int = data.get('color', 0)
+        self.colors: RoleColors = RoleColors.from_dict(
+            data=data.get('colors')
+            or {
+                'primary_color': self._color,
+                'secondary_color': None,
+                'tertiary_color': None,
+            }
+        )
         self.hoist: bool = data.get('hoist', False)
         self._icon: Optional[str] = data.get('icon')
         self.unicode_emoji: Optional[str] = data.get('unicode_emoji')

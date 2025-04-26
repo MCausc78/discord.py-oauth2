@@ -23,6 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from typing import List, Union
+from typing_extensions import TypeAlias
 
-Snowflake = Union[str, int]
+Snowflake: TypeAlias = Union[str, int]
 SnowflakeList = List[Snowflake]

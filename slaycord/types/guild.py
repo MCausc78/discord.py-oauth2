@@ -194,3 +194,8 @@ class RolePositionUpdate(_RolePositionRequired, total=False):
 class BulkBanUserResponse(TypedDict):
     banned_users: Optional[List[Snowflake]]
     failed_users: Optional[List[Snowflake]]
+
+
+class RTCRegion(TypedDict):
+    region: str
+    ips: List[str]

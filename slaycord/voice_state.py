@@ -327,7 +327,7 @@ class VoiceConnectionState:
         previous_endpoint = self.endpoint
 
         self.token = data['token']
-        self.server_id = int(data.get('guild_id') or data.get('channel_id') or data.get('lobby_id') or 0)
+        self.server_id = int(data.get('lobby_id') or data.get('guild_id') or data.get('channel_id') or 0)
         endpoint = data.get('endpoint')
 
         if self.token is None or endpoint is None:

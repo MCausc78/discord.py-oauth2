@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
     from datetime import datetime
 
-    from .channel import DMChannel, EphemeralDMChannel
+    from .channel import DMChannel, GroupChannel, EphemeralDMChannel
     from .game_relationship import GameRelationship
     from .guild import Guild
     from .member import VoiceState
@@ -653,6 +653,18 @@ class User(BaseUser, slaycord.abc.Messageable):
         :meth:`create_dm` coroutine function.
         """
         return self._state._get_private_channel_by_user(self.id)
+
+    @property
+    def mutual_groups(self) -> List[GroupChannel]:
+        """List[:class:`GroupChannel`]: The groups that the user shares with the client.
+
+        .. note::
+
+            This will only return mutual groups within the client's internal cache.
+        """
+        from .channel import GroupChannel
+
+        return [ch for ch in self._state._private_channels.values() if isinstance(ch, GroupChannel) and ch]
 
     @property
     def mutual_guilds(self) -> List[Guild]:

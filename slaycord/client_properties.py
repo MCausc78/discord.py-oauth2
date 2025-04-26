@@ -25,15 +25,40 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from base64 import b64encode
+import sys
 from typing import Any, Dict, Final, Optional, TYPE_CHECKING
 
+from .enums import Enum
 from .utils import _to_json, copy_doc
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from .utils import MaybeAwaitable
 
 DEFAULT_USER_AGENT: Final[str] = "Discord Embedded/0.0.8"
 SDK_CLIENT_BUILD_NUMBER: Final[int] = 304683
+
+
+class ClientOperatingSystem(Enum):
+    android = 'Android'
+    ios = 'iOS'
+    linux = 'Linux'
+    osx = 'Mac OS X'
+    windows = 'Windows'
+    unknown = 'Unknown'
+
+    @classmethod
+    def default(cls) -> Self:
+        lookup = {
+            'android': cls.android,
+            'darwin': cls.osx,
+            'ios': cls.ios,
+            'linux': cls.linux,
+            'win32': cls.windows,
+            'cygwin': cls.windows,
+        }
+        return lookup.get(sys.platform, cls.unknown)  # type: ignore
 
 
 class ClientProperties:
@@ -45,7 +70,7 @@ class ClientProperties:
     - :class:`~slaycord.SimpleClientProperties`
 
     Client properties are used for analytics and anti-abuse systems. See
-    `documentation <https://docs.slaycord.sex/reference#client-properties>`_ for details.
+    `documentation <https://docs.slaycord.food/reference#client-properties>`_ for details.
     """
 
     __slots__ = ()
@@ -106,6 +131,11 @@ class DefaultClientProperties(ClientProperties):
     ----------
     user_agent: :class:`str`
         The user agent used to make HTTP requests and WebSocket connections.
+
+    Parameters
+    ----------
+    os: Optional[:class:`ClientOperatingSystem`]
+        The operating system to send in properties.
     """
 
     __slots__ = (
@@ -115,7 +145,7 @@ class DefaultClientProperties(ClientProperties):
         'user_agent',
     )
 
-    def __init__(self) -> None:
+    def __init__(self, *, os: Optional[ClientOperatingSystem] = None) -> None:
         # [2025-03-18 22:06:32.443] [1456] (gateway_socket.cpp:698): sending - {
         #   "d": {
         #     "capabilities":69680,
@@ -132,13 +162,16 @@ class DefaultClientProperties(ClientProperties):
         #   "op":2
         # }
 
+        if os is None:
+            os = ClientOperatingSystem.default()
+
         self.user_agent: str = "Discord Embedded/0.0.8"
 
         self._gateway_value: Dict[str, Any] = {
             "browser": "Discord Embedded",
             "client_build_number": SDK_CLIENT_BUILD_NUMBER,
             "device": "console",  # :clueless:
-            "os": "Windows",
+            "os": os.value,
             "version": 1,  # That's what populates :attr:`Session.version`
         }
         self._http_value: Dict[str, Any] = {
@@ -147,7 +180,7 @@ class DefaultClientProperties(ClientProperties):
             "browser_version": "0.0.8",
             "client_build_number": SDK_CLIENT_BUILD_NUMBER,
             "design_id": 0,  # ???
-            "os": "Windows",
+            "os": os.value,
             "release_channel": "unknown",
         }
         self._update_cached_properties()

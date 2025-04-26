@@ -30,6 +30,7 @@ from .appinfo import *
 from .asset import *
 from .automod import *
 from .channel import *
+from .calls import *
 from .client import *
 from .client_properties import *
 from .color import *
@@ -41,6 +42,7 @@ from .enums import *
 from .errors import *
 from .file import *
 from .flags import *
+from .game_invite import *
 from .game_relationship import *
 from .guild import *
 from .integrations import *
@@ -65,6 +67,7 @@ from .sku import *
 from .soundboard import *
 from .stage_instance import *
 from .sticker import *
+from .stream import *
 from .subscription import *
 from .team import *
 from .template import *

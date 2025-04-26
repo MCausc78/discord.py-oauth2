@@ -94,6 +94,7 @@ if TYPE_CHECKING:
     from .automod import AutoModAction, AutoModRule
     from .channel import DMChannel, GroupChannel, EphemeralDMChannel
     from .ext.commands import Bot, Context, CommandError
+    from .game_invite import GameInvite
     from .game_relationship import GameRelationship
     from .guild import GuildChannel
     from .integrations import Integration
@@ -526,6 +527,11 @@ class Client:
     def audio_settings(self) -> AudioSettingsManager:
         """:class:`.AudioSettingsManager`: Returns the manager for user's audio settings."""
         return self._connection._audio_settings
+
+    @property
+    def game_invites(self) -> Sequence[GameInvite]:
+        """Sequence[:class:`.GameInvite`]: Returns all the game invites that the connected client has."""
+        return SequenceProxy(self._connection._game_invites.values())
 
     @property
     def voice_clients(self) -> List[VoiceProtocol]:
@@ -2742,6 +2748,24 @@ class Client:
         state = self._connection
         data = await state.http.get_relationships(with_implicit=with_implicit)
         return [Relationship(state=state, data=d) for d in data]
+
+    async def fetch_preferred_rtc_regions(self) -> Dict[str, List[str]]:
+        """|coro|
+
+        Retrieves the preferred RTC regions of the client.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving the preferred voice regions failed.
+
+        Returns
+        -------
+        Dict[:class:`str`, List[:class:`str`]]
+            The region name and list of IPs for the closest voice regions.
+        """
+        data = await self.http.get_preferred_voice_regions()
+        return {v['region']: v['ips'] for v in data}
 
     async def create_dm(self, user: Snowflake) -> Union[DMChannel, EphemeralDMChannel]:
         """|coro|

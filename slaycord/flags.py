@@ -1088,7 +1088,7 @@ class Intents(BaseFlags):
         self.guild_presences = True
         self.dm_messages = True
         self.private_channels = True
-        self.unknown_19 = True
+        self.calls = True
         self.relationships = True
         self.user_presences = True
         self.lobbies = True
@@ -1120,7 +1120,7 @@ class Intents(BaseFlags):
 
         - :attr:`~.dm_messages`
         - :attr:`~.private_channels`
-        - :attr:`~.unknown_19`
+        - :attr:`~.calls`
         - :attr:`~.relationships`
         - :attr:`~.user_presences`
         - :attr:`~.lobbies`
@@ -1130,7 +1130,7 @@ class Intents(BaseFlags):
         self = cls.none()
         self.dm_messages = True
         self.private_channels = True
-        self.unknown_19 = True
+        self.calls = True
         self.relationships = True
         self.user_presences = True
         self.lobbies = True
@@ -1710,8 +1710,15 @@ class Intents(BaseFlags):
         return 1 << 18
 
     @flag_value
-    def unknown_19(self) -> int:
-        """:class:`bool`: Unknown."""
+    def calls(self) -> int:
+        """:class:`bool`: Whether call related events are enabled.
+
+        This corresponds to the following events:
+
+        - :func:`on_call_create`
+        - :func:`on_call_update`
+        - :func:`on_call_delete`
+        """
         return 1 << 19
 
     @alias_flag_value

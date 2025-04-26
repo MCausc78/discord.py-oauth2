@@ -33,6 +33,7 @@ from .audit_log import AuditLogEntry
 from .automod import AutoModerationAction, AutoModerationRuleTriggerType
 from .channel import ChannelType, DMChannel, GroupDMChannel, StageInstance, VoiceChannelEffect
 from .emoji import Emoji, PartialEmoji
+from .game_invite import GameInvite
 from .guild import Guild, UnavailableGuild
 from .integration import BaseIntegration, IntegrationApplication
 from .interactions import Interaction
@@ -47,6 +48,7 @@ from .sku import Entitlement
 from .snowflake import Snowflake
 from .soundboard import SoundboardSound
 from .sticker import GuildSticker
+from .stream import *
 from .subscription import Subscription
 from .threads import Thread, ThreadMember
 from .user import User, AvatarDecorationData, RelationshipType, Relationship, GameRelationshipType, GameRelationship
@@ -130,6 +132,7 @@ class ReadySupplementalEvent(TypedDict):
     merged_presences: MergedPresences
     lazy_private_channels: List[Union[DMChannel, GroupDMChannel]]
     disclose: List[str]
+    game_invites: List[GameInvite]
 
 
 ResumedEvent = Literal[None]
@@ -534,6 +537,17 @@ class UpdateLobbyVoiceState(TypedDict):
     self_deaf: bool
 
 
+GameInviteCreateEvent = GameInvite
+
+
+class GameInviteDeleteEvent(TypedDict):
+    invite_id: Snowflake
+
+
+class GameInviteDeleteManyEvent(TypedDict):
+    invite_ids: List[Snowflake]
+
+
 class RelationshipAddEvent(Relationship):
     should_notify: NotRequired[bool]
 
@@ -567,3 +581,19 @@ class UserMergeOperationCompletedEvent(TypedDict):
 
 
 UserSettingsUpdateEvent = GatewayUserSettings
+
+StreamCreateEvent = StreamUpdateEvent = Stream
+
+
+class StreamDeleteEvent(TypedDict):
+    stream_key: str
+    reason: Literal[
+        'user_requested',
+        'stream_ended',
+        'stream_full',
+        'unauthorized',
+        'safety_guild_rate_limited',
+        'parse_failed',
+        'invalid_channel',
+    ]
+    unavailable: NotRequired[bool]

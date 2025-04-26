@@ -39,9 +39,10 @@ from .utils import cached_slot_property, find, utcnow
 from .voice_client import VoiceClient
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
     from . import abc
     from .abc import T as ConnectReturn
-    from .calls import Call
     from .channel import DMChannel, GroupChannel
     from .client import Client
     from .member import VoiceState
@@ -402,7 +403,9 @@ class PrivateCall:
         There is an alias of this called :attr:`leave`.
         """
         state = self._state
-        if not (client := state._get_voice_client(self.channel.me.id)):
+        client = state._get_voice_client(self.channel.me.id)
+
+        if client is None:
             return
 
         return await client.disconnect(force=force)
@@ -500,3 +503,6 @@ class GroupCall(PrivateCall):
         """
         channel = self.channel
         await self._state.http.stop_ringing(channel.id, *{r.id for r in recipients or channel.recipients})
+
+
+Call: TypeAlias = Union[PrivateCall, GroupCall]
