@@ -55,8 +55,9 @@ from .automod import AutoModRule, AutoModAction
 from .channel import *
 from .channel import _private_channel_factory, _channel_factory
 from .emoji import Emoji
-from .enums import try_enum, AudioContext, ChannelType, Status
+from .enums import try_enum, AudioContext, ChannelType, Status, StreamDeletionReason
 from .flags import ApplicationFlags, Intents, MemberCacheFlags
+from .game_invite import GameInvite
 from .game_relationship import GameRelationship
 from .guild import Guild
 from .integrations import _integration_factory
@@ -77,6 +78,7 @@ from .sku import Entitlement
 from .soundboard import SoundboardSound
 from .stage_instance import StageInstance
 from .sticker import GuildSticker
+from .stream import PartialStream, Stream
 from .subscription import Subscription
 from .threads import Thread, ThreadMember
 from .user import User, ClientUser
@@ -84,7 +86,7 @@ from .utils import MISSING, SequenceProxy, _get_as_snowflake, find, parse_time
 
 if TYPE_CHECKING:
     from .abc import PrivateChannel
-    from .calls import PrivateCall, GroupCall
+    from .calls import Call
     from .gateway import DiscordWebSocket
     from .guild import GuildChannel
     from .http import HTTPClient
@@ -112,7 +114,6 @@ if TYPE_CHECKING:
     from .types.voice import BaseVoiceState as VoiceStatePayload
 
     T = TypeVar('T')
-    Call = Union[PrivateCall, GroupCall]
     Channel = Union[GuildChannel, PrivateChannel, PartialMessageable]
 
 
@@ -245,10 +246,12 @@ class ConnectionState(Generic[ClientT]):
         self._guilds: Dict[int, Guild] = {}
 
         self._lobbies: Dict[int, Lobby] = {}
+        self._game_invites: Dict[int, GameInvite] = {}
         self._game_relationships: Dict[int, GameRelationship] = {}
         self._audio_settings: AudioSettingsManager = AudioSettingsManager(data={}, state=self)
         self._relationships: Dict[int, Relationship] = {}
         self._sessions: Dict[str, Session] = {}
+        self._streams: Dict[str, Stream] = {}
         self._subscriptions: Dict[int, Subscription] = {}
 
         self.analytics_token: Optional[str] = None
@@ -846,6 +849,10 @@ class ConnectionState(Generic[ClientT]):
         disclose = data.get('disclose', [])
         self.disclose = disclose
 
+        for game_invite_data in data.get('game_invites', ()):
+            game_invite = GameInvite(data=game_invite_data, state=self)
+            self._game_invites[game_invite.id] = game_invite
+
         raw = RawReadyEvent(
             state=self,
             disclose=disclose,
@@ -858,6 +865,28 @@ class ConnectionState(Generic[ClientT]):
 
     def parse_resumed(self, data: gw.ResumedEvent) -> None:
         self.dispatch('resumed')
+
+    def parse_remote_command(self, data: Any) -> None:
+        # This event can have anything as it's payload
+
+        # class RemoteVoiceStateUpdateCommand(sckema.Struct):
+        #     self_mute: bool = sckema.Boolean()
+        #     self_deaf: bool = sckema.Boolean()
+        #
+        # class RemoteDisconnectCommand(sckema.Struct):
+        #     pass
+        #
+        # class RemoteAudioSettingsUpdateCommand(sckema.Struct):
+        #     context: Literal['user', 'stream'] = sckema.Choice(('user', 'stream'))
+        #     id: int = sckema.Integer(coerce={str})
+        #
+        # remote_command_type = sckema.InternalTaggedEnumType('type', variants={
+        #     'VOICE_STATE_UPDATE': RemoteVoiceStateUpdateCommand.finalize(),
+        #     'DISCONNECT': RemoteDisconnectCommand.finalize(),
+        #     'AUDIO_SETTINGS_UPDATE': RemoteAudioSettingsUpdateCommand.finalize(),
+        # })
+
+        self.dispatch('remote_command', data)
 
     def parse_message_create(self, data: gw.MessageCreateEvent) -> None:
         channel, _ = self._get_guild_channel(data)
@@ -1895,27 +1924,32 @@ class ConnectionState(Generic[ClientT]):
             _log.debug('VOICE_STATE_UPDATE referencing unknown guild ID: %s. Discarding.', guild_id)
             return
 
-        if int(data['user_id']) == self_id:
+        user_id = int(data['user_id'])
+        if user_id == self_id:
             voice = self._get_voice_client(guild.id if guild else self_id)
             if voice is not None:
                 coro = voice.on_voice_state_update(data)
                 asyncio.create_task(logging_coroutine(coro, info='Voice Protocol voice state update handler'))
 
-        if guild is not None:
-            member, before, after = guild._update_voice_state(data, channel_id)
-            if member is not None:
-                if flags.voice:
-                    if channel_id is None and flags._voice_only and member.id != self_id:
-                        guild._remove_member(member)
-                    elif channel_id is not None:
-                        guild._add_member(member)
-
-                self.dispatch('voice_state_update', member, before, after)
-            else:
-                _log.debug('VOICE_STATE_UPDATE referencing an unknown member ID: %s. Discarding.', data['user_id'])
-        else:
+        if guild is None:
             user, before, after = self._update_voice_state(data, channel_id)
+            if user is None:
+                user = Object(user_id)
             self.dispatch('voice_state_update', user, before, after)
+            return
+
+        member, before, after = guild._update_voice_state(data, channel_id)
+        if member is None:
+            _log.debug('VOICE_STATE_UPDATE referencing an unknown member ID: %s. Discarding.', user_id)
+            return
+
+        if flags.voice:
+            if channel_id is None and flags._voice_only and member.id != self_id:
+                guild._remove_member(member)
+            elif channel_id is not None:
+                guild._add_member(member)
+
+        self.dispatch('voice_state_update', member, before, after)
 
     def parse_voice_server_update(self, data: gw.VoiceServerUpdateEvent) -> None:
         key_id = _get_as_snowflake(data, 'guild_id')
@@ -2312,9 +2346,7 @@ class ConnectionState(Generic[ClientT]):
             'PRESENCE_UPDATE',
             predicate=(
                 lambda data, /: (
-                    _get_as_snowflake(data, 'guild_id') is None
-                    and int(data['user']['id']) == user_id
-                    and data['status'] == 'offline'
+                    data.get('guild_id') is None and int(data['user']['id']) == user_id and data['status'] == 'offline'
                 )
             ),
         )
@@ -2341,7 +2373,10 @@ class ConnectionState(Generic[ClientT]):
                 old = copy(existing)
                 existing._update(session)
                 if not from_ready and (
-                    old.status != existing.status or old.active != existing.active or old.activities != existing.activities
+                    old.status != existing.status
+                    or old.active != existing.active
+                    or old.activities != existing.activities
+                    or old.hidden_activities != existing.hidden_activities
                 ):
                     self.dispatch('session_update', old, existing)
             else:
@@ -2374,7 +2409,12 @@ class ConnectionState(Generic[ClientT]):
             if old_all is not None:
                 old = copy(old_all)
                 old_all._update(fake)
-                if old.status != old_all.status or old.active != old_all.active or old.activities != old_all.activities:
+                if (
+                    old.status != old_all.status
+                    or old.active != old_all.active
+                    or old.activities != old_all.activities
+                    or old.hidden_activities != old_all.hidden_activities
+                ):
                     self.dispatch('session_update', old, old_all)
             else:
                 old_all = Session._fake_all(state=self, data=fake)
@@ -2448,8 +2488,83 @@ class ConnectionState(Generic[ClientT]):
             source_user_id,
         )
 
-    # TODO: That event
+    def parse_game_invite_create(self, data: gw.GameInviteCreateEvent) -> None:
+        game_invite = GameInvite(data=data, state=self)
+        self._game_invites[game_invite.id] = game_invite
+        self.dispatch('game_invite_create', game_invite)
+
+    def parse_game_invite_delete(self, data: gw.GameInviteDeleteEvent) -> None:
+        invite_id = int(data['invite_id'])
+        try:
+            game_invite = self._game_invites.pop(invite_id)
+        except KeyError:
+            _log.debug('GAME_INVITE_DELETE referencing an unknown game invite ID: %s. Discarding.', invite_id)
+        else:
+            self.dispatch('game_invite_delete', game_invite)
+
+    def parse_game_invite_delete_many(self, data: gw.GameInviteDeleteManyEvent) -> None:
+        raw = RawBulkGameInviteDeleteEvent(data)
+        for invite_id in raw.invite_ids:
+            try:
+                invite = self._game_invites.pop(invite_id)
+            except KeyError:
+                _log.debug('GAME_INVITE_DELETE_MANY referencing an unknown game invite ID: %s. Ignoring.', invite_id)
+            else:
+                raw.cached_invites.append(invite)
+
+        if raw.cached_invites:
+            self.dispatch('bulk_game_invite_delete', raw.cached_invites)
+        self.dispatch('raw_bulk_game_invite_delete', raw)
+
+    def parse_stream_create(self, data: gw.StreamCreateEvent) -> None:
+        key = data['stream_key']
+
+        try:
+            stream = self._streams[key]
+        except KeyError:
+            stream = Stream(data=data, state=self)
+            self._streams[stream.key] = stream
+            self.dispatch('stream_create', stream)
+        else:
+            stream.unavailable = False
+            self.dispatch('stream_available', stream)
+
+    def parse_stream_update(self, data: gw.StreamUpdateEvent) -> None:
+        key = data['stream_key']
+        try:
+            new = self._streams[key]
+        except KeyError:
+            old = PartialStream(key=key, state=self)
+            new = Stream(data=data, state=self)
+        else:
+            old = copy(new)
+            new._update(data)
+        self.dispatch('stream_update', old, new)
+
+    def parse_stream_delete(self, data: gw.StreamDeleteEvent) -> None:
+        key = data['stream_key']
+
+        if data.get('unavailable'):
+            try:
+                stream = self._streams[key]
+            except KeyError:
+                stream = PartialStream(key=key, state=self)
+            else:
+                stream.unavailable = True
+            self.dispatch('stream_unavailable', stream)
+            return
+
+        try:
+            stream = self._streams.pop(key)
+        except KeyError:
+            stream = PartialStream(key=key, state=self)
+
+        reason = try_enum(StreamDeletionReason, data['reason'])
+        self.dispatch('stream_delete', stream, reason)
+
+    # TODO: These events
     # ACTIVITY_INVITE_CREATE
+    # STREAM_SERVER_UPDATE
 
     def _get_reaction_user(self, channel: MessageableChannel, user_id: int) -> Optional[Union[User, Member]]:
         if isinstance(channel, (TextChannel, Thread, VoiceChannel)):

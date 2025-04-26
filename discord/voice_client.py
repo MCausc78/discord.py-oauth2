@@ -111,7 +111,7 @@ class VoiceProtocol:
 
         .. warning::
 
-            This method is not the same as the event. See: :func:`on_voice_state_update`
+            This method is not the same as the event. See: :func:`on_voice_state_update`.
 
         Parameters
         ----------
@@ -146,7 +146,9 @@ class VoiceProtocol:
         """
         raise NotImplementedError
 
-    async def connect(self, *, timeout: float, reconnect: bool, self_deaf: bool = False, self_mute: bool = False) -> None:
+    async def connect(
+        self, *, timeout: float, reconnect: bool, self_deaf: bool = False, self_mute: bool = False, self_video: bool = False
+    ) -> None:
         """|coro|
 
         An abstract method called when the client initiates the connection request.

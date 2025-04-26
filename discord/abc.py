@@ -79,6 +79,8 @@ if TYPE_CHECKING:
         GroupChannel,
         EphemeralDMChannel,
         PartialMessageable,
+        VoiceChannel,
+        StageChannel,
         CategoryChannel,
     )
     from .client import Client
@@ -97,7 +99,7 @@ if TYPE_CHECKING:
     MessageableChannel = PartialMessageableChannel
     MessageableDestinationType = Literal['channel', 'lobby', 'user']
     SnowflakeTime = Union["Snowflake", datetime]
-    VocalChannel = Union[DMChannel, GroupChannel]
+    VocalChannel = Union[DMChannel, GroupChannel, VoiceChannel, StageChannel]
 
 
 @runtime_checkable

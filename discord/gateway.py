@@ -45,7 +45,6 @@ from .enums import SpeakingState
 from .errors import ConnectionClosed
 from .utils import (
     _ActiveDecompressionContext,
-    _DecompressionContext,
     _from_json,
     _to_json,
 )
@@ -67,6 +66,8 @@ if TYPE_CHECKING:
     from .client_properties import ClientProperties
     from .state import ConnectionState
     from .types.gateway import UpdateLobbyVoiceState as UpdateLobbyVoiceStatePayload
+    from .types.stream import StreamType
+    from .utils import _DecompressionContext
     from .voice_state import VoiceConnectionState
 
 
@@ -316,6 +317,11 @@ class DiscordWebSocket:
     GUILD_SYNC                  = 12
     CALL_CONNECT                = 13
     LOBBY_VOICE_STATES          = 17
+    CREATE_STREAM               = 18
+    DELETE_STREAM               = 19
+    WATCH_STREAM                = 20
+    PING_STREAM_SERVER          = 21
+    SET_STREAM_PAUSED           = 22
     # fmt: on
 
     def __init__(self, socket: aiohttp.ClientWebSocketResponse, *, loop: asyncio.AbstractEventLoop) -> None:
@@ -780,6 +786,72 @@ class DiscordWebSocket:
         }
 
         _log.debug('Updating our lobby voice states to %s.', payload)
+        await self.send_as_json(payload)
+
+    async def create_stream(
+        self,
+        *,
+        type: StreamType,
+        guild_id: Optional[int] = None,
+        channel_id: int,
+        preferred_region: Optional[str] = None,
+    ) -> None:
+        payload = {
+            'op': self.CREATE_STREAM,
+            'd': {
+                'type': type,
+                'guild_id': guild_id,
+                'channel_id': channel_id,
+            },
+        }
+        if preferred_region is not None:
+            payload['d']['preferred_region'] = preferred_region
+        _log.debug('Sending "%s" to create stream', payload)
+        await self.send_as_json(payload)
+
+    async def ping_stream_server(self, stream_key: str) -> None:
+        payload = {
+            'op': self.PING_STREAM_SERVER,
+            'd': {
+                'stream_key': stream_key,
+            },
+        }
+
+        _log.debug('Pinging server of stream with key %s.', stream_key)
+        await self.send_as_json(payload)
+
+    async def watch_stream(self, stream_key: str) -> None:
+        payload = {
+            'op': self.WATCH_STREAM,
+            'd': {
+                'stream_key': stream_key,
+            },
+        }
+
+        _log.debug('Watching stream with key %s.', stream_key)
+        await self.send_as_json(payload)
+
+    async def set_stream_paused(self, stream_key: str, paused: bool) -> None:
+        payload = {
+            'op': self.SET_STREAM_PAUSED,
+            'd': {
+                'stream_key': stream_key,
+                'paused': paused,
+            },
+        }
+
+        _log.debug('Setting whether stream with key %s is paused to %s', stream_key, paused)
+        await self.send_as_json(payload)
+
+    async def delete_stream(self, stream_key: str) -> None:
+        payload = {
+            'op': self.DELETE_STREAM,
+            'd': {
+                'stream_key': stream_key,
+            },
+        }
+
+        _log.debug('Deleting stream with key %s.', stream_key)
         await self.send_as_json(payload)
 
     async def close(self, code: int = 4000) -> None:

@@ -39,6 +39,7 @@ from .utils import (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .game_invite import GameInvite
     from .guild import Guild
     from .member import VoiceState, Member
     from .message import Message, LobbyMessage
@@ -64,6 +65,7 @@ if TYPE_CHECKING:
         VoiceChannelStatusUpdateEvent,
         LobbyMessageDeleteEvent,
         LobbyMessageUpdateEvent,
+        GameInviteDeleteManyEvent,
     )
     from .user import User
 
@@ -91,6 +93,7 @@ __all__ = (
     'RawVoiceChannelStatusUpdateEvent',
     'SupplementalGuild',
     'RawReadyEvent',
+    'RawBulkGameInviteDeleteEvent',
 )
 
 
@@ -710,3 +713,24 @@ class RawReadyEvent(_RawReprMixin):
         self.disclose: List[str] = disclose
         self.friend_presences: List[RawPresenceUpdateEvent] = friend_presences
         self.guilds: List[SupplementalGuild] = guilds
+
+
+class RawBulkGameInviteDeleteEvent(_RawReprMixin):
+    """Represents the event payload for a :func:`on_raw_bulk_game_invite_delete` event.
+
+    Attributes
+    ----------
+    invite_ids: Set[:class:`int`]
+        A :class:`set` of the game invite IDs that were deleted.
+    cached_invites: List[:class:`GameInvite`]
+        The cached game invites, if found in the internal game invite cache.
+    """
+
+    __slots__ = (
+        'invite_ids',
+        'cached_invites',
+    )
+
+    def __init__(self, data: GameInviteDeleteManyEvent) -> None:
+        self.invite_ids: Set[int] = set(map(int, data['invite_ids']))
+        self.cached_invites: List[GameInvite] = []

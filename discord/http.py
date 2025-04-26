@@ -831,6 +831,22 @@ class HTTPClient:
 
         raise RuntimeError('Unreachable')
 
+    async def get_preferred_voice_regions(self) -> List[guild.RTCRegion]:
+        user_agent = self.client_properties.get_http_user_agent()
+        if isawaitable(user_agent):
+            user_agent = await user_agent
+        headers = {'User-Agent': user_agent}
+
+        async with self.__session.get('https://latency.media.gaming-sdk.com/rtc', headers=headers) as resp:
+            if resp.status == 200:
+                return await resp.json()
+            elif resp.status == 404:
+                raise NotFound(resp, 'RTC regions not found')
+            elif resp.status == 403:
+                raise Forbidden(resp, 'Cannot retrieve rtc regions')
+            else:
+                raise HTTPException(resp, 'Failed to get rtc regions')
+
     # state management
 
     async def close(self) -> None:
@@ -1578,6 +1594,18 @@ class HTTPClient:
 
     def modify_user_settings(self, /, **payload) -> Response[settings.UserSettings]:
         return self.request(Route('PATCH', '/users/@me/settings'), json=payload)
+
+    def upload_stream_preview(self, stream_key: str, thumbnail: str) -> Response[None]:
+        payload = {'thumbnail': thumbnail}
+
+        return self.request(
+            Route(
+                'POST',
+                '/streams/{stream_key}/preview',
+                stream_key=stream_key,
+            ),
+            json=payload,
+        )
 
     async def get_bot_gateway(self) -> Tuple[int, str, gateway.SessionStartLimit]:
         try:

@@ -83,6 +83,8 @@ __all__ = (
     'Status',
     'StickerFormatType',
     'StickerType',
+    'StreamDeletionReason',
+    'StreamType',
     'SubscriptionStatus',
     'TeamMemberRole',
     'TeamMembershipState',
@@ -949,6 +951,22 @@ class StickerFormatType(Enum):
 class StickerType(Enum):
     standard = 1
     guild = 2
+
+
+class StreamDeletionReason(Enum):
+    user_requested = 'user_requested'
+    stream_ended = 'stream_ended'
+    stream_full = 'stream_full'
+    unauthorized = 'unauthorized'
+    safety_guild_rate_limited = 'safety_guild_rate_limited'
+    parse_failed = 'parse_failed'
+    invalid_channel = 'invalid_channel'
+
+
+class StreamType(Enum):
+    guild = 'guild'
+    call = 'call'
+    test = 'test'
 
 
 class SubscriptionStatus(Enum):
