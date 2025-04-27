@@ -222,7 +222,7 @@ if TYPE_CHECKING:
     class _DecompressionContext(Protocol):
         COMPRESSION_TYPE: str
 
-        def decompress(self, data: bytes, /) -> str | None:
+        def decompress(self, data: bytes, /) -> Optional[bytes]:
             ...
 
     P = ParamSpec('P')
@@ -1514,9 +1514,9 @@ if _HAS_ZSTD:
             decompressor = zstandard.ZstdDecompressor()
             self.context = decompressor.decompressobj()
 
-        def decompress(self, data: bytes, /) -> Optional[str]:
+        def decompress(self, data: bytes, /) -> Optional[bytes]:
             # Each WS message is a complete gateway message
-            return self.context.decompress(data).decode('utf-8')
+            return self.context.decompress(data)
 
     _ActiveDecompressionContext: Type[_DecompressionContext] = _ZstdDecompressionContext
 else:
@@ -1530,7 +1530,7 @@ else:
             self.buffer: bytearray = bytearray()
             self.context = zlib.decompressobj()
 
-        def decompress(self, data: bytes, /) -> Optional[str]:
+        def decompress(self, data: bytes, /) -> Optional[bytes]:
             self.buffer.extend(data)
 
             # Check whether ending is Z_SYNC_FLUSH
@@ -1539,8 +1539,7 @@ else:
 
             msg = self.context.decompress(self.buffer)
             self.buffer = bytearray()
-
-            return msg.decode('utf-8')
+            return msg
 
     _ActiveDecompressionContext: Type[_DecompressionContext] = _ZlibDecompressionContext
 
