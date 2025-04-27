@@ -35,21 +35,7 @@ import time
 import threading
 import traceback
 
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Deque,
-    Dict,
-    List,
-    NamedTuple,
-    Optional,
-    TYPE_CHECKING,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Coroutine, Deque, Dict, List, NamedTuple, Optional, TYPE_CHECKING, Tuple, TypeVar
 
 import aiohttp
 import yarl
@@ -62,31 +48,6 @@ from .utils import (
     _from_json,
     _to_json,
 )
-
-try:
-    from erlpack import (
-        Atom,
-        unpack as _unpack_etf,
-        pack as _to_etf,
-    )  # type: ignore
-
-    def _remove_atoms(data: Any) -> Any:
-        if isinstance(data, bytes):
-            return data.decode()
-        elif isinstance(data, list):
-            return list(map(_remove_atoms, data))
-        elif isinstance(data, dict):
-            return {_remove_atoms(k): _remove_atoms(v) for k, v in data.items()}
-        elif isinstance(data, Atom):
-            return str(data)
-        return data
-
-    def _from_etf(data: bytes) -> Any:
-        decoded = _unpack_etf(data)
-        return _remove_atoms(decoded)
-
-except KeyError:
-    _from_etf = None  # type: ignore
 
 _log = logging.getLogger(__name__)
 
@@ -210,7 +171,7 @@ class KeepAliveHandler(threading.Thread):
 
             data = self.get_payload()
             _log.debug(self.msg, data['d'])
-            coro = self.ws.send(data, rate_limit=False)
+            coro = self.ws.send_heartbeat(data)
             f = asyncio.run_coroutine_threadsafe(coro, loop=self.ws.loop)
             try:
                 # block until sending is complete
@@ -331,7 +292,6 @@ class DiscordWebSocket:
 
     if TYPE_CHECKING:
         token: Optional[str]
-        encoding: str
         _connection: ConnectionState
         _discord_parsers: Dict[str, Callable[..., Any]]
         call_hooks: Callable[..., Any]
@@ -438,7 +398,6 @@ class DiscordWebSocket:
 
         # dynamically add attributes needed
         ws.token = client.http.token
-        ws.encoding = encoding
         ws._connection = client._connection
         ws._discord_parsers = client._connection.parsers
         ws._dispatch = client.dispatch
@@ -451,7 +410,7 @@ class DiscordWebSocket:
         ws.client_properties = client.properties
 
         if client._enable_debug_events:
-            ws._send = ws._debug_send
+            ws.send = ws.debug_send
             ws.log_receive = ws.debug_log_receive
 
         client._connection._update_references(ws)
@@ -521,7 +480,7 @@ class DiscordWebSocket:
             payload['d']['intents'] = state._intents.value
 
         await self.call_hooks('before_identify', initial=self._initial_identify)
-        await self.send(payload)
+        await self.send_as_json(payload)
         _log.debug('Gateway has sent the IDENTIFY payload.')
 
     async def resume(self) -> None:
@@ -535,42 +494,19 @@ class DiscordWebSocket:
             },
         }
 
-        await self.send(payload)
+        await self.send_as_json(payload)
         _log.debug('Gateway has sent the RESUME payload.')
 
     async def received_message(self, msg: Any, /) -> None:
-        if isinstance(msg, bytes):
-            if self.encoding == 'etf':
-                if _from_etf is None:
-                    raise TypeError('Cannot decode ETF')
-                try:
-                    msg = _from_etf(msg)
-                except Exception:
-                    valid_etf = False
-                else:
-                    valid_etf = 'op' in msg
+        if type(msg) is bytes:
+            msg = self._decompressor.decompress(msg)
 
-                if not valid_etf:
-                    msg = self._decompressor.decompress(msg)
-                    if msg is None:
-                        # Received a partial gateway message
-                        return
-                    msg = _from_etf(msg)
+            # Received a partial gateway message
+            if msg is None:
+                return
 
-            elif self.encoding == 'json':
-                msg = self._decompressor.decompress(msg)
-                if msg is None:
-                    # Received a partial gateway message
-                    return
-
-                msg = _from_json(msg)
-            else:
-                raise TypeError(f'Unknown encoding: {self.encoding}')
-        else:
-            msg = _from_json(msg)
-
-        msg = cast('Any', msg)
         self.log_receive(msg)
+        msg = _from_json(msg)
 
         _log.debug('WebSocket Event: %s', msg)
 
@@ -604,14 +540,14 @@ class DiscordWebSocket:
             if op == self.HEARTBEAT:
                 if self._keep_alive:
                     beat = self._keep_alive.get_payload()
-                    await self.send(beat)
+                    await self.send_as_json(beat)
                 return
 
             if op == self.HELLO:
                 interval = data['heartbeat_interval'] / 1000.0
                 self._keep_alive = KeepAliveHandler(ws=self, interval=interval)
                 # send a heartbeat immediately
-                await self.send(self._keep_alive.get_payload())
+                await self.send_as_json(self._keep_alive.get_payload())
                 self._keep_alive.start()
                 return
 
@@ -725,39 +661,26 @@ class DiscordWebSocket:
                 _log.debug('Websocket closed with %s, cannot reconnect.', code)
                 raise ConnectionClosed(self.socket, code=code) from None
 
-    async def _debug_send(self, data: Union[bytes, str], /, *, rate_limit: bool = True) -> None:
-        if rate_limit:
-            await self._rate_limiter.block()
-
+    async def debug_send(self, data: str, /) -> None:
+        await self._rate_limiter.block()
         self._dispatch('socket_raw_send', data)
-        if isinstance(data, bytes):
-            await self.socket.send_bytes(data)
-        elif isinstance(data, str):
-            await self.socket.send_str(data)
-        else:
-            raise TypeError(f'Cannot send {type(data).__name__}')
+        await self.socket.send_str(data)
 
-    async def _send(self, data: Union[bytes, str], /, *, rate_limit: bool = True) -> None:
-        if rate_limit:
-            await self._rate_limiter.block()
+    async def send(self, data: str, /) -> None:
+        await self._rate_limiter.block()
+        await self.socket.send_str(data)
 
-        if isinstance(data, bytes):
-            await self.socket.send_bytes(data)
-        elif isinstance(data, str):
-            await self.socket.send_str(data)
-        else:
-            raise TypeError(f'Cannot send {type(data).__name__}')
-
-    async def send(self, data: Any, *, rate_limit: bool = True) -> None:
-        if self.encoding == 'json':
-            msg = _to_json(data)
-        elif self.encoding == 'etf':
-            if _to_etf is None:
-                raise TypeError('Cannot decode ETF')
-            msg = _to_etf(data)
-
+    async def send_as_json(self, data: Any) -> None:
         try:
-            await self._send(msg, rate_limit=rate_limit)
+            await self.send(_to_json(data))
+        except RuntimeError as exc:
+            if not self._can_handle_close():
+                raise ConnectionClosed(self.socket) from exc
+
+    async def send_heartbeat(self, data: Any) -> None:
+        # This bypasses the rate limit handling code since it has a higher priority
+        try:
+            await self.socket.send_str(_to_json(data))
         except RuntimeError as exc:
             if not self._can_handle_close():
                 raise ConnectionClosed(self.socket) from exc
@@ -821,7 +744,7 @@ class DiscordWebSocket:
         if query is not None:
             payload['d']['query'] = query
 
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def voice_state(
         self,
@@ -843,7 +766,7 @@ class DiscordWebSocket:
         }
 
         _log.debug('Updating our voice state to %s.', payload)
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def call_connect(self, channel_id: int) -> None:
         payload = {
@@ -854,7 +777,7 @@ class DiscordWebSocket:
         }
 
         _log.debug('Attemping to discover a call in %s.', payload)
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def lobby_voice_states(self, voice_states: List[UpdateLobbyVoiceStatePayload]) -> None:
         payload = {
@@ -863,7 +786,7 @@ class DiscordWebSocket:
         }
 
         _log.debug('Updating our lobby voice states to %s.', payload)
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def create_stream(
         self,
@@ -884,7 +807,7 @@ class DiscordWebSocket:
         if preferred_region is not None:
             payload['d']['preferred_region'] = preferred_region
         _log.debug('Sending "%s" to create stream', payload)
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def ping_stream_server(self, stream_key: str) -> None:
         payload = {
@@ -895,7 +818,7 @@ class DiscordWebSocket:
         }
 
         _log.debug('Pinging server of stream with key %s.', stream_key)
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def watch_stream(self, stream_key: str) -> None:
         payload = {
@@ -906,7 +829,7 @@ class DiscordWebSocket:
         }
 
         _log.debug('Watching stream with key %s.', stream_key)
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def set_stream_paused(self, stream_key: str, paused: bool) -> None:
         payload = {
@@ -918,7 +841,7 @@ class DiscordWebSocket:
         }
 
         _log.debug('Setting whether stream with key %s is paused to %s', stream_key, paused)
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def delete_stream(self, stream_key: str) -> None:
         payload = {
@@ -929,7 +852,7 @@ class DiscordWebSocket:
         }
 
         _log.debug('Deleting stream with key %s.', stream_key)
-        await self.send(payload)
+        await self.send_as_json(payload)
 
     async def close(self, code: int = 4000) -> None:
         if self._keep_alive:
