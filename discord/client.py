@@ -55,7 +55,7 @@ from .channel import PartialMessageable
 from .client_properties import ClientProperties, DefaultClientProperties
 from .connections import Connection
 from .emoji import Emoji
-from .enums import ChannelType, Status, RelationshipType, ClientType
+from .enums import ChannelType, ClientType, GatewayEncoding, RelationshipType, Status
 from .errors import *
 from .flags import ApplicationFlags, Intents
 from .gateway import *
@@ -282,6 +282,10 @@ class Client:
         if properties is None:
             properties = DefaultClientProperties()
 
+        encoding = options.get('encoding', 'json')
+        if not isinstance(encoding, GatewayEncoding):
+            encoding = GatewayEncoding(encoding)
+
         connector: Optional[aiohttp.BaseConnector] = options.get('connector', None)
         proxy: Optional[str] = options.pop('proxy', None)
         proxy_auth: Optional[aiohttp.BasicAuth] = options.pop('proxy_auth', None)
@@ -310,6 +314,7 @@ class Client:
         }
 
         self._enable_debug_events: bool = options.pop('enable_debug_events', False)
+        self._encoding: GatewayEncoding = encoding
         self._connection: ConnectionState[Self] = self._get_state(intents=intents, **options)
         self._closing_task: Optional[asyncio.Task[None]] = None
         self._ready: asyncio.Event = MISSING
@@ -811,6 +816,7 @@ class Client:
         backoff = ExponentialBackoff()
         ws_params: Dict[str, Any] = {
             'initial': True,
+            'encoding': self._encoding.value,
         }
         while not self.is_closed():
             try:
