@@ -60,7 +60,6 @@ __all__ = (
     'ExpireBehaviour',
     'ForumLayoutType',
     'ForumOrderType',
-    'GatewayEncoding',
     'InteractionResponseType',
     'InteractionType',
     'InviteTarget',
@@ -645,11 +644,6 @@ class ForumLayoutType(Enum):
 class ForumOrderType(Enum):
     latest_activity = 0
     creation_date = 1
-
-
-class GatewayEncoding(Enum):
-    json = 'json'
-    etf = 'etf'
 
 
 class InteractionResponseType(Enum):
