@@ -22,16 +22,20 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
+from typing import Generic, TypeVar
+
+T = TypeVar('T')
+
 __all__ = (
     'EqualityComparable',
     'Hashable',
 )
 
 
-class EqualityComparable:
+class EqualityComparable(Generic[T]):
     __slots__ = ()
 
-    id: int
+    id: T
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, self.__class__):
@@ -39,7 +43,7 @@ class EqualityComparable:
         return NotImplemented
 
 
-class Hashable(EqualityComparable):
+class Hashable(EqualityComparable[int]):
     __slots__ = ()
 
     def __hash__(self) -> int:

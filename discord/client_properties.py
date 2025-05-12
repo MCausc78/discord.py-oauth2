@@ -45,8 +45,10 @@ class ClientOperatingSystem(Enum):
     ios = 'iOS'
     linux = 'Linux'
     osx = 'Mac OS X'
+    playstation = 'Playstation'
     windows = 'Windows'
     unknown = 'Unknown'
+    xbox = 'Xbox'
 
     @classmethod
     def default(cls) -> Self:
@@ -328,6 +330,7 @@ class SimpleClientProperties(ClientProperties):
 
 
 __all__ = (
+    'ClientOperatingSystem',
     'ClientProperties',
     'DefaultClientProperties',
     'SimpleClientProperties',

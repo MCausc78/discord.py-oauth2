@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from typing import List, Literal, Optional, TypedDict, Union
+from typing import Dict, List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired
 
 from .emoji import PartialEmoji
@@ -78,6 +78,11 @@ class _BaseTextChannel(_BaseGuildChannel, total=False):
     rate_limit_per_user: int
     default_thread_rate_limit_per_user: int
     default_auto_archive_duration: ThreadArchiveDuration
+
+
+class VoiceChannelBackground(TypedDict):
+    type: Literal[0, 1]
+    resource_id: NotRequired[Snowflake]
 
 
 class TextChannel(_BaseTextChannel):
@@ -245,3 +250,12 @@ class StageInstance(TypedDict):
 
 class CallEligibility(TypedDict):
     ringable: bool
+
+
+class LinkedAccount(TypedDict):
+    id: str
+    name: str
+
+
+class LinkedAccounts(TypedDict):
+    linked_accounts: Dict[Snowflake, List[LinkedAccount]]

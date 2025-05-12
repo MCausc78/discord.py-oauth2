@@ -28,7 +28,9 @@ import asyncio
 from collections import deque
 import datetime
 from inspect import isawaitable
+import io
 import logging
+import os
 from typing import (
     Any,
     ClassVar,
@@ -923,6 +925,18 @@ class HTTPClient:
 
     #     return self.request(Route('POST', '/users/{user_id}/channels', user_id=user_id), json=payload)
 
+    def get_linked_accounts(
+        self,
+        channel_id: Snowflake,
+        *,
+        user_ids: Optional[List[Snowflake]] = None,
+    ) -> Response[channel.LinkedAccounts]:
+        params = {}
+        if user_ids is not None:
+            params['user_ids'] = user_ids
+        route = Route('GET', '/channels/{channel_id}/linked-accounts', channel_id=channel_id)
+        return self.request(route, params=params)
+
     # Message management
 
     def start_private_message(self, user_id: Snowflake) -> Response[channel.DMChannel]:
@@ -1428,6 +1442,20 @@ class HTTPClient:
 
         return self.request(Route('POST', '/partner-sdk/token'), json=payload)
 
+    # POST https://gaming-sdk.com/api/v9/oauth2/token
+    # No Authorization here
+    # Content-Type: application/x-www-form-urlencoded
+
+    # body:
+
+    # client_id=1169421761859833997
+    # grant_type=authorization_code
+    # code=code
+    # redirect_uri=redirectUri
+    # code_verifier=codeVerifier
+    # external_auth_token=balls
+    # external_auth_type=UNITY_SERVICES_ID_TOKEN
+
     # Lobbies
     def create_or_join_lobby(
         self,
@@ -1592,6 +1620,9 @@ class HTTPClient:
     def get_connections(self) -> Response[list[connections.Connection]]:
         return self.request(Route('GET', '/users/@me/connections'))
 
+    def get_linked_connections(self) -> Response[list[connections.Connection]]:
+        return self.request(Route('GET', '/users/@me/linked-connections'))
+
     def modify_user_settings(self, /, **payload) -> Response[settings.UserSettings]:
         return self.request(Route('PATCH', '/users/@me/settings'), json=payload)
 
@@ -1605,6 +1636,21 @@ class HTTPClient:
                 stream_key=stream_key,
             ),
             json=payload,
+        )
+
+    def upload_video_stream_preview(
+        self, stream_key: str, thumbnail: Union[str, bytes, os.PathLike[Any], io.BufferedIOBase]
+    ) -> Response[None]:
+        file = File(thumbnail)
+
+        return self.request(
+            Route(
+                'POST',
+                '/streams/{stream_key}/preview',
+                stream_key=stream_key,
+            ),
+            files=[file],
+            form=[{'name': 'file', 'value': file.fp}],
         )
 
     async def get_bot_gateway(self) -> Tuple[int, str, gateway.SessionStartLimit]:

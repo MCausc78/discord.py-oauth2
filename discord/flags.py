@@ -915,6 +915,11 @@ class ChannelFlags(BaseFlags):
         """:class:`bool`: Returns ``True`` if the user does not have permissions to view the channel."""
         return 1 << 17
 
+    @flag_value
+    def is_moderator_report_channel(self):
+        """:class:`bool`: Returns ``True`` if the channel is a Mod Queue channel."""
+        return 1 << 19
+
 
 @fill_with_flags()
 class EmbedFlags(BaseFlags):

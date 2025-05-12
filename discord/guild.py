@@ -693,9 +693,9 @@ class Guild(UserGuild):
             pass
 
         self.name: str = guild.get('name', '')
-        self.verification_level: VerificationLevel = try_enum(VerificationLevel, guild.get('verification_level'))
+        self.verification_level: VerificationLevel = try_enum(VerificationLevel, guild.get('verification_level', 0))
         self.default_notifications: NotificationLevel = try_enum(
-            NotificationLevel, guild.get('default_message_notifications')
+            NotificationLevel, guild.get('default_message_notifications', -1)
         )
         self.explicit_content_filter: ContentFilter = try_enum(ContentFilter, guild.get('explicit_content_filter', 0))
         self.afk_timeout: int = guild.get('afk_timeout', 0)
@@ -719,7 +719,11 @@ class Guild(UserGuild):
             if state.cache_guild_expressions
             else ()
         )
-        self.features: List[GuildFeature] = guild.get('features', [])
+        self.features: List[GuildFeature]
+        if 'features' in guild:
+            self.features = guild['features']
+        elif not hasattr(self, 'features'):
+            self.features = []
         self._splash: Optional[str] = guild.get('splash')
         self._system_channel_id: Optional[int] = _get_as_snowflake(guild, 'system_channel_id')
         self.description: Optional[str] = guild.get('description')

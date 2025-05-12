@@ -52,11 +52,12 @@ from .enums import (
     ForumOrderType,
     SafetyWarningType,
     VideoQualityMode,
+    VoiceCallBackgroundType,
     VoiceChannelEffectAnimationType,
 )
 from .flags import ChannelFlags, RecipientFlags
 from .lobby import LinkedLobby
-from .mixins import Hashable
+from .mixins import EqualityComparable, Hashable
 from .object import Object
 from .partial_emoji import _EmojiTag, PartialEmoji
 from .permissions import Permissions
@@ -90,6 +91,7 @@ __all__ = (
     'SafetyWarning',
     'VoiceChannelEffect',
     'VoiceChannelSoundEffect',
+    'LinkedAccount',
     '_guild_channel_factory',
     '_private_channel_factory',
     '_channel_factory',
@@ -108,6 +110,7 @@ if TYPE_CHECKING:
     from .role import Role
     from .state import ConnectionState
     from .types.channel import (
+        VoiceChannelBackground as VoiceChannelBackgroundPayload,
         TextChannel as TextChannelPayload,
         NewsChannel as NewsChannelPayload,
         VoiceChannel as VoiceChannelPayload,
@@ -121,6 +124,7 @@ if TYPE_CHECKING:
         MediaChannel as MediaChannelPayload,
         ForumTag as ForumTagPayload,
         VoiceChannelEffect as VoiceChannelEffectPayload,
+        LinkedAccount as LinkedAccountPayload,
     )
     from .types.soundboard import BaseSoundboardSound as BaseSoundboardSoundPayload
     from .types.threads import ThreadArchiveDuration
@@ -258,6 +262,75 @@ class VoiceChannelEffect:
     def is_sound(self) -> bool:
         """:class:`bool`: Whether the effect is a sound or not."""
         return self.sound is not None
+
+
+class VoiceChannelBackground:
+    """Represents a background for voice channel.
+
+    Attributes
+    ----------
+    type: :class:`VoiceCallBackgroundType`
+        The background type.
+    resource_id: Optional[:class:`int`]
+        The resource ID. Currently unknown.
+
+        Only provided when :attr:`type` is :attr:`~VoiceCallBackgroundType.gradient`.
+
+    Parameters
+    ----------
+    type: :class:`VoiceCallBackgroundType`
+        The background type.
+    resource_id: Optional[:class:`int`]
+        The resource ID. Currently unknown.
+
+        Must be provided when :attr:`type` is :attr:`~VoiceCallBackgroundType.gradient`.
+    """
+
+    __slots__ = (
+        'type',
+        'resource_id',
+    )
+
+    def __init__(self, type: Optional[VoiceCallBackgroundType] = None, *, resource_id: Optional[int] = None) -> None:
+        if type is None:
+            if resource_id is None:
+                type = VoiceCallBackgroundType.gradient
+            else:
+                type = VoiceCallBackgroundType.empty
+
+        self.type: VoiceCallBackgroundType = type
+        self.resource_id: Optional[int] = resource_id
+
+    @classmethod
+    def from_dict(cls, data: VoiceChannelBackgroundPayload) -> Self:
+        return cls(
+            type=try_enum(VoiceCallBackgroundType, data['type']),
+            resource_id=_get_as_snowflake(data, 'resource_id'),
+        )
+
+
+class LinkedAccount(EqualityComparable[str]):
+    """Represents a linked account.
+
+    Attributes
+    ----------
+    id: :class:`str`
+        The ID of the linked account.
+    name: :class:`str`
+        The name of the account.
+    """
+
+    __slots__ = (
+        'id',
+        'name',
+    )
+
+    def __init__(self, *, data: LinkedAccountPayload) -> None:
+        self.id: str = data['id']
+        self.name: str = data['name']
+
+    def __hash__(self) -> int:
+        return hash(self.id)
 
 
 class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
@@ -736,16 +809,28 @@ class VoiceChannel(VocalGuildChannel):
         The status of the voice channel. ``None`` if no status is set.
         This is not available for the fetch methods such as :func:`Guild.fetch_channel`
         or :func:`Client.fetch_channel`.
+    voice_background: Optional[:class:`ChannelVoiceBackground`]
+        The background for this voice channel.
+
+        .. deprecated:: 2.7
     hd_streaming_until: Optional[:class:`~datetime.datetime`]
         When the HD streaming entitlement expires.
     hd_streaming_buyer_id: Optional[:class:`int`]
-        The user's ID who purchased HD streaming for this stage channel.
+        The user's ID who purchased HD streaming for this voice channel.
     """
 
-    __slots__ = ('status',)
+    __slots__ = (
+        'voice_background',
+        'status',
+    )
 
     def __init__(self, *, state: ConnectionState, guild: Guild, data: VoiceChannelPayload) -> None:
         super().__init__(state=state, guild=guild, data=data)
+        voice_background_data = data.get('voice_background_display')
+        if voice_background_data:
+            self.voice_background: Optional[VoiceChannelBackground] = VoiceChannelBackground.from_dict(voice_background_data)
+        else:
+            self.voice_background = None
         self.status: Optional[str] = data.get('status') or None  # empty string -> None
 
     def __repr__(self) -> str:
@@ -1549,14 +1634,17 @@ class DMChannel(discord.abc.Messageable, discord.abc.Connectable, discord.abc.Pr
     def _from_message(cls, state: ConnectionState, channel_id: int, message_id: Optional[int]) -> Self:
         self = cls.__new__(cls)
         self._state = state
-        self.recipient = None
         # state.user won't be None here
+        self.recipient = None
         self.me = state.user  # type: ignore
         self.id = channel_id
         self.last_message_id = message_id
         self.last_pin_timestamp = None
+        self.safety_warnings = []
+        self._flags = 0
         self._message_request = False
         self._requested_at = None
+        self._recipient_flags = 0
         self._spam = False
         return self
 
@@ -1980,6 +2068,34 @@ class GroupChannel(discord.abc.PrivateChannel, discord.abc.Connectable, Hashable
         if ring:
             await self._initial_ring()
         return ret
+
+    async def fetch_linked_accounts_for(self, users: Optional[List[Snowflake]] = None) -> Dict[int, List[LinkedAccount]]:
+        """|coro|
+
+        Retrieves linked accounts for specified users.
+
+        Parameters
+        ----------
+        users: Optional[List[:class:`User`]]
+            The users to retrieve linked accounts for.
+
+        Raises
+        ------
+        Forbidden
+            You do not have proper permissions to retrieve linked accounts.
+        HTTPException
+            Retrieving linked accounts failed.
+
+        Returns
+        -------
+        Dict[:class:`int`, List[:class:`LinkedAccount`]]
+            The mapping of user IDs to their linked accounts.
+        """
+        data = await self._state.http.get_linked_accounts(
+            self.id,
+            user_ids=None if users is None else [user.id for user in users],
+        )
+        return {int(k): [LinkedAccount(data=d) for d in v] for k, v in data['linked_accounts'].items()}
 
 
 class EphemeralDMChannel(discord.abc.Messageable, discord.abc.Connectable, discord.abc.PrivateChannel, Hashable):

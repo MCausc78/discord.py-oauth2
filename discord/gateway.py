@@ -35,13 +35,13 @@ import time
 import threading
 import traceback
 
-from typing import Any, Callable, Coroutine, Deque, Dict, List, NamedTuple, Optional, TYPE_CHECKING, Tuple, TypeVar
+from typing import Any, Callable, Coroutine, Deque, Dict, List, NamedTuple, Optional, Sequence, TYPE_CHECKING, Tuple, TypeVar
 
 import aiohttp
 import yarl
 
-from .activity import BaseActivity
-from .enums import SpeakingState
+from .activity import BaseActivity, Spotify, ActivityTypes
+from .enums import SpeakingState, Status
 from .errors import ConnectionClosed
 from .utils import (
     _ActiveDecompressionContext,
@@ -328,20 +328,26 @@ class DiscordWebSocket:
         self.socket: aiohttp.ClientWebSocketResponse = socket
         self.loop: asyncio.AbstractEventLoop = loop
 
-        # an empty dispatcher to prevent crashes
+        # An empty dispatcher to prevent crashes
         self._dispatch: Callable[..., Any] = lambda *args: None
-        # generic event listeners
+
+        # Generic event listeners
         self._dispatch_listeners: List[EventListener] = []
-        # the keep alive
+
+        # The keep alive handler
         self._keep_alive: Optional[KeepAliveHandler] = None
         self.thread_id: int = threading.get_ident()
 
-        # ws related stuff
+        # WebSocket related stuff
         self.session_id: Optional[str] = None
         self.sequence: Optional[int] = None
         self._decompressor: _DecompressionContext = _ActiveDecompressionContext()
         self._close_code: Optional[int] = None
         self._rate_limiter: GatewayRatelimiter = GatewayRatelimiter()
+
+        # Presence state tracking
+        self.afk: bool = False
+        self.idle_since: int = 0
 
     @property
     def open(self) -> bool:
@@ -471,7 +477,7 @@ class DiscordWebSocket:
                 'capabilities': (1 << 4) | (1 << 5) | (1 << 12) | (1 << 16),
                 'properties': properties,
                 'compress': True,
-                'large_threshold': 250,
+                # 'large_threshold': 250,
             },
         }
 
@@ -481,7 +487,7 @@ class DiscordWebSocket:
 
         await self.call_hooks('before_identify', initial=self._initial_identify)
         await self.send_as_json(payload)
-        _log.debug('Gateway has sent the IDENTIFY payload.')
+        _log.info('Gateway has sent the IDENTIFY payload with properties: %s.', properties)
 
     async def resume(self) -> None:
         """Sends the RESUME packet."""
@@ -552,7 +558,7 @@ class DiscordWebSocket:
                 return
 
             if op == self.INVALIDATE_SESSION:
-                if data is True:
+                if data:
                     await self.close()
                     raise ReconnectWebSocket()
 
@@ -688,33 +694,27 @@ class DiscordWebSocket:
     async def change_presence(
         self,
         *,
-        activity: Optional[BaseActivity] = None,
-        status: Optional[str] = None,
-        since: float = 0.0,
+        activities: Optional[Sequence[ActivityTypes]] = None,
+        status: Optional[Status] = None,
+        since: int = 0,
+        afk: bool = False,
     ) -> None:
-        if activity is not None:
-            if not isinstance(activity, BaseActivity):
-                raise TypeError('activity must derive from BaseActivity.')
-            activities = [activity.to_dict()]
+        if activities is not None:
+            if not all(isinstance(activity, (BaseActivity, Spotify)) for activity in activities):
+                raise TypeError('activity must derive from BaseActivity')
+            activities_data = [activity.to_dict() for activity in activities]
         else:
-            activities = []
-
-        if status == 'idle':
-            since = int(time.time() * 1000)
+            activities_data = []
 
         payload = {
             'op': self.PRESENCE,
-            'd': {
-                'activities': activities,
-                'afk': False,
-                'since': since,
-                'status': status,
-            },
+            'd': {'activities': activities_data, 'afk': afk, 'since': since, 'status': str(status or 'unknown')},
         }
 
-        sent = _to_json(payload)
-        _log.debug('Sending "%s" to change status', sent)
-        await self.send(sent)
+        _log.debug('Sending %s to change presence.', payload['d'])
+        await self.send_as_json(payload)
+        self.afk = afk
+        self.idle_since = since
 
     async def request_chunks(
         self,

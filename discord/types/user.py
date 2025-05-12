@@ -90,3 +90,7 @@ class GameRelationship(TypedDict):
     since: str
     dm_access_type: int
     user_id: int
+
+
+class RecentUserActivity(TypedDict):
+    application_id: Snowflake

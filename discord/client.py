@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import asyncio
-import datetime
+from datetime import datetime
 import logging
 from typing import (
     Any,
@@ -55,7 +55,7 @@ from .channel import PartialMessageable
 from .client_properties import ClientProperties, DefaultClientProperties
 from .connections import Connection
 from .emoji import Emoji
-from .enums import ChannelType, Status, RelationshipType, ClientType
+from .enums import ActivityType, ChannelType, Status, RelationshipType, ClientType
 from .errors import *
 from .flags import ApplicationFlags, Intents
 from .gateway import *
@@ -208,10 +208,6 @@ class Client:
         is ``True``.
 
         .. versionadded:: 1.5
-    status: Optional[:class:`.Status`]
-        A status to start your presence with upon logging on to Discord.
-    activity: Optional[:class:`.BaseActivity`]
-        An activity to start your presence with upon logging on to Discord.
     allowed_mentions: Optional[:class:`AllowedMentions`]
         Control how the client handles mentions by default on every message sent.
 
@@ -237,6 +233,9 @@ class Client:
         To enable these events, this must be set to ``True``. Defaults to ``False``.
 
         .. versionadded:: 2.0
+    sync_presence: :class:`bool`
+        Whether to keep presences up-to-date across clients.
+        The default behavior is ``True`` (what the client does).
     enable_raw_presences: :class:`bool`
         Whether to manually enable or disable the :func:`on_raw_presence_update` event.
 
@@ -300,6 +299,7 @@ class Client:
             max_ratelimit_timeout=max_ratelimit_timeout,
         )
         self.properties: ClientProperties = properties
+        self.resume: Optional[Tuple[int, str]] = options.pop('resume', None)
 
         self._handlers: Dict[str, Callable[..., None]] = {
             'ready': self._handle_ready,
@@ -310,6 +310,7 @@ class Client:
         }
 
         self._enable_debug_events: bool = options.pop('enable_debug_events', False)
+        self._sync_presences: bool = options.pop('sync_presence', True)
         self._connection: ConnectionState[Self] = self._get_state(intents=intents, **options)
         self._closing_task: Optional[asyncio.Task[None]] = None
         self._ready: asyncio.Event = MISSING
@@ -686,7 +687,35 @@ class Client:
         """
         _log.exception('Ignoring exception in %s', event_method)
 
-    # hooks
+    async def on_internal_settings_update(self, old_settings: UserSettings, new_settings: UserSettings, /):
+        if not self._sync_presences:
+            return
+
+        if (
+            old_settings is not None
+            and old_settings.status == new_settings.status
+            and old_settings.custom_activity == new_settings.custom_activity
+        ):
+            return  # Nothing changed
+
+        current_activity = None
+        for activity in self.activities:
+            if activity.type != ActivityType.custom:
+                current_activity = activity
+                break
+
+        if new_settings.status == self.client_status and new_settings.custom_activity == current_activity:
+            return  # Nothing changed
+
+        status = new_settings.status
+        activities = [a for a in self.client_activities if a.type != ActivityType.custom]
+        if new_settings.custom_activity is not None:
+            activities.append(new_settings.custom_activity)
+
+        _log.debug('Syncing presence to %s %s', status, new_settings.custom_activity)
+        await self.change_presence(status=status, activities=activities, edit_settings=False)
+
+    # Hooks
 
     async def _call_before_identify_hook(self, *, initial: bool = False) -> None:
         # This hook is an internal hook that actually calls the public one.
@@ -770,13 +799,13 @@ class Client:
             passing status code.
         """
 
-        _log.info('logging in using static token')
+        _log.info('Logging in using static token')
 
         if self.loop is _loop:
             await self._async_setup_hook()
 
         if not isinstance(token, str):
-            raise TypeError(f'expected token to be a str, received {token.__class__.__name__} instead')
+            raise TypeError(f'Expected token to be a str, received {token.__class__.__name__} instead')
         token = token.strip()
 
         data = await self.http.static_login(token)
@@ -812,6 +841,10 @@ class Client:
         ws_params: Dict[str, Any] = {
             'initial': True,
         }
+        if self.resume is not None:
+            seq, session_id = self.resume
+            ws_params.update(sequence=seq, resume=True, session=session_id)
+
         while not self.is_closed():
             try:
                 coro = DiscordWebSocket.from_client(self, **ws_params)
@@ -1494,9 +1527,9 @@ class Client:
         event: Literal['private_channel_pins_update'],
         /,
         *,
-        check: Optional[Callable[[PrivateChannel, datetime.datetime], bool]] = ...,
+        check: Optional[Callable[[PrivateChannel, datetime], bool]] = ...,
         timeout: Optional[float] = ...,
-    ) -> Tuple[PrivateChannel, datetime.datetime]:
+    ) -> Tuple[PrivateChannel, datetime]:
         ...
 
     @overload
@@ -1529,12 +1562,12 @@ class Client:
         *,
         check: Optional[
             Callable[
-                [Union[GuildChannel, Thread], Optional[datetime.datetime]],
+                [Union[GuildChannel, Thread], Optional[datetime]],
                 bool,
             ]
         ],
         timeout: Optional[float] = ...,
-    ) -> Tuple[Union[GuildChannel, Thread], Optional[datetime.datetime]]:
+    ) -> Tuple[Union[GuildChannel, Thread], Optional[datetime]]:
         ...
 
     @overload
@@ -1543,9 +1576,9 @@ class Client:
         event: Literal['typing'],
         /,
         *,
-        check: Optional[Callable[[Messageable, Union[User, Member], datetime.datetime], bool]] = ...,
+        check: Optional[Callable[[Messageable, Union[User, Member], datetime], bool]] = ...,
         timeout: Optional[float] = ...,
-    ) -> Tuple[Messageable, Union[User, Member], datetime.datetime]:
+    ) -> Tuple[Messageable, Union[User, Member], datetime]:
         ...
 
     @overload
@@ -2290,12 +2323,27 @@ class Client:
     async def change_presence(
         self,
         *,
-        activity: Optional[BaseActivity] = None,
-        status: Optional[Status] = None,
+        activity: Optional[ActivityTypes] = MISSING,
+        activities: List[ActivityTypes] = MISSING,
+        status: Status = MISSING,
+        afk: bool = MISSING,
+        idle_since: Optional[datetime] = MISSING,
+        edit_settings: bool = True,
+        update_presence: bool = MISSING,
     ) -> None:
         """|coro|
 
         Changes the client's presence.
+
+        .. versionchanged:: 2.0
+
+            Edits are no longer in place.
+            Added option to update settings.
+
+        .. versionchanged:: 2.0
+
+            This function will now raise :exc:`TypeError` instead of
+            ``InvalidArgument``.
 
         Example
         -------
@@ -2305,49 +2353,93 @@ class Client:
             game = discord.Game("with the API")
             await client.change_presence(status=discord.Status.idle, activity=game)
 
-        .. versionchanged:: 2.0
-            Removed the ``afk`` keyword-only parameter.
-
-        .. versionchanged:: 2.0
-            This function will now raise :exc:`TypeError` instead of
-            ``InvalidArgument``.
-
         Parameters
         ----------
         activity: Optional[:class:`.BaseActivity`]
-            The activity being done. ``None`` if no currently active activity is done.
-        status: Optional[:class:`.Status`]
-            Indicates what status to change to. If ``None``, then
-            :attr:`.Status.online` is used.
+            The activity being done. ``None`` if no activity is done.
+        activities: List[:class:`.BaseActivity`]
+            A list of the activities being done. Cannot be sent with ``activity``.
+
+            .. versionadded:: 2.0
+        status: :class:`.Status`
+            Indicates what status to change to.
+        afk: :class:`bool`
+            Indicates if you are going AFK. This allows the Discord
+            client to know how to handle push notifications better
+            for you in case you are away from your keyboard.
+        idle_since: Optional[:class:`datetime`]
+            When the client went idle. This indicates that you are
+            truly idle and not just lying.
+        edit_settings: :class:`bool`
+            Whether to update user settings with the new status and/or
+            custom activity. This will broadcast the change and cause
+            all connected (official) clients to change presence as well.
+
+            This should be set to ``False`` for idle changes.
+
+            Required for setting/editing ``expires_at`` for custom activities.
+            It's not recommended to change this, as setting it to ``False``
+            can cause undefined behavior.
+        update_presence: :class:`bool`
+            Whether to update presence immediately. This is useful when presence syncing is disabled.
 
         Raises
         ------
         TypeError
-            If the ``activity`` parameter is not the proper type.
+            The ``activity`` parameter is not the proper type.
+            Both ``activity`` and ``activities`` were passed.
+        ValueError
+            More than one custom activity was passed.
         """
+        if activity is not MISSING and activities is not MISSING:
+            raise TypeError('Cannot pass both activity and activities')
 
-        if status is None:
-            status_str = 'online'
-            status = Status.online
-        elif status is Status.offline:
-            status_str = 'invisible'
-            status = Status.offline
-        else:
-            status_str = str(status)
-
-        await self.ws.change_presence(activity=activity, status=status_str)
-
-        for guild in self._connection.guilds:
-            me = guild.me
-            if me is None:
-                continue
-
-            if activity is not None:
-                me.activities = (activity,)  # type: ignore
+        skip_activities = False
+        if activities is MISSING:
+            if activity is not MISSING:
+                activities = [activity] if activity else []
             else:
-                me.activities = ()
+                activities = list(self.client_activities)
+                skip_activities = True
+        else:
+            activities = activities or []
 
-            me.status = status
+        skip_status = status is MISSING
+        if status is MISSING:
+            status = self.client_status
+        if status is Status.offline:
+            status = Status.invisible
+
+        if afk is MISSING:
+            afk = self.ws.afk if self.ws else False
+
+        if idle_since is MISSING:
+            since = self.ws.idle_since if self.ws else 0
+        else:
+            since = int(idle_since.timestamp() * 1000) if idle_since else 0
+
+        custom_activity = None
+        if not skip_activities:
+            for activity in activities:
+                if getattr(activity, 'type', None) is ActivityType.custom:
+                    if custom_activity is not None:
+                        raise ValueError('More than one custom activity was passed')
+                    custom_activity = activity
+
+        if update_presence is MISSING:
+            update_presence = (not edit_settings) or self._sync_presences
+
+        if update_presence:
+            await self.ws.change_presence(status=status, activities=activities, afk=afk, since=since)
+
+        if edit_settings:
+            payload: Dict[str, Any] = {}
+            if not skip_status and status != self.settings.status:
+                payload['status'] = status
+            if not skip_activities and custom_activity != self.settings.custom_activity:
+                payload['custom_activity'] = custom_activity
+            if payload:
+                await self.settings.edit(**payload)
 
     async def create_headless_session(
         self, *, activities: List[ActivityTypes], token: Optional[str] = None
@@ -2486,11 +2578,11 @@ class Client:
 
                 The default has been changed to 200.
 
-        before: Union[:class:`.abc.Snowflake`, :class:`datetime.datetime`]
+        before: Union[:class:`.abc.Snowflake`, :class:`datetime`]
             Retrieves guilds before this date or object.
             If a datetime is provided, it is recommended to use a UTC aware datetime.
             If the datetime is naive, it is assumed to be local time.
-        after: Union[:class:`.abc.Snowflake`, :class:`datetime.datetime`]
+        after: Union[:class:`.abc.Snowflake`, :class:`datetime`]
             Retrieve guilds after this date or object.
             If a datetime is provided, it is recommended to use a UTC aware datetime.
             If the datetime is naive, it is assumed to be local time.
@@ -2536,9 +2628,9 @@ class Client:
 
             return data, after, limit
 
-        if isinstance(before, datetime.datetime):
+        if isinstance(before, datetime):
             before = Object(id=time_snowflake(before, high=False))
-        if isinstance(after, datetime.datetime):
+        if isinstance(after, datetime):
             after = Object(id=time_snowflake(after, high=True))
 
         predicate: Optional[Callable[[GuildPayload], bool]] = None
@@ -2844,11 +2936,7 @@ class Client:
         return Lobby(data=data, state=state)
 
     @overload
-    async def send_friend_request(self, user: _UserTag, /) -> None:
-        ...
-
-    @overload
-    async def send_friend_request(self, user: str, /) -> None:
+    async def send_friend_request(self, user: Union[_UserTag, str, int], /) -> None:
         ...
 
     @overload
