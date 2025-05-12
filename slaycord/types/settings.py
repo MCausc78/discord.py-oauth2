@@ -64,3 +64,8 @@ class AudioSettings(TypedDict):
     muted: bool
     volume: float
     soundboard_muted: bool
+
+
+class MuteConfig(TypedDict):
+    end_time: Optional[str]
+    selected_time_window: Optional[int]
