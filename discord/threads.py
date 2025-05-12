@@ -30,10 +30,11 @@ from typing import Dict, List, Literal, Optional, TYPE_CHECKING, Union
 
 from .abc import GuildChannel
 from .errors import ClientException
-from .enums import ChannelType, try_enum
-from .flags import ChannelFlags
+from .enums import try_enum, ChannelType
+from .flags import ChannelFlags, ThreadMemberFlags
 from .mixins import Hashable
 from .permissions import Permissions
+from .settings import MuteConfig
 from .utils import _get_as_snowflake, parse_time
 
 __all__ = (
@@ -494,15 +495,19 @@ class ThreadMember(Hashable):
         The thread's ID.
     joined_at: :class:`datetime.datetime`
         The time the member joined the thread in UTC.
+    muted: :class:`MuteConfig`
+        The mute configuration for the guild.
+        Only reliably available for yourself.
     """
 
     __slots__ = (
+        '_state',
+        'parent',
         'id',
         'thread_id',
         'joined_at',
-        'flags',
-        '_state',
-        'parent',
+        '_flags',
+        'muted',
     )
 
     def __init__(self, parent: Thread, data: ThreadMemberPayload) -> None:
@@ -527,7 +532,23 @@ class ThreadMember(Hashable):
             self.thread_id = self.parent.id
 
         self.joined_at: datetime = parse_time(data['join_timestamp'])
-        self.flags: int = data['flags']
+        self._flags: int = data['flags']
+        self.muted: MuteConfig = MuteConfig(data.get('muted', False), data.get('mute_config'))
+
+    @property
+    def flags(self) -> ThreadMemberFlags:
+        """:class:`ThreadMemberFlags`: The thread member's flags.
+
+        Only reliably available for yourself.
+        """
+        return ThreadMemberFlags._from_value(self._flags)
+
+    @property
+    def member(self) -> Optional[Member]:
+        """Optional[:class:`Member`]: The member this :class:`ThreadMember` represents. If the member
+        is not cached then this will be ``None``.
+        """
+        return self.parent.guild.get_member(self.id)
 
     @property
     def thread(self) -> Thread:

@@ -25,12 +25,13 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from copy import copy
+from datetime import datetime
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING, Union, overload
 
 from .activity import CustomActivity
 from .color import Color
 from .enums import try_enum, AudioContext, SlayerSDKReceiveInGameDMs, Status
-from .utils import MISSING
+from .utils import MISSING, parse_time, utcnow
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
         GatewayUserSettings as GatewayUserSettingsPayload,
         UserSettings as UserSettingsPayload,
         AudioSettings as AudioSettingsPayload,
+        MuteConfig as MuteConfigPayload,
     )
 
 
@@ -483,9 +485,65 @@ class AudioSettingsManager:
             return {}
 
 
+class MuteConfig:
+    """An object representing an object's mute status.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two items are muted.
+
+        .. describe:: x != y
+
+            Checks if two items are not muted.
+
+        .. describe:: str(x)
+
+            Returns the mute status as a string.
+
+        .. describe:: int(x)
+
+            Returns the mute status as an int.
+
+    Attributes
+    ----------
+    muted: :class:`bool`
+        Indicates if the object is muted.
+    until: Optional[:class:`datetime.datetime`]
+        When the mute will expire.
+    """
+
+    def __init__(self, muted: bool, config: Optional[MuteConfigPayload] = None) -> None:
+        until = parse_time(config.get('end_time') if config else None)
+        if until is not None:
+            if until <= utcnow():
+                muted = False
+                until = None
+
+        self.muted: bool = muted
+        self.until: Optional[datetime] = until
+
+    def __repr__(self) -> str:
+        return str(self.muted)
+
+    def __int__(self) -> int:
+        return int(self.muted)
+
+    def __bool__(self) -> bool:
+        return self.muted
+
+    def __eq__(self, other: object) -> bool:
+        return self.muted == bool(other)
+
+    def __ne__(self, other: object) -> bool:
+        return not self.muted == bool(other)
+
+
 __all__ = (
     'GuildFolder',
     'UserSettings',
     'AudioSettings',
     'AudioSettingsManager',
+    'MuteConfig',
 )
