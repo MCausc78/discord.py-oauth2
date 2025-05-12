@@ -51,7 +51,15 @@ from .sticker import GuildSticker
 from .stream import *
 from .subscription import Subscription
 from .threads import Thread, ThreadMember
-from .user import User, AvatarDecorationData, RelationshipType, Relationship, GameRelationshipType, GameRelationship
+from .user import (
+    User,
+    AvatarDecorationData,
+    RelationshipType,
+    Relationship,
+    GameRelationshipType,
+    GameRelationship,
+    RecentUserActivity,
+)
 from .voice import GuildVoiceState, VoiceState
 
 
@@ -133,6 +141,7 @@ class ReadySupplementalEvent(TypedDict):
     lazy_private_channels: List[Union[DMChannel, GroupDMChannel]]
     disclose: List[str]
     game_invites: List[GameInvite]
+    user_activities: List[RecentUserActivity]
 
 
 ResumedEvent = Literal[None]

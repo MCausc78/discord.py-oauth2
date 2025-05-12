@@ -71,7 +71,6 @@ class RoleColors:
         The secondary role color.
     tertiary_color: :class:`int`
         The tertiary role color.
-
     """
 
     __slots__ = (

@@ -588,12 +588,13 @@ class ConnectionState(Generic[ClientT]):
             guild_id = guild_id or int(data['guild_id'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
             guild = self._get_guild(guild_id)
         except KeyError:
-            if data.get('channel_type') == ChannelType.ephemeral_dm.value:
-                cls = EphemeralDMChannel
-            else:
-                cls = DMChannel
-
-            channel = cls._from_message(self, channel_id, _get_as_snowflake(data, 'id') or None)
+            channel = self._get_private_channel(channel_id)
+            if channel is None:
+                if data.get('channel_type') == ChannelType.ephemeral_dm.value:
+                    cls = EphemeralDMChannel
+                else:
+                    cls = DMChannel
+                channel = cls._from_message(self, channel_id, _get_as_snowflake(data, 'id') or None)
             guild = None
         else:
             channel = guild and guild._resolve_channel(channel_id)
@@ -689,15 +690,10 @@ class ConnectionState(Generic[ClientT]):
         self.disabled_functions = tuple(feature_flags.get('disabled_functions', ()))
         self.settings._update(data.get('user_settings') or {}, from_ready=True)
 
-        if self.application_id is None:
-            try:
-                application = data['application']
-            except KeyError:
-                pass
-            else:
-                self.application_id = _get_as_snowflake(application, 'id')
-                self.application_name: str = application['name']
-                self.application_flags: ApplicationFlags = ApplicationFlags._from_value(application['flags'])
+        application_data = data['application']
+        self.application_id = int(application_data['id'])
+        self.application_name: str = application_data['name']
+        self.application_flags: ApplicationFlags = ApplicationFlags._from_value(application_data['flags'])
 
         for raw_guild_data, raw_guild_members_data in zip(
             data.get('guilds', ()),
@@ -741,13 +737,11 @@ class ConnectionState(Generic[ClientT]):
 
         guilds = []
 
-        for (untyped_guild_data, untyped_guild_members_data, untyped_guild_presences_data,) in zip(
+        for (untyped_guild_data, untyped_guild_members_data, untyped_guild_presences_data) in zip(
             data.get('guilds', ()),
             data.get('merged_members', ()),
             merged_presences.get('guilds', ()),
         ):
-            # TODO: Handle guild_data.voice_states?: VoiceState[].
-
             guild_data = cast('gw.SupplementalGuild', untyped_guild_data)
             guild_members_data = cast('List[MemberWithUserPayload]', untyped_guild_members_data)
             guild_presences_data = cast('List[PartialPresenceUpdatePayload]', untyped_guild_presences_data)
@@ -849,14 +843,17 @@ class ConnectionState(Generic[ClientT]):
         disclose = data.get('disclose', [])
         self.disclose = disclose
 
+        game_invites = []
         for game_invite_data in data.get('game_invites', ()):
             game_invite = GameInvite(data=game_invite_data, state=self)
             self._game_invites[game_invite.id] = game_invite
+            game_invites.append(game_invite)
 
         raw = RawReadyEvent(
             state=self,
             disclose=disclose,
             friend_presences=friend_presences,
+            game_invites=game_invites,
             guilds=guilds,
         )
 
@@ -895,7 +892,8 @@ class ConnectionState(Generic[ClientT]):
         self.dispatch('message', message)
         if self._messages is not None:
             self._messages.append(message)
-        # we ensure that the channel is either a TextChannel, VoiceChannel, or Thread
+
+        # We ensure that the channel is either a TextChannel, VoiceChannel, or Thread
         if channel and channel.__class__ in (TextChannel, VoiceChannel, Thread, StageChannel):
             channel.last_message_id = message.id  # type: ignore
 
@@ -958,7 +956,7 @@ class ConnectionState(Generic[ClientT]):
         else:
             raw.member = None
 
-        # rich interface here
+        # Rich interface here
         message = self._get_message(raw.message_id)
         if message is not None:
             emoji = self._upgrade_partial_emoji(emoji)
@@ -989,7 +987,7 @@ class ConnectionState(Generic[ClientT]):
             emoji = self._upgrade_partial_emoji(emoji)
             try:
                 reaction = message._remove_reaction(data, emoji, raw.user_id)
-            except (AttributeError, ValueError):  # eventual consistency lol
+            except (AttributeError, ValueError):  # Eventual consistency lol
                 pass
             else:
                 user = self._get_reaction_user(message.channel, raw.user_id)
@@ -1006,12 +1004,16 @@ class ConnectionState(Generic[ClientT]):
         if message is not None:
             try:
                 reaction = message._clear_emoji(emoji)
-            except (AttributeError, ValueError):  # eventual consistency lol
+            except (AttributeError, ValueError):  # Eventual consistency lol
                 pass
             else:
                 if reaction:
                     self.dispatch('reaction_clear_emoji', reaction)
         self.dispatch('raw_reaction_clear_emoji', raw)
+
+    def parse_presences_replace(self, data: List[gw.PresenceUpdateEvent]) -> None:
+        for d in data:
+            self.parse_presence_update(d)
 
     def parse_presence_update(self, data: gw.PresenceUpdateEvent) -> None:
         if data.get('__fake__'):
@@ -2404,8 +2406,11 @@ class ConnectionState(Generic[ClientT]):
                 # We have more than one session, this should not happen
                 ws = self._get_websocket()
                 fake = data[ws.session_id]  # type: ignore
-            else:
+            elif data:
                 fake = list(data.values())[0]
+            else:
+                return
+
             if old_all is not None:
                 old = copy(old_all)
                 old_all._update(fake)

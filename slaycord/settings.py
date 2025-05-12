@@ -229,7 +229,7 @@ class UserSettings:
         self,
         *,
         status: Optional[Status] = MISSING,
-        custom_activity: Optional[CustomActivity] = None,
+        custom_activity: Optional[CustomActivity] = MISSING,
         receive_in_game_dms: Optional[SlayerSDKReceiveInGameDMs] = MISSING,
     ) -> UserSettings:
         """|coro|

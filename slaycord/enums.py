@@ -65,12 +65,12 @@ __all__ = (
     'InviteTarget',
     'InviteType',
     'Locale',
-    'OperatingSystem',
     'MFALevel',
     'MessageReferenceType',
     'MessageType',
     'NSFWLevel',
     'NotificationLevel',
+    'OperatingSystem',
     'PollLayoutType',
     'PremiumType',
     'PrivacyLevel',
@@ -92,6 +92,7 @@ __all__ = (
     'UserFlags',
     'VerificationLevel',
     'VideoQualityMode',
+    'VoiceCallBackgroundType',
     'VoiceChannelEffectAnimationType',
     'WebhookType',
 )
@@ -718,46 +719,6 @@ class Locale(Enum):
         return self.value
 
 
-# There are tons of different operating system/client enums in the API,
-# so we try to unify them here
-# They're normalized as the numbered enum, and converted from the stringified enum(s)
-class OperatingSystem(Enum):
-    windows = 1
-    macos = 2
-    linux = 3
-
-    android = -1
-    ios = -2
-    playstation = -3
-    unknown = -99
-
-    @classmethod
-    def from_string(cls, value: str) -> Self:
-        lookup = {
-            'windows': cls.windows,
-            'win32': cls.windows,
-            'macos': cls.macos,
-            'darwin': cls.macos,
-            'osx': cls.macos,
-            'linux': cls.linux,
-            'android': cls.android,
-            'ios': cls.ios,
-            'playstation': cls.playstation,
-            'unknown': cls.unknown,
-        }
-        return lookup.get(value, create_unknown_value(cls, value))  # type: ignore
-
-    def to_string(self):
-        lookup = {
-            OperatingSystem.windows: 'win32',
-            OperatingSystem.macos: 'darwin',
-        }
-        return lookup.get(self, self.name)
-
-    def __str__(self):
-        return self.to_string()
-
-
 class MFALevel(Enum, comparable=True):
     disabled = 0
     require_2fa = 1
@@ -832,8 +793,54 @@ class NSFWLevel(Enum, comparable=True):
 
 
 class NotificationLevel(Enum, comparable=True):
+    unknown = -1
     all_messages = 0
     only_mentions = 1
+    no_messages = 2
+    inherit = 3
+
+
+# There are tons of different operating system/client enums in the API,
+# so we try to unify them here
+# They're normalized as the numbered enum, and converted from the stringified enum(s)
+class OperatingSystem(Enum):
+    windows = 1
+    macos = 2
+    linux = 3
+
+    android = -1
+    ios = -2
+    playstation = -3
+    xbox = -4
+
+    unknown = -99
+
+    @classmethod
+    def from_string(cls, value: str) -> Self:
+        lookup = {
+            'windows': cls.windows,
+            'win32': cls.windows,
+            'macos': cls.macos,
+            'darwin': cls.macos,
+            'osx': cls.macos,
+            'linux': cls.linux,
+            'android': cls.android,
+            'ios': cls.ios,
+            'playstation': cls.playstation,
+            'xbox': cls.xbox,
+            'unknown': cls.unknown,
+        }
+        return lookup.get(value, create_unknown_value(cls, value))  # type: ignore
+
+    def to_string(self):
+        lookup = {
+            OperatingSystem.windows: 'win32',
+            OperatingSystem.macos: 'darwin',
+        }
+        return lookup.get(self, self.name)
+
+    def __str__(self):
+        return self.to_string()
 
 
 class PollLayoutType(Enum):
@@ -1055,6 +1062,11 @@ class VideoQualityMode(Enum):
 
     def __int__(self) -> int:
         return self.value
+
+
+class VoiceCallBackgroundType(Enum):
+    empty = 0
+    gradient = 1
 
 
 class VoiceChannelEffectAnimationType(Enum):

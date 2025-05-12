@@ -690,6 +690,8 @@ class RawReadyEvent(_RawReprMixin):
         The upcoming changes that the client should disclose to the user.
     friend_presences: List[:class:`RawPresenceUpdateEvent`]
         The presences for your friends.
+    game_invites: List[:class:`GameInvite`]
+        The game invites.
     guilds: List[:class:`SupplementalGuild`]
         The guilds you're in.
     """
@@ -698,6 +700,7 @@ class RawReadyEvent(_RawReprMixin):
         '_state',
         'disclose',
         'friend_presences',
+        'game_invites',
         'guilds',
     )
 
@@ -707,11 +710,13 @@ class RawReadyEvent(_RawReprMixin):
         state: ConnectionState,
         disclose: List[str],
         friend_presences: List[RawPresenceUpdateEvent],
+        game_invites: List[GameInvite],
         guilds: List[SupplementalGuild],
     ) -> None:
         self._state: ConnectionState = state
         self.disclose: List[str] = disclose
         self.friend_presences: List[RawPresenceUpdateEvent] = friend_presences
+        self.game_invites: List[GameInvite] = game_invites
         self.guilds: List[SupplementalGuild] = guilds
 
 

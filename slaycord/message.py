@@ -44,6 +44,7 @@ from typing import (
     Union,
 )
 
+from .activity import Game
 from .asset import Asset
 from .calls import CallMessage
 from .channel import PartialMessageable
@@ -2449,6 +2450,64 @@ class Message(PartialMessage, Hashable):
             The newly edited message.
         """
         return await self.edit(attachments=[a for a in self.attachments if a not in attachments])
+
+    async def accept_activity_invite(self, *, session_id: Optional[str] = None) -> str:
+        """|coro|
+
+        Accepts an activity invite included.
+
+        The message must have :attr:`~Message.activity` set.
+
+        Parameters
+        ----------
+        session_id: Optional[:class:`str`]
+            The session ID. Only required if user presence
+            is unavailable (e.g. due to being not connected to Gateway).
+
+        Raises
+        ------
+        Forbidden
+            You are not allowed to accept activity invites.
+        HTTPException
+            Accepting activity invite failed.
+        """
+        activity = self.activity
+        if not activity:
+            raise TypeError('Message does not have activity invite')
+
+        application_id = self.application_id
+        if not application_id:
+            raise TypeError('Application ID is unavailable for some reason')
+
+        if session_id is None:
+            if isinstance(self.author, Member):
+                activities = self.author.activities
+            else:
+                r = self.author.relationship
+                if r is None:
+                    raise TypeError('Cannot get user activities')
+                activities = r.activities
+
+            a = find(
+                lambda a, /: (
+                    isinstance(a, Game) and a.application_id == application_id and a.party == activity.get('party')
+                ),
+                activities,
+            )
+            if a is None:
+                raise TypeError('Invite is invalid')
+            assert isinstance(a, Game), 'Invite is not game invite'
+            session_id = a.session_id or ''
+
+        data = await self._state.http.get_activity_secret(
+            self.author.id,
+            session_id,
+            application_id,
+            1,
+            channel_id=self.channel.id,
+            message_id=self.id,
+        )
+        return data['secret']
 
 
 @flatten_handlers

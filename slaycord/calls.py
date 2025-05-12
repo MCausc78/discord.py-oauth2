@@ -256,15 +256,12 @@ class PrivateCall:
         Changes the channel's voice region.
 
         Parameters
-        -----------
+        ----------
         region: :class:`str`
             A region to change the voice region to.
 
-            .. versionchanged:: 2.0
-                The type of this parameter has changed to :class:`str`.
-
         Raises
-        -------
+        ------
         HTTPException
             Failed to change the channel's voice region.
         """
@@ -277,7 +274,7 @@ class PrivateCall:
         Rings the other recipient.
 
         Raises
-        -------
+        ------
         Forbidden
             Not allowed to ring the other recipient.
         HTTPException
@@ -295,7 +292,7 @@ class PrivateCall:
         Stops ringing the other recipient.
 
         Raises
-        -------
+        ------
         HTTPException
             Stopping the ringing failed.
         ClientException

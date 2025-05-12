@@ -435,6 +435,7 @@ class Game(BaseActivity):
         self.state: Optional[str] = extra.get('state')
         self.platform: Optional[str] = extra.get('platform')
         self.assets: ActivityAssets = extra.get('assets') or {}
+        self.session_id: Optional[str] = extra.get('session_id')
 
         try:
             timestamps: ActivityTimestamps = extra['timestamps']

@@ -664,7 +664,9 @@ class User(BaseUser, slaycord.abc.Messageable):
         """
         from .channel import GroupChannel
 
-        return [ch for ch in self._state._private_channels.values() if isinstance(ch, GroupChannel) and ch]
+        return [
+            ch for ch in self._state._private_channels.values() if isinstance(ch, GroupChannel) and self in ch.recipients
+        ]
 
     @property
     def mutual_guilds(self) -> List[Guild]:
