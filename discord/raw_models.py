@@ -183,7 +183,7 @@ class RawMessageUpdateEvent(_RawReprMixin):
         .. versionadded:: 1.7
 
     data: :class:`dict`
-        The raw data given by the :ddocs:`gateway <topics/gateway-events#message-update>`
+        The raw data given by the :ddocs:`Gateway <topics/gateway-events#message-update>`
     cached_message: Optional[:class:`Message`]
         The cached message, if found in the internal message cache. Represents the message before
         it is modified by the data in :attr:`RawMessageUpdateEvent.data`.
@@ -217,7 +217,7 @@ class RawLobbyMessageUpdateEvent(_RawReprMixin):
     lobby_id: :class:`int
         The lobby ID where the message got updated.
     data: :class:`dict`
-        The raw data given by the :ddocs:`gateway <topics/gateway-events#lobby-message-update>`
+        The raw data given by the :ddocs:`Gateway <topics/gateway-events#lobby-message-update>`
     cached_message: Optional[:class:`LobbyMessage`]
         The cached message, if found in the internal message cache. Represents the message before
         it is modified by the data in :attr:`RawLobbyMessageUpdateEvent.data`.
@@ -402,29 +402,28 @@ class RawThreadUpdateEvent(_RawReprMixin):
 
     Attributes
     ----------
-    thread_id: :class:`int`
-        The ID of the thread that was updated.
-    thread_type: :class:`discord.ChannelType`
-        The channel type of the updated thread.
     guild_id: :class:`int`
         The ID of the guild the thread is in.
-    parent_id: :class:`int`
-        The ID of the channel the thread belongs to.
     data: :class:`dict`
-        The raw data given by the :ddocs:`gateway <topics/gateway-events#thread-update>`
+        The raw data given by the :ddocs:`Gateway <topics/gateway-events#thread-update>`.
     thread: Optional[:class:`discord.Thread`]
-        The thread, if it could be found in the internal cache.
+        The updated thread.
+    old: Optional[:class:`discord.Thread`]
+        The thread before being updated, if thread could be found in the internal cache.
     """
 
-    __slots__ = ('thread_id', 'thread_type', 'parent_id', 'guild_id', 'data', 'thread')
+    __slots__ = (
+        'guild_id',
+        'data',
+        'thread',
+        'old',
+    )
 
     def __init__(self, data: ThreadUpdateEvent) -> None:
-        self.thread_id: int = int(data['id'])
-        self.thread_type: ChannelType = try_enum(ChannelType, data['type'])
         self.guild_id: int = int(data['guild_id'])
-        self.parent_id: int = int(data['parent_id'])
         self.data: ThreadUpdateEvent = data
         self.thread: Optional[Thread] = None
+        self.old: Optional[Thread] = None
 
 
 class RawThreadDeleteEvent(_RawReprMixin):
@@ -484,7 +483,7 @@ class RawThreadMembersUpdate(_RawReprMixin):
     member_count: :class:`int`
         The approximate number of members in the thread. This caps at 50.
     data: :class:`dict`
-        The raw data given by the :ddocs:`gateway <topics/gateway-events#thread-members-update>`.
+        The raw data given by the :ddocs:`Gateway <topics/gateway-events#thread-members-update>`.
     """
 
     __slots__ = ('thread_id', 'guild_id', 'member_count', 'data')
@@ -633,16 +632,18 @@ class RawVoiceChannelStatusUpdateEvent(_RawReprMixin):
 class SupplementalGuild:
     """Represents a supplemental guild.
 
+    .. versionadded:: 3.0
+
     Parameters
     ----------
     id: :class:`int`
         The guild's ID.
-    members: List[:class:`.Member`]
+    members: List[:class:`Member`]
         The guild's members.
 
         .. note::
 
-        You must have ``guilds.members.read``
+            You must have ``guilds.members.read`` OAuth2 scope for this to be populated.
 
     presences: List[:class:`RawPresenceUpdateEvent`]
         The presences for guild members.
@@ -651,9 +652,9 @@ class SupplementalGuild:
 
         .. note::
 
-            You must have ``voice`` OAuth2 scope to receive non-empty value.
+            You must have ``voice`` OAuth2 scope for this to be populated.
 
-    underlying: :class:`.Guild`
+    underlying: :class:`Guild`
         The underlying guild.
     """
 
@@ -683,6 +684,8 @@ class SupplementalGuild:
 
 class RawReadyEvent(_RawReprMixin):
     """Represents the payload for a :func:`on_ready`.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------
@@ -722,6 +725,8 @@ class RawReadyEvent(_RawReprMixin):
 
 class RawBulkGameInviteDeleteEvent(_RawReprMixin):
     """Represents the event payload for a :func:`on_raw_bulk_game_invite_delete` event.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------

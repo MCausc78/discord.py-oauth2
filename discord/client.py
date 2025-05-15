@@ -52,7 +52,7 @@ from .activity import BaseActivity, Spotify, ActivityTypes, Session, HeadlessSes
 from .appinfo import AppInfo
 from .backoff import ExponentialBackoff
 from .channel import PartialMessageable
-from .client_properties import ClientProperties, DefaultClientProperties
+from .impersonate import Impersonate, DefaultImpersonate
 from .connections import Connection
 from .emoji import Emoji
 from .enums import ActivityType, ChannelType, Status, RelationshipType, ClientType
@@ -277,9 +277,9 @@ class Client:
         self.ws: DiscordWebSocket = None  # type: ignore
         self._listeners: Dict[str, List[Tuple[asyncio.Future, Callable[..., bool]]]] = {}
 
-        properties = options.get('client_properties')
-        if properties is None:
-            properties = DefaultClientProperties()
+        impersonate = options.get('impersonate')
+        if impersonate is None:
+            impersonate = DefaultImpersonate()
 
         connector: Optional[aiohttp.BaseConnector] = options.get('connector', None)
         proxy: Optional[str] = options.pop('proxy', None)
@@ -291,14 +291,14 @@ class Client:
         self.http: HTTPClient = HTTPClient(
             self.loop,
             connector,
-            client_properties=properties,
+            impersonate=impersonate,
             proxy=proxy,
             proxy_auth=proxy_auth,
             unsync_clock=unsync_clock,
             http_trace=http_trace,
             max_ratelimit_timeout=max_ratelimit_timeout,
         )
-        self.properties: ClientProperties = properties
+        self.impersonate: Impersonate = impersonate
         self.resume: Optional[Tuple[int, str]] = options.pop('resume', None)
 
         self._handlers: Dict[str, Callable[..., None]] = {
@@ -750,7 +750,7 @@ class Client:
         self.http.loop = loop
         self._connection.loop = loop
         self._ready = asyncio.Event()
-        await self.properties.setup()
+        await self.impersonate.setup()
 
     async def setup_hook(self) -> None:
         """|coro|

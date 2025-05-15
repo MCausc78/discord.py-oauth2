@@ -23,7 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 
-from typing import Any, Awaitable, Callable, Coroutine, TYPE_CHECKING, Protocol, TypeVar, Union, Tuple, Optional
+from typing import Any, Awaitable, Callable, Coroutine, Optional, Protocol, TYPE_CHECKING, Tuple, TypeVar, Union
 
 
 T = TypeVar('T')
@@ -32,8 +32,8 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec
 
     from .bot import Bot
-    from .context import Context
     from .cog import Cog
+    from .context import Context
     from .errors import CommandError
 
     P = ParamSpec('P')
@@ -42,7 +42,6 @@ else:
     P = TypeVar('P')
     MaybeAwaitableFunc = Tuple[P, T]
 
-_Bot = Bot
 Coro = Coroutine[Any, Any, T]
 CoroFunc = Callable[..., Coro[Any]]
 MaybeCoro = Union[T, Coro[T]]
@@ -54,7 +53,7 @@ Hook = Union[Callable[["CogT", "ContextT"], Coro[Any]], Callable[["ContextT"], C
 Error = Union[Callable[["CogT", "ContextT", "CommandError"], Coro[Any]], Callable[["ContextT", "CommandError"], Coro[Any]]]
 
 ContextT = TypeVar('ContextT', bound='Context[Any]')
-BotT = TypeVar('BotT', bound=_Bot, covariant=True)
+BotT = TypeVar('BotT', bound='Bot', covariant=True)
 
 ContextT_co = TypeVar('ContextT_co', bound='Context[Any]', covariant=True)
 

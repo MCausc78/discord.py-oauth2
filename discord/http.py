@@ -73,9 +73,9 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from .client_properties import ClientProperties
     from .embeds import Embed
     from .flags import MessageFlags
+    from .impersonate import Impersonate
     from .message import Attachment
     from .poll import Poll
 
@@ -507,7 +507,7 @@ class HTTPClient:
         loop: asyncio.AbstractEventLoop,
         connector: Optional[aiohttp.BaseConnector] = None,
         *,
-        client_properties: ClientProperties,
+        impersonate: Impersonate,
         proxy: Optional[str] = None,
         proxy_auth: Optional[aiohttp.BasicAuth] = None,
         unsync_clock: bool = True,
@@ -533,7 +533,7 @@ class HTTPClient:
         self.http_trace: Optional[aiohttp.TraceConfig] = http_trace
         self.use_clock: bool = not unsync_clock
         self.max_ratelimit_timeout: Optional[float] = max(30.0, max_ratelimit_timeout) if max_ratelimit_timeout else None
-        self.client_properties: ClientProperties = client_properties
+        self.impersonate: Impersonate = impersonate
 
     def clear(self) -> None:
         if self.__session and self.__session.closed:
@@ -543,13 +543,13 @@ class HTTPClient:
         self, url: str, *, compress: int = 0, params: Optional[Dict[str, Any]] = None
     ) -> aiohttp.ClientWebSocketResponse:
 
-        initial_headers = self.client_properties.get_websocket_initial_headers()
+        initial_headers = self.impersonate.get_websocket_initial_headers()
         if isawaitable(initial_headers):
             initial_headers = await initial_headers
 
         headers: CIMultiDict[str] = CIMultiDict(initial_headers)
         if 'User-Agent' not in headers:
-            user_agent = self.client_properties.get_websocket_user_agent()
+            user_agent = self.impersonate.get_websocket_user_agent()
             if isawaitable(user_agent):
                 user_agent = await user_agent
             headers['User-Agent'] = user_agent
@@ -609,19 +609,19 @@ class HTTPClient:
 
         # header creation
 
-        initial_headers = self.client_properties.get_http_initial_headers()
+        initial_headers = self.impersonate.get_http_initial_headers()
         if isawaitable(initial_headers):
             initial_headers = await initial_headers
 
         headers: CIMultiDict[str] = CIMultiDict(initial_headers)
         if 'User-Agent' not in headers:
-            user_agent = self.client_properties.get_http_user_agent()
+            user_agent = self.impersonate.get_http_user_agent()
             if isawaitable(user_agent):
                 user_agent = await user_agent
             headers['User-Agent'] = user_agent
 
         if 'X-Super-Properties' not in headers:
-            xsp = self.client_properties.get_client_properties_base64()
+            xsp = self.impersonate.get_client_properties_base64()
             if isawaitable(xsp):
                 xsp = await xsp
             headers['X-Super-Properties'] = xsp
@@ -834,10 +834,16 @@ class HTTPClient:
         raise RuntimeError('Unreachable')
 
     async def get_preferred_voice_regions(self) -> List[guild.RTCRegion]:
-        user_agent = self.client_properties.get_http_user_agent()
-        if isawaitable(user_agent):
-            user_agent = await user_agent
-        headers = {'User-Agent': user_agent}
+        initial_headers = self.impersonate.get_http_initial_headers()
+        if isawaitable(initial_headers):
+            initial_headers = await initial_headers
+
+        headers: CIMultiDict[str] = CIMultiDict(initial_headers)
+        if 'User-Agent' not in headers:
+            user_agent = self.impersonate.get_http_user_agent()
+            if isawaitable(user_agent):
+                user_agent = await user_agent
+            headers['User-Agent'] = user_agent
 
         async with self.__session.get('https://latency.media.gaming-sdk.com/rtc', headers=headers) as resp:
             if resp.status == 200:

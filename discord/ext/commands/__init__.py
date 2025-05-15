@@ -1,6 +1,6 @@
 """
 discord.ext.commands
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 An extension module to facilitate creation of bot commands.
 
@@ -18,4 +18,3 @@ from .errors import *
 from .flags import *
 from .help import *
 from .parameters import *
-from .hybrid import *

@@ -647,6 +647,36 @@ class ForumOrderType(Enum):
     creation_date = 1
 
 
+class GuildBadgeType(Enum):
+    sword = 0
+    water_drop = 1
+    skull = 2
+    toadstool = 3
+    moon = 4
+    lightning = 5
+    leaf = 6
+    heart = 7
+    fire = 8
+    compass = 9
+    crosshairs = 10
+    flower = 11
+    force = 12
+    gem = 13
+    lava = 14
+    psychic = 15
+    smoke = 16
+    snow = 17
+    sound = 18
+    sun = 19
+    wind = 20
+
+
+class GuildVisibility(Enum):
+    public = 1
+    restricted = 2
+    public_with_recruitment = 3
+
+
 class InteractionResponseType(Enum):
     pong = 1
     # ack = 2 (deprecated)

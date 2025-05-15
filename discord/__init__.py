@@ -2,18 +2,18 @@
 Discord API Wrapper
 ~~~~~~~~~~~~~~~~~~~
 
-A basic wrapper for the Discord API.
+A basic wrapper for the Discord user API.
 
-:copyright: (c) 2015-present Rapptz
+:copyright: (c) 2015-present Rapptz and 2025-present MCausc78
 :license: MIT, see LICENSE for more details.
 
 """
 
-__title__ = 'discord'
-__author__ = 'Rapptz'
+__title__ = 'discord.py-oauth2'
+__author__ = 'MCausc78'
 __license__ = 'MIT'
-__copyright__ = 'Copyright 2015-present Rapptz'
-__version__ = '2.6.0a'
+__copyright__ = 'Copyright 2015-present Rapptz and 2025-present MCausc78'
+__version__ = '3.0.0a'
 
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
@@ -32,7 +32,6 @@ from .automod import *
 from .channel import *
 from .calls import *
 from .client import *
-from .client_properties import *
 from .color import *
 from .components import *
 from .connections import *
@@ -45,6 +44,7 @@ from .flags import *
 from .game_invite import *
 from .game_relationship import *
 from .guild import *
+from .impersonate import *
 from .integrations import *
 from .invite import *
 from .lobby import *
@@ -87,7 +87,7 @@ class VersionInfo(NamedTuple):
     serial: int
 
 
-version_info: VersionInfo = VersionInfo(major=2, minor=6, micro=0, releaselevel='alpha', serial=0)
+version_info: VersionInfo = VersionInfo(major=3, minor=0, micro=0, releaselevel='alpha', serial=0)
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 

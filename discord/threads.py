@@ -24,7 +24,8 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-import array
+from array import array
+from copy import copy
 from datetime import datetime
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING, Union
 
@@ -180,7 +181,7 @@ class Thread(Hashable):
         self.member_count: int = data['member_count']
         self._flags: int = data.get('flags', 0)
         # SnowflakeList is sorted, but this would not be proper for applied tags, where order actually matters.
-        self._applied_tags: array.array[int] = array.array('Q', map(int, data.get('applied_tags', ())))
+        self._applied_tags: array[int] = array('Q', map(int, data.get('applied_tags', ())))
         self._unroll_metadata(data['thread_metadata'])
 
         self.me: Optional[ThreadMember]
@@ -200,7 +201,9 @@ class Thread(Hashable):
         self.invitable: bool = data.get('invitable', True)
         self._created_at: Optional[datetime] = parse_time(data.get('create_timestamp'))
 
-    def _update(self, data: ThreadPayload) -> None:
+    def _update(self, data: ThreadPayload) -> Optional[Thread]:
+        old = copy(self)
+
         try:
             self.name = data['name']
         except KeyError:
@@ -208,12 +211,17 @@ class Thread(Hashable):
 
         self.slowmode_delay = data.get('rate_limit_per_user', 0)
         self._flags: int = data.get('flags', 0)
-        self._applied_tags: array.array[int] = array.array('Q', map(int, data.get('applied_tags', ())))
+        self._applied_tags: array[int] = array('Q', map(int, data.get('applied_tags', ())))
 
         try:
             self._unroll_metadata(data['thread_metadata'])
         except KeyError:
             pass
+
+        attrs = [x for x in self.__slots__ if not any(y in x for y in ('member', 'guild', 'state', 'count'))]
+
+        if any(getattr(self, attr) != getattr(old, attr) for attr in attrs):
+            return old
 
     @property
     def type(self) -> ThreadChannelType:

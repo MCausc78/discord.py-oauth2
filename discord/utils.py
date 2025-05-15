@@ -57,6 +57,8 @@ from typing import (
     Iterator,
     List,
     Literal,
+    MutableMapping,
+    MutableSequence,
     NamedTuple,
     Optional,
     Protocol,
@@ -222,7 +224,7 @@ if TYPE_CHECKING:
     class _DecompressionContext(Protocol):
         COMPRESSION_TYPE: str
 
-        def decompress(self, data: bytes, /) -> str | None:
+        def decompress(self, data: bytes, /) -> Optional[str]:
             ...
 
     P = ParamSpec('P')
@@ -235,7 +237,7 @@ else:
     cached_property = _cached_property
     _SnowflakeListBase = array.array
 
-
+K = TypeVar('K')
 T = TypeVar('T')
 T_co = TypeVar('T_co', covariant=True)
 _Iter = Union[Iterable[T], AsyncIterable[T]]
@@ -1603,3 +1605,76 @@ class _RawReprMixin:
     def __repr__(self) -> str:
         value = ' '.join(f'{attr}={getattr(self, attr)!r}' for attr in self.__slots__)
         return f'<{self.__class__.__name__} {value}>'
+
+
+class _ReactiveSequenceProxy(MutableSequence[T]):
+    __slots__ = (
+        '_original',
+        '_updater',
+    )
+
+    def __init__(self, *, original: MutableSequence[T], updater: Callable[[], None]) -> None:
+        self._original = original
+        self._updater = updater
+
+    def __len__(self) -> int:
+        return self._original.__len__()
+
+    def __reversed__(self) -> Iterator[T]:
+        return self._original.__reversed__()
+
+    def __contains__(self, x: T, /) -> bool:
+        return self._original.__contains__(x)
+
+    def __getitem__(self, key: int, /) -> T:
+        val = self._original.__getitem__(key)
+        if isinstance(val, MutableMapping):
+            return _ReactiveMappingProxy(original=val, updater=self._updater)  # type: ignore
+        elif isinstance(val, MutableSequence):
+            return _ReactiveSequenceProxy(original=val, updater=self._updater)  # type: ignore
+        return val
+
+    def __setitem__(self, index: int, value: T, /) -> None:
+        self._original.__setitem__(index, value)
+        self._updater()
+
+    def __delitem__(self, index: Union[int, slice[int, int, int]], /) -> None:
+        self._original.__delitem__(index)
+        self._updater()
+
+    def insert(self, index: int, value: T, /) -> None:
+        self._original.insert(index, value)
+        self._updater()
+
+
+class _ReactiveMappingProxy(MutableMapping[K, T]):
+    __slots__ = (
+        '_original',
+        '_updater',
+    )
+
+    def __init__(self, *, original: MutableMapping[K, T], updater: Callable[[], None]) -> None:
+        self._original = original
+        self._updater = updater
+
+    def __getitem__(self, key: K, /) -> T:
+        val = self._original.__getitem__(key)
+        if isinstance(val, MutableMapping):
+            return _ReactiveMappingProxy(original=val, updater=self._updater)  # type: ignore
+        elif isinstance(val, MutableSequence):
+            return _ReactiveSequenceProxy(original=val, updater=self._updater)  # type: ignore
+        return val
+
+    def __setitem__(self, key: K, value: T, /) -> None:
+        self._original.__setitem__(key, value)
+        self._updater()
+
+    def __delitem__(self, key: K, /) -> None:
+        self._original.__delitem__(key)
+        self._updater()
+
+    def __iter__(self) -> Iterable[K]:
+        return self._original.__iter__()
+
+    def __len__(self) -> int:
+        return self._original.__len__()

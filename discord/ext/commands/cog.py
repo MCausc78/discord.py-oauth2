@@ -26,32 +26,25 @@ from __future__ import annotations
 import inspect
 import discord
 import logging
-from discord import app_commands
-from discord.utils import maybe_coroutine, _to_kebab_case
+from discord.utils import maybe_coroutine
 
 from typing import (
     Any,
     Callable,
     ClassVar,
-    Coroutine,
     Dict,
     Generator,
-    Iterable,
     List,
     Optional,
     TYPE_CHECKING,
-    Sequence,
     Tuple,
     TypeVar,
-    Union,
 )
 
 from ._types import _BaseCommand, BotT
 
 if TYPE_CHECKING:
     from typing_extensions import Self
-    from discord.abc import Snowflake
-    from discord._types import ClientT
 
     from .bot import BotBase
     from .context import Context
@@ -159,22 +152,17 @@ class CogMeta(type):
 
     __cog_name__: str
     __cog_description__: str
-    __cog_group_name__: Union[str, app_commands.locale_str]
-    __cog_group_description__: Union[str, app_commands.locale_str]
+    __cog_group_name__: str
+    __cog_group_description__: str
     __cog_group_nsfw__: bool
     __cog_group_auto_locale_strings__: bool
     __cog_group_extras__: Dict[Any, Any]
     __cog_settings__: Dict[str, Any]
     __cog_commands__: List[Command[Any, ..., Any]]
-    __cog_app_commands__: List[Union[app_commands.Group, app_commands.Command[Any, ..., Any]]]
     __cog_listeners__: List[Tuple[str, str]]
 
     def __new__(cls, *args: Any, **kwargs: Any) -> CogMeta:
         name, bases, attrs = args
-        if any(issubclass(base, app_commands.Group) for base in bases):
-            raise TypeError(
-                'Cannot inherit from app_commands.Group with commands.Cog, consider using commands.GroupCog instead'
-            )
 
         # If name='...' is given but not group_name='...' then name='...' is used for both.
         # If neither is given then cog name is the class name but group name is kebab case
@@ -182,19 +170,9 @@ class CogMeta(type):
             cog_name = kwargs.pop('name')
         except KeyError:
             cog_name = name
-            try:
-                group_name = kwargs.pop('group_name')
-            except KeyError:
-                group_name = _to_kebab_case(name)
-        else:
-            group_name = kwargs.pop('group_name', cog_name)
 
         attrs['__cog_settings__'] = kwargs.pop('command_attrs', {})
         attrs['__cog_name__'] = cog_name
-        attrs['__cog_group_name__'] = group_name
-        attrs['__cog_group_nsfw__'] = kwargs.pop('group_nsfw', False)
-        attrs['__cog_group_auto_locale_strings__'] = kwargs.pop('group_auto_locale_strings', True)
-        attrs['__cog_group_extras__'] = kwargs.pop('group_extras', {})
 
         description = kwargs.pop('description', None)
         if description is None:
@@ -204,7 +182,6 @@ class CogMeta(type):
         attrs['__cog_group_description__'] = kwargs.pop('group_description', description or '\u2026')
 
         commands = {}
-        cog_app_commands = {}
         listeners = {}
         no_bot_cog = 'Commands or listeners must not start with cog_ or bot_ (in method {0.__name__}.{1})'
 
@@ -225,12 +202,6 @@ class CogMeta(type):
                     if elem.startswith(('cog_', 'bot_')):
                         raise TypeError(no_bot_cog.format(base, elem))
                     commands[elem] = value
-                elif isinstance(value, (app_commands.Group, app_commands.Command)) and value.parent is None:
-                    if is_static_method:
-                        raise TypeError(f'Command in method {base}.{elem!r} must not be staticmethod.')
-                    if elem.startswith(('cog_', 'bot_')):
-                        raise TypeError(no_bot_cog.format(base, elem))
-                    cog_app_commands[elem] = value
                 elif inspect.iscoroutinefunction(value):
                     try:
                         getattr(value, '__cog_listener__')
@@ -242,7 +213,6 @@ class CogMeta(type):
                         listeners[elem] = value
 
         new_cls.__cog_commands__ = list(commands.values())  # this will be copied in Cog.__new__
-        new_cls.__cog_app_commands__ = list(cog_app_commands.values())
 
         listeners_as_list = []
         for listener in listeners.values():
@@ -280,17 +250,11 @@ class Cog(metaclass=CogMeta):
 
     __cog_name__: str
     __cog_description__: str
-    __cog_group_name__: Union[str, app_commands.locale_str]
-    __cog_group_description__: Union[str, app_commands.locale_str]
+    __cog_group_name__: str
+    __cog_group_description__: str
     __cog_settings__: Dict[str, Any]
     __cog_commands__: List[Command[Self, ..., Any]]
-    __cog_app_commands__: List[Union[app_commands.Group, app_commands.Command[Self, ..., Any]]]
     __cog_listeners__: List[Tuple[str, str]]
-    __cog_is_app_commands_group__: ClassVar[bool] = False
-    __cog_app_commands_group__: Optional[app_commands.Group]
-    __discord_app_commands_error_handler__: Optional[
-        Callable[[discord.Interaction, app_commands.AppCommandError], Coroutine[Any, Any, None]]
-    ]
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Self:
         # For issue 426, we need to store a copy of the command objects
@@ -305,29 +269,6 @@ class Cog(metaclass=CogMeta):
 
         lookup = {cmd.qualified_name: cmd for cmd in self.__cog_commands__}
 
-        # Register the application commands
-        children: List[Union[app_commands.Group, app_commands.Command[Self, ..., Any]]] = []
-        app_command_refs: Dict[str, Union[app_commands.Group, app_commands.Command[Self, ..., Any]]] = {}
-
-        if cls.__cog_is_app_commands_group__:
-            group = app_commands.Group(
-                name=cls.__cog_group_name__,
-                description=cls.__cog_group_description__,
-                nsfw=cls.__cog_group_nsfw__,
-                auto_locale_strings=cls.__cog_group_auto_locale_strings__,
-                parent=None,
-                guild_ids=getattr(cls, '__discord_app_commands_default_guilds__', None),
-                guild_only=getattr(cls, '__discord_app_commands_guild_only__', False),
-                allowed_contexts=getattr(cls, '__discord_app_commands_contexts__', None),
-                allowed_installs=getattr(cls, '__discord_app_commands_installation_types__', None),
-                default_permissions=getattr(cls, '__discord_app_commands_default_permissions__', None),
-                extras=cls.__cog_group_extras__,
-            )
-        else:
-            group = None
-
-        self.__cog_app_commands_group__ = group
-
         # Update the Command instances dynamically as well
         for command in self.__cog_commands__:
             setattr(self, command.callback.__name__, command)
@@ -336,78 +277,14 @@ class Cog(metaclass=CogMeta):
                 # Get the latest parent reference
                 parent = lookup[parent.qualified_name]  # type: ignore
 
-                # Hybrid commands already deal with updating the reference
-                # Due to the copy below, so we need to handle them specially
-                if hasattr(parent, '__commands_is_hybrid__') and hasattr(command, '__commands_is_hybrid__'):
-                    current: Optional[Union[app_commands.Group, app_commands.Command[Self, ..., Any]]] = getattr(
-                        command, 'app_command', None
-                    )
-                    updated = app_command_refs.get(command.qualified_name)
-                    if current and updated:
-                        command.app_command = updated  # type: ignore  # Safe attribute access
-
                 # Update our parent's reference to our self
                 parent.remove_command(command.name)  # type: ignore
                 parent.add_command(command)  # type: ignore
-
-            if hasattr(command, '__commands_is_hybrid__') and parent is None:
-                app_command: Optional[Union[app_commands.Group, app_commands.Command[Self, ..., Any]]] = getattr(
-                    command, 'app_command', None
-                )
-                if app_command:
-                    group_parent = self.__cog_app_commands_group__
-                    app_command = app_command._copy_with(parent=group_parent, binding=self)
-                    # The type checker does not see the app_command attribute even though it exists
-                    command.app_command = app_command  # type: ignore
-
-                    # Update all the references to point to the new copy
-                    if isinstance(app_command, app_commands.Group):
-                        for child in app_command.walk_commands():
-                            app_command_refs[child.qualified_name] = child
-                            if hasattr(child, '__commands_is_hybrid_app_command__') and child.qualified_name in lookup:
-                                child.wrapped = lookup[child.qualified_name]  # type: ignore
-
-                    if self.__cog_app_commands_group__:
-                        children.append(app_command)
-
-        if Cog._get_overridden_method(self.cog_app_command_error) is not None:
-            error_handler = self.cog_app_command_error
-        else:
-            error_handler = None
-
-        self.__discord_app_commands_error_handler__ = error_handler
-
-        for command in cls.__cog_app_commands__:
-            copy = command._copy_with(parent=self.__cog_app_commands_group__, binding=self)
-
-            # Update set bindings
-            if copy._attr:
-                setattr(self, copy._attr, copy)
-
-            if isinstance(copy, app_commands.Group):
-                copy.__discord_app_commands_error_handler__ = error_handler
-                for command in copy._children.values():
-                    if isinstance(command, app_commands.Group):
-                        command.__discord_app_commands_error_handler__ = error_handler
-
-            children.append(copy)
-
-        self.__cog_app_commands__ = children
-        if self.__cog_app_commands_group__:
-            self.__cog_app_commands_group__.module = cls.__module__
-            mapping = {cmd.name: cmd for cmd in children}
-            if len(mapping) > 25:
-                raise TypeError('maximum number of application command children exceeded')
-
-            self.__cog_app_commands_group__._children = mapping
 
         return self
 
     def get_commands(self) -> List[Command[Self, ..., Any]]:
         r"""Returns the commands that are defined inside this cog.
-
-        This does *not* include :class:`discord.app_commands.Command` or :class:`discord.app_commands.Group`
-        instances.
 
         Returns
         --------
@@ -416,17 +293,6 @@ class Cog(metaclass=CogMeta):
             defined inside this cog, not including subcommands.
         """
         return [c for c in self.__cog_commands__ if c.parent is None]
-
-    def get_app_commands(self) -> List[Union[app_commands.Command[Self, ..., Any], app_commands.Group]]:
-        r"""Returns the app commands that are defined inside this cog.
-
-        Returns
-        --------
-        List[Union[:class:`discord.app_commands.Command`, :class:`discord.app_commands.Group`]]
-            A :class:`list` of :class:`discord.app_commands.Command`\s and :class:`discord.app_commands.Group`\s that are
-            defined inside this cog, not including subcommands.
-        """
-        return [c for c in self.__cog_app_commands__ if c.parent is None]
 
     @property
     def qualified_name(self) -> str:
@@ -457,27 +323,6 @@ class Cog(metaclass=CogMeta):
                 yield command
                 if isinstance(command, GroupMixin):
                     yield from command.walk_commands()
-
-    def walk_app_commands(self) -> Generator[Union[app_commands.Command[Self, ..., Any], app_commands.Group], None, None]:
-        """An iterator that recursively walks through this cog's app commands and subcommands.
-
-        Yields
-        ------
-        Union[:class:`discord.app_commands.Command`, :class:`discord.app_commands.Group`]
-            An app command or group from the cog.
-        """
-        for command in self.__cog_app_commands__:
-            yield command
-            if isinstance(command, app_commands.Group):
-                yield from command.walk_commands()
-
-    @property
-    def app_command(self) -> Optional[app_commands.Group]:
-        """Optional[:class:`discord.app_commands.Group`]: Returns the associated group with this cog.
-
-        This is only available if inheriting from :class:`GroupCog`.
-        """
-        return self.__cog_app_commands_group__
 
     def get_listeners(self) -> List[Tuple[str, Callable[..., Any]]]:
         """Returns a :class:`list` of (name, function) listener pairs that are defined in this cog.
@@ -543,13 +388,6 @@ class Cog(metaclass=CogMeta):
         """
         return not hasattr(self.cog_command_error.__func__, '__cog_special_method__')
 
-    def has_app_command_error_handler(self) -> bool:
-        """:class:`bool`: Checks whether the cog has an app error handler.
-
-        .. versionadded:: 2.1
-        """
-        return not hasattr(self.cog_app_command_error.__func__, '__cog_special_method__')
-
     @_cog_special_method
     async def cog_load(self) -> None:
         """|maybecoro|
@@ -611,18 +449,6 @@ class Cog(metaclass=CogMeta):
         return True
 
     @_cog_special_method
-    def interaction_check(self, interaction: discord.Interaction[ClientT], /) -> bool:
-        """A special method that registers as a :func:`discord.app_commands.check`
-        for every app command and subcommand in this cog.
-
-        This function **can** be a coroutine and must take a sole parameter,
-        ``interaction``, to represent the :class:`~discord.Interaction`.
-
-        .. versionadded:: 2.0
-        """
-        return True
-
-    @_cog_special_method
     async def cog_command_error(self, ctx: Context[BotT], error: Exception) -> None:
         """|coro|
 
@@ -640,27 +466,6 @@ class Cog(metaclass=CogMeta):
             The invocation context where the error happened.
         error: :class:`CommandError`
             The error that happened.
-        """
-        pass
-
-    @_cog_special_method
-    async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
-        """|coro|
-
-        A special method that is called whenever an error within
-        an application command is dispatched inside this cog.
-
-        This is similar to :func:`discord.app_commands.CommandTree.on_error` except
-        only applying to the application commands inside this cog.
-
-        This **must** be a coroutine.
-
-        Parameters
-        -----------
-        interaction: :class:`~discord.Interaction`
-            The interaction that is being handled.
-        error: :exc:`~discord.app_commands.AppCommandError`
-            The exception that was raised.
         """
         pass
 
@@ -698,7 +503,7 @@ class Cog(metaclass=CogMeta):
         """
         pass
 
-    async def _inject(self, bot: BotBase, override: bool, guild: Optional[Snowflake], guilds: Sequence[Snowflake]) -> Self:
+    async def _inject(self, bot: BotBase, override: bool) -> Self:
         cls = self.__class__
 
         # we'll call this first so that errors can propagate without
@@ -738,30 +543,15 @@ class Cog(metaclass=CogMeta):
         for name, method_name in self.__cog_listeners__:
             bot.add_listener(getattr(self, method_name), name)
 
-        # Only do this if these are "top level" commands
-        if not self.__cog_app_commands_group__:
-            for command in self.__cog_app_commands__:
-                # This is already atomic
-                bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
-
         return self
 
-    async def _eject(self, bot: BotBase, guild_ids: Optional[Iterable[int]]) -> None:
+    async def _eject(self, bot: BotBase) -> None:
         cls = self.__class__
 
         try:
             for command in self.__cog_commands__:
                 if command.parent is None:
                     bot.remove_command(command.name)
-
-            if not self.__cog_app_commands_group__:
-                for command in self.__cog_app_commands__:
-                    guild_ids = guild_ids or command._guild_ids
-                    if guild_ids is None:
-                        bot.tree.remove_command(command.name)
-                    else:
-                        for guild_id in guild_ids:
-                            bot.tree.remove_command(command.name, guild=discord.Object(id=guild_id))
 
             for name, method_name in self.__cog_listeners__:
                 bot.remove_listener(getattr(self, method_name), name)

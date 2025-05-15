@@ -46,6 +46,8 @@ if TYPE_CHECKING:
         MuteConfig as MuteConfigPayload,
     )
 
+# {"t":"USER_SETTINGS_UPDATE","s":63,"op":0,"d":{"application_settings":{"1211781489931452447":{"app_dm_settings":{"allow_mobile_push":true}}}}}
+
 
 class GuildFolder:
     """Represents a guild folder or position if :attr:`id` is ``None``.
