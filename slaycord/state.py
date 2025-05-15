@@ -1269,22 +1269,33 @@ class ConnectionState(Generic[ClientT]):
                 self.dispatch('thread_join', thread)
 
     def parse_thread_update(self, data: gw.ThreadUpdateEvent) -> None:
-        guild_id = int(data['guild_id'])
-        guild = self._get_guild(guild_id)
+        raw = RawThreadUpdateEvent(data=data)
+
+        self.dispatch('raw_thread_update', raw)
+        guild = self._get_guild(raw.guild_id)
         if guild is None:
-            _log.debug('THREAD_UPDATE referencing an unknown guild ID: %s. Discarding', guild_id)
+            _log.debug('THREAD_UPDATE referencing an unknown guild ID: %s. Discarding', raw.guild_id)
             return
 
-        existing = guild.get_thread(int(data['id']))
-        if existing is not None:
+        thread_id = int(data['id'])
+
+        existing = guild.get_thread(thread_id)
+        if existing is None:
+            # Shouldn't happen
+            raw.thread = Thread(guild=guild, state=self, data=data)
+            guild._add_thread(raw.thread)
+            self.dispatch('raw_thread_update', raw)
+        else:
             old = existing._update(data)
             if existing.archived:
                 guild._remove_thread(existing)
+
+            raw.old = old
+            raw.thread = existing
+
+            self.dispatch('raw_thread_update', raw)
             if old is not None:
                 self.dispatch('thread_update', old, existing)
-        else:  # Shouldn't happen
-            thread = Thread(guild=guild, state=self, data=data)
-            guild._add_thread(thread)
 
     def parse_thread_delete(self, data: gw.ThreadDeleteEvent) -> None:
         guild_id = int(data['guild_id'])
@@ -1368,8 +1379,11 @@ class ConnectionState(Generic[ClientT]):
             return
 
         if thread.me is None:
-            member = ThreadMember(thread, data)
-            thread.me = member
+            me = ThreadMember(thread, data)
+            thread.me = me
+
+            # Should be fine:tm:
+            self.dispatch('thread_join', me)
         else:
             old_me = copy(thread.me)
             thread.me._from_data(data)
@@ -1392,8 +1406,8 @@ class ConnectionState(Generic[ClientT]):
             _log.debug('THREAD_MEMBERS_UPDATE referencing an unknown thread ID: %s. Discarding.', thread_id)
             return
 
-        added_members = [ThreadMember(thread, d) for d in data.get('added_members', [])]
-        removed_member_ids = [int(x) for x in data.get('removed_member_ids', [])]
+        added_members = [ThreadMember(thread, d) for d in data.get('added_members', ())]
+        removed_member_ids = list(map(int, data.get('removed_member_ids', ())))
         self_id = self.self_id
         for member in added_members:
             if member.id != self_id:

@@ -949,6 +949,8 @@ class CustomActivity(BaseActivity):
 class Session:
     """Represents a connected Discord gateway session.
 
+    .. versionadded:: 3.0
+
     .. container:: operations
 
         .. describe:: x == y
@@ -1066,6 +1068,8 @@ class HeadlessSession:
     """Represents a headless session.
 
     A headless session is a session that does not have Gateway connection (nor requires it) and primarily used to set Rich Presence.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------

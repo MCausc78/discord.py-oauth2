@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .client import Client
-    from .client_properties import ClientProperties
+    from .impersonate import Impersonate
     from .state import ConnectionState
     from .types.gateway import UpdateLobbyVoiceState as UpdateLobbyVoiceStatePayload
     from .types.stream import StreamType
@@ -298,7 +298,7 @@ class DiscordWebSocket:
         _initial_identify: bool
         gateway: yarl.URL
         _max_heartbeat_timeout: float
-        client_properties: ClientProperties
+        impersonate: Impersonate
 
     # fmt: off
     DEFAULT_GATEWAY    = yarl.URL('wss://gateway.gaming-sdk.com/')
@@ -413,7 +413,7 @@ class DiscordWebSocket:
         ws.session_id = session
         ws.sequence = sequence
         ws._max_heartbeat_timeout = client._connection.heartbeat_timeout
-        ws.client_properties = client.properties
+        ws.impersonate = client.impersonate
 
         if client._enable_debug_events:
             ws.send = ws.debug_send
@@ -465,12 +465,11 @@ class DiscordWebSocket:
 
     async def identify(self) -> None:
         """Sends the IDENTIFY packet."""
-        properties = self.client_properties.get_client_properties()
+        properties = self.impersonate.get_client_properties()
         if isawaitable(properties):
             properties = await properties
 
         payload = {
-            'op': self.IDENTIFY,
             'd': {
                 'token': 'Bearer ' + (self.token or ''),
                 # DEDUPE_USER_OBJECTS | PRIORITIZED_READY_PAYLOAD | AUTO_CALL_CONNECT | AUTO_LOBBY_CONNECT
@@ -479,6 +478,7 @@ class DiscordWebSocket:
                 'compress': True,
                 # 'large_threshold': 250,
             },
+            'op': self.IDENTIFY,
         }
 
         state = self._connection
@@ -492,12 +492,12 @@ class DiscordWebSocket:
     async def resume(self) -> None:
         """Sends the RESUME packet."""
         payload = {
-            'op': self.RESUME,
             'd': {
                 'seq': self.sequence,
                 'session_id': self.session_id,
                 'token': 'Bearer ' + (self.token or ''),
             },
+            'op': self.RESUME,
         }
 
         await self.send_as_json(payload)
@@ -577,10 +577,9 @@ class DiscordWebSocket:
             self.session_id = data['session_id']
             self.gateway = yarl.URL(data['resume_gateway_url'])
 
-            scopes = data.get('scopes', [])
+            scopes = data.get('scopes', ())
 
             _log.info('Connected to Gateway (Session ID: %s) with %s OAuth2 scopes.', self.session_id, len(scopes))
-
         elif event == 'RESUMED':
             _log.info('Gateway has successfully RESUMED session %s.', self.session_id)
 

@@ -34,12 +34,11 @@ from collections import deque
 
 from .errors import MaxConcurrencyReached
 from .context import Context
-from slaycord.app_commands import Cooldown as Cooldown
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from ...message import Message
+    from slaycord.message import Message
 
 __all__ = (
     'BucketType',
@@ -81,6 +80,125 @@ class BucketType(Enum):
 
     def __call__(self, msg: Union[Message, Context[Any]]) -> Any:
         return self.get_key(msg)
+
+
+class Cooldown:
+    """Represents a cooldown for a command.
+
+    Attributes
+    -----------
+    rate: :class:`float`
+        The total number of tokens available per :attr:`per` seconds.
+    per: :class:`float`
+        The length of the cooldown period in seconds.
+    """
+
+    __slots__ = ('rate', 'per', '_window', '_tokens', '_last')
+
+    def __init__(self, rate: float, per: float) -> None:
+        self.rate: int = int(rate)
+        self.per: float = float(per)
+        self._window: float = 0.0
+        self._tokens: int = self.rate
+        self._last: float = 0.0
+
+    def get_tokens(self, current: Optional[float] = None) -> int:
+        """Returns the number of available tokens before rate limiting is applied.
+
+        Parameters
+        ------------
+        current: Optional[:class:`float`]
+            The time in seconds since Unix epoch to calculate tokens at.
+            If not supplied then :func:`time.time()` is used.
+
+        Returns
+        --------
+        :class:`int`
+            The number of tokens available before the cooldown is to be applied.
+        """
+        if not current:
+            current = time.time()
+
+        # the calculated tokens should be non-negative
+        tokens = max(self._tokens, 0)
+
+        if current > self._window + self.per:
+            tokens = self.rate
+        return tokens
+
+    def get_retry_after(self, current: Optional[float] = None) -> float:
+        """Returns the time in seconds until the cooldown will be reset.
+
+        Parameters
+        -------------
+        current: Optional[:class:`float`]
+            The current time in seconds since Unix epoch.
+            If not supplied, then :func:`time.time()` is used.
+
+        Returns
+        -------
+        :class:`float`
+            The number of seconds to wait before this cooldown will be reset.
+        """
+        current = current or time.time()
+        tokens = self.get_tokens(current)
+
+        if tokens == 0:
+            return self.per - (current - self._window)
+
+        return 0.0
+
+    def update_rate_limit(self, current: Optional[float] = None, *, tokens: int = 1) -> Optional[float]:
+        """Updates the cooldown rate limit.
+
+        Parameters
+        -------------
+        current: Optional[:class:`float`]
+            The time in seconds since Unix epoch to update the rate limit at.
+            If not supplied, then :func:`time.time()` is used.
+        tokens: :class:`int`
+            The amount of tokens to deduct from the rate limit.
+
+            .. versionadded:: 2.0
+
+        Returns
+        -------
+        Optional[:class:`float`]
+            The retry-after time in seconds if rate limited.
+        """
+        current = current or time.time()
+        self._last = current
+
+        self._tokens = self.get_tokens(current)
+
+        # first token used means that we start a new rate limit window
+        if self._tokens == self.rate:
+            self._window = current
+
+        # decrement tokens by specified number
+        self._tokens -= tokens
+
+        # check if we are rate limited and return retry-after
+        if self._tokens < 0:
+            return self.per - (current - self._window)
+
+    def reset(self) -> None:
+        """Reset the cooldown to its initial state."""
+        self._tokens = self.rate
+        self._last = 0.0
+
+    def copy(self) -> Self:
+        """Creates a copy of this cooldown.
+
+        Returns
+        --------
+        :class:`Cooldown`
+            A new instance of this cooldown.
+        """
+        return self.__class__(self.rate, self.per)
+
+    def __repr__(self) -> str:
+        return f'<Cooldown rate: {self.rate} per: {self.per} window: {self._window} tokens: {self._tokens}>'
 
 
 class CooldownMapping(Generic[T_contra]):

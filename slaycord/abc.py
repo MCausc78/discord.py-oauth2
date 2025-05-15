@@ -95,7 +95,7 @@ if TYPE_CHECKING:
     )
     from .user import ClientUser
 
-    PartialMessageableChannel = Union[TextChannel, DMChannel, GroupChannel, EphemeralDMChannel, PartialMessageable]
+    PartialMessageableChannel = Union[TextChannel, DMChannel, EphemeralDMChannel, PartialMessageable]
     MessageableChannel = PartialMessageableChannel
     MessageableDestinationType = Literal['channel', 'lobby', 'user']
     SnowflakeTime = Union["Snowflake", datetime]

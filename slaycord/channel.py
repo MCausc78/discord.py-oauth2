@@ -267,6 +267,8 @@ class VoiceChannelEffect:
 class VoiceChannelBackground:
     """Represents a background for voice channel.
 
+    .. versionadded:: 3.0
+
     Attributes
     ----------
     type: :class:`VoiceCallBackgroundType`
@@ -311,6 +313,8 @@ class VoiceChannelBackground:
 
 class LinkedAccount(EqualityComparable[str]):
     """Represents a linked account.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------
@@ -371,6 +375,8 @@ class TextChannel(slaycord.abc.Messageable, slaycord.abc.GuildChannel, Hashable)
         top channel is position 0.
     linked_lobby: Optional[:class:`~slaycord.LinkedLobby`]
         The lobby linked to the channel.
+
+        .. versionadded:: 3.0
     last_message_id: Optional[:class:`int`]
         The last message ID of the message sent to this channel. It may
         *not* point to an existing or valid message.
@@ -812,11 +818,15 @@ class VoiceChannel(VocalGuildChannel):
     voice_background: Optional[:class:`ChannelVoiceBackground`]
         The background for this voice channel.
 
-        .. deprecated:: 2.7
+        .. deprecated:: 3.0
     hd_streaming_until: Optional[:class:`~datetime.datetime`]
         When the HD streaming entitlement expires.
+
+        .. versionadded:: 3.0
     hd_streaming_buyer_id: Optional[:class:`int`]
         The user's ID who purchased HD streaming for this voice channel.
+
+        .. versionadded:: 3.0
     """
 
     __slots__ = (
@@ -924,8 +934,12 @@ class StageChannel(VocalGuildChannel):
         The channel's topic. ``None`` if it isn't set.
     hd_streaming_until: Optional[:class:`~datetime.datetime`]
         When the HD streaming entitlement expires.
+
+        .. versionadded:: 3.0
     hd_streaming_buyer_id: Optional[:class:`int`]
         The user's ID who purchased HD streaming for this stage channel.
+
+        .. versionadded:: 3.0
     """
 
     __slots__ = ('topic',)
@@ -1472,6 +1486,8 @@ class ForumChannel(slaycord.abc.GuildChannel, Hashable):
 class SafetyWarning:
     """Represents a safety warning.
 
+    .. versionadded:: 3.0
+
     .. container:: operations
 
         .. describe:: x == y
@@ -1552,6 +1568,8 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
         When the last pinned message was pinned. ``None`` if there are no pinned messages.
     safety_warnings: List[:class:`SafetyWarning`]
         The safety warnings for this direct message channel.
+
+        .. versionadded:: 3.0
     """
 
     __slots__ = (
@@ -1650,7 +1668,10 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
 
     @property
     def call(self) -> Optional[PrivateCall]:
-        """Optional[:class:`PrivateCall`]: The channel's currently active call."""
+        """Optional[:class:`PrivateCall`]: The channel's currently active call.
+
+        .. versionadded:: 3.0
+        """
         return self._state._calls.get(self.id)
 
     @property
@@ -1688,23 +1709,39 @@ class DMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc
 
     @property
     def recipient_flags(self) -> RecipientFlags:
+        """:class:`RecipientFlags`: The channel recipient's flags.
+
+        .. versionadded:: 3.0
+        """
         return RecipientFlags._from_value(self._recipient_flags)
 
     @property
     def requested_at(self) -> Optional[datetime.datetime]:
-        """Optional[:class:`datetime.datetime`]: Returns the message request's creation time in UTC, if applicable."""
+        """Optional[:class:`datetime.datetime`]: Returns the message request's creation time in UTC, if applicable.
+
+        .. versionadded:: 3.0
+        """
         return self._requested_at
 
     def is_message_request(self) -> bool:
-        """:class:`bool`: Indicates if the direct message is/was a message request."""
+        """:class:`bool`: Indicates if the direct message is/was a message request.
+
+        .. versionadded:: 3.0
+        """
         return self._message_request is not None
 
     def is_accepted(self) -> bool:
-        """:class:`bool`: Indicates if the message request is accepted. For regular direct messages, this is always ``True``."""
+        """:class:`bool`: Indicates if the message request is accepted. For regular direct messages, this is always ``True``.
+
+        .. versionadded:: 3.0
+        """
         return not self._message_request if self._message_request is not None else True
 
     def is_spam(self) -> bool:
-        """:class:`bool`: Indicates if the direct message is a spam message request."""
+        """:class:`bool`: Indicates if the direct message is a spam message request.
+
+        .. versionadded:: 3.0
+        """
         return self._spam
 
     def permissions_for(self, obj: Any = None, /) -> Permissions:
@@ -1867,16 +1904,22 @@ class GroupChannel(slaycord.abc.PrivateChannel, slaycord.abc.Connectable, Hashab
         The ID of the managing application, if any.
     nicks: Dict[:class:`User`, :class:`str`]
         A mapping of users to their respective nicknames in the group channel.
+
+        .. versionadded:: 3.0
     origin_channel_id: Optional[:class:`int`]
         The ID of the DM this group channel originated from, if any.
 
         This can only be accurately received in :func:`on_private_channel_create`
         due to a Discord limitation.
+
+        .. versionadded:: 3.0
     blocked_user_warning_dismissed: :class:`bool`
         Whether the user has acknowledged the presence of blocked users in the group channel.
 
         This can only be accurately received in :func:`on_private_channel_create`, :func:`on_private_channel_update`,
         and :func:`on_private_channel_delete` due to a Discord limitation.
+
+        .. versionadded:: 3.0
     """
 
     __slots__ = (
@@ -2074,6 +2117,8 @@ class GroupChannel(slaycord.abc.PrivateChannel, slaycord.abc.Connectable, Hashab
 
         Retrieves linked accounts for specified users.
 
+        .. versionadded:: 3.0
+
         Parameters
         ----------
         users: Optional[List[:class:`User`]]
@@ -2100,6 +2145,8 @@ class GroupChannel(slaycord.abc.PrivateChannel, slaycord.abc.Connectable, Hashab
 
 class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, slaycord.abc.PrivateChannel, Hashable):
     """Represents a Discord ephemeral direct message channel.
+
+    .. versionadded:: 3.0
 
     .. container:: operations
 
@@ -2132,12 +2179,8 @@ class EphemeralDMChannel(slaycord.abc.Messageable, slaycord.abc.Connectable, sla
     last_message_id: Optional[:class:`int`]
         The last message ID of the message sent to this channel. It may
         *not* point to an existing or valid message.
-
-        .. versionadded:: 2.0
     last_pin_timestamp: Optional[:class:`datetime.datetime`]
         When the last pinned message was pinned. ``None`` if there are no pinned messages.
-
-        .. versionadded:: 2.0
     """
 
     __slots__ = (

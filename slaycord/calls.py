@@ -77,6 +77,8 @@ class CallMessage:
     This is only received in cases where the message type is equivalent to
     :attr:`MessageType.call`.
 
+    .. versionadded:: 3.0
+
     Attributes
     ----------
     ended_timestamp: Optional[:class:`datetime.datetime`]
@@ -155,6 +157,8 @@ class PrivateCall:
     """Represents the actual group call from Discord.
 
     This is accompanied with a :class:`CallMessage` denoting the information.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------
@@ -440,6 +444,8 @@ class GroupCall(PrivateCall):
     """Represents a Discord group call.
 
     This is accompanied with a :class:`CallMessage` denoting the information.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------

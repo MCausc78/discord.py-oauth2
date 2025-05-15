@@ -53,8 +53,9 @@ if TYPE_CHECKING:
     from slaycord.state import Channel
     from slaycord.threads import Thread
 
+    from .bot import Bot
     from .parameters import Parameter
-    from ._types import BotT, _Bot
+    from ._types import BotT
     from .context import Context
 
 __all__ = (
@@ -90,7 +91,7 @@ __all__ = (
 )
 
 
-def _get_from_guilds(bot: _Bot, getter: str, argument: Any) -> Any:
+def _get_from_guilds(bot: Bot, getter: str, argument: Any) -> Any:
     result = None
     for guild in bot.guilds:
         result = getattr(guild, getter)(argument)

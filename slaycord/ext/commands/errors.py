@@ -35,7 +35,6 @@ if TYPE_CHECKING:
     from slaycord.abc import GuildChannel
     from slaycord.threads import Thread
     from slaycord.types.snowflake import Snowflake, SnowflakeList
-    from slaycord.app_commands import AppCommandError
 
     from .context import Context
     from .converter import Converter
@@ -105,7 +104,6 @@ __all__ = (
     'MissingFlagArgument',
     'TooManyFlags',
     'MissingRequiredFlag',
-    'HybridCommandError',
     'RangeError',
 )
 
@@ -1205,22 +1203,3 @@ class MissingFlagArgument(FlagError):
     def __init__(self, flag: Flag) -> None:
         self.flag: Flag = flag
         super().__init__(f'Flag {flag.name!r} does not have an argument')
-
-
-class HybridCommandError(CommandError):
-    """An exception raised when a :class:`~slaycord.ext.commands.HybridCommand` raises
-    an :exc:`~slaycord.app_commands.AppCommandError` derived exception that could not be
-    sufficiently converted to an equivalent :exc:`CommandError` exception.
-
-    .. versionadded:: 2.0
-
-    Attributes
-    -----------
-    original: :exc:`~slaycord.app_commands.AppCommandError`
-        The original exception that was raised. You can also get this via
-        the ``__cause__`` attribute.
-    """
-
-    def __init__(self, original: AppCommandError) -> None:
-        self.original: AppCommandError = original
-        super().__init__(f'Hybrid command raised an error: {original}')

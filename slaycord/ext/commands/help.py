@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
     import slaycord.abc
 
-    from .bot import BotBase
+    from .bot import BotBase, Bot
     from .context import Context
     from .cog import Cog
     from .parameters import Parameter
@@ -62,7 +62,6 @@ if TYPE_CHECKING:
     from ._types import (
         UserCheck,
         BotT,
-        _Bot,
     )
 
 __all__ = (
@@ -373,7 +372,7 @@ class HelpCommand:
         self.command_attrs = attrs = options.pop('command_attrs', {})
         attrs.setdefault('name', 'help')
         attrs.setdefault('help', 'Shows this message')
-        self.context: Context[_Bot] = MISSING
+        self.context: Context[Bot] = MISSING
         self._command_impl = _HelpCommandImpl(self, **self.command_attrs)
 
     def copy(self) -> Self:
