@@ -276,7 +276,7 @@ class Relationship(Hashable):
 
             This is only reliably provided for type :class:`RelationshipType.friend`.
         """
-        return try_enum(Status, self.client_status.web or 'offline')
+        return try_enum(Status, self.client_status.embedded or 'offline')
 
     def is_on_mobile(self) -> bool:
         """:class:`bool`: A helper function that determines if a user is active on a mobile device.

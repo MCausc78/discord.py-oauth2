@@ -24,41 +24,15 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, TypedDict
+from typing import List, TypedDict
 from typing_extensions import NotRequired
 
-from .channel import GuildChannel
-from .snowflake import Snowflake
-from .voice import LobbyVoiceState
+from .appinfo import PartialAppInfo
+from .user import User
 
 
-class Lobby(TypedDict):
-    id: Snowflake
-    application_id: Snowflake
-    metadata: Optional[Dict[str, str]]
-    members: List[LobbyMember]
-    linked_channel: NotRequired[GuildChannel]
-
-    region: NotRequired[Optional[str]]
-    voice_states: NotRequired[List[LobbyVoiceState]]
-
-
-# {
-#     "user_id": "1073325901825187841",
-#     "user": {
-#         "id": "1073325901825187841"
-#     },
-#     "metadata": {
-#         "baller": "balls"
-#     },
-#     "flags": 1,
-#     "connected": true
-# }
-
-
-class LobbyMember(TypedDict):
-    id: NotRequired[Snowflake]
-    user_id: NotRequired[Snowflake]
-    metadata: NotRequired[Optional[Dict[str, str]]]
-    flags: NotRequired[int]
-    connected: NotRequired[bool]
+class GetCurrentAuthorizationInformationResponse(TypedDict):
+    application: PartialAppInfo
+    scopes: List[str]
+    expires: str
+    user: NotRequired[User]
