@@ -1,6 +1,6 @@
 """
 slaycord.types
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
 
 Typings for the Discord API
 

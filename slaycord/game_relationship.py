@@ -54,6 +54,8 @@ class GameRelationship(Hashable):
 
     A game relationship is like a friendship, a friend request to/from someone, etc.
 
+    .. versionadded:: 3.0
+
     .. container:: operations
 
         .. describe:: x == y
