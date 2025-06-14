@@ -379,20 +379,28 @@ class RawIntegrationDeleteEvent(_RawReprMixin):
 
     Attributes
     ----------
-    integration_id: :class:`int`
-        The ID of the integration that got deleted.
     application_id: Optional[:class:`int`]
         The ID of the bot/OAuth2 application for this deleted integration.
+    integration_id: :class:`int`
+        The ID of the integration that got deleted.
     guild_id: :class:`int`
         The guild ID where the integration got deleted.
+    guild: Optional[:class:`Guild`]
+        The guild where the integration got deleted.
     """
 
-    __slots__ = ('integration_id', 'application_id', 'guild_id')
+    __slots__ = (
+        'application_id',
+        'integration_id',
+        'guild_id',
+        'guild',
+    )
 
-    def __init__(self, data: IntegrationDeleteEvent) -> None:
+    def __init__(self, data: IntegrationDeleteEvent, guild: Optional[Guild] = None) -> None:
+        self.application_id: Optional[int] = _get_as_snowflake(data, 'application_id')
         self.integration_id: int = int(data['id'])
         self.guild_id: int = int(data['guild_id'])
-        self.application_id: Optional[int] = _get_as_snowflake(data, 'application_id')
+        self.guild: Optional[Guild] = guild
 
 
 class RawThreadUpdateEvent(_RawReprMixin):

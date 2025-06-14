@@ -44,17 +44,17 @@ class GuildFolder(TypedDict):
 
 
 class UserSettings(TypedDict):
-    status: NotRequired[StatusType]
-    custom_status: NotRequired[Optional[UserSettingsCustomStatus]]
-    slayer_sdk_receive_in_game_dms: NotRequired[Literal[0, 1, 2, 3]]
+    status: NotRequired[StatusType]  # Required scope: activities.read OR presences.read
+    custom_status: NotRequired[Optional[UserSettingsCustomStatus]]  # Required scope: activities.read OR presences.read
+    slayer_sdk_receive_in_game_dms: NotRequired[Literal[0, 1, 2, 3]]  # Not included in GatewayUserSettings
 
 
 class GatewayUserSettings(UserSettings):
-    show_current_game: NotRequired[bool]
-    guild_folders: NotRequired[List[GuildFolder]]
-    allow_activity_party_privacy_voice_channel: NotRequired[bool]
-    allow_activity_party_privacy_friends: NotRequired[bool]
-    soundboard_volume: NotRequired[float]
+    show_current_game: NotRequired[bool]  # Required scope: activities.write OR presences.read
+    guild_folders: NotRequired[List[GuildFolder]]  # Required scope: guilds
+    allow_activity_party_privacy_voice_channel: NotRequired[bool]  # Required scope: activities.write OR presences.read
+    allow_activity_party_privacy_friends: NotRequired[bool]  # Required scope: activities.write OR presences.read
+    soundboard_volume: NotRequired[float]  # Required scope: voice
 
 
 AudioContext = Literal['user', 'stream']

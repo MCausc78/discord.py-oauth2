@@ -24,30 +24,15 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Optional, Literal, TypedDict
-from typing_extensions import NotRequired
+from typing import TypedDict
+
+from .misc import MaybeLocalized
 
 
 class SKU(TypedDict):
     id: str
     type: int
     application_id: str
-    name: str
+    name: MaybeLocalized
     slug: str
     flags: int
-
-
-class Entitlement(TypedDict):
-    id: str
-    sku_id: str
-    application_id: str
-    user_id: Optional[str]
-    type: int
-    deleted: bool
-    starts_at: NotRequired[str]
-    ends_at: NotRequired[str]
-    guild_id: NotRequired[str]
-    consumed: NotRequired[bool]
-
-
-EntitlementOwnerType = Literal[1, 2]

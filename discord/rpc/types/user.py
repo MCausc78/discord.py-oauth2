@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Optional, TypedDict
 from typing_extensions import NotRequired
 
-from .snowflake import Snowflake
+from ...types.snowflake import Snowflake
+from ...types.user import RelationshipType
+from .presence import RelationshipPresence
 
 
 class AvatarDecorationData(TypedDict):
@@ -22,3 +24,9 @@ class User(TypedDict):
     bot: bool
     flags: int
     premium_type: int
+
+
+class Relationship(TypedDict):
+    type: RelationshipType
+    user: User
+    presence: RelationshipPresence

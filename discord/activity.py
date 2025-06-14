@@ -443,8 +443,8 @@ class Game(BaseActivity):
             self._start = 0
             self._end = 0
         else:
-            self._start = timestamps.get('start', 0)
-            self._end = timestamps.get('end', 0)
+            self._start: int = int(timestamps.get('start', 0))
+            self._end: int = int(timestamps.get('end', 0))
 
     @property
     def type(self) -> ActivityType:
@@ -982,7 +982,7 @@ class Session:
     activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
         The activities the session is currently doing.
     hidden_activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
-        The hidden activities the session is currently doing. Consider using this when :attr:`status` is :attr:`~Status.invisible`.
+        The hidden activities the session is currently doing.
     """
 
     __slots__ = (

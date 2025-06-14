@@ -77,6 +77,7 @@ class PartialStream:
         *,
         paused: bool = MISSING,
         thumbnail: bytes = MISSING,
+        camera_thumbnail: bytes = MISSING,
     ) -> Self:
         """|coro|
 
@@ -94,6 +95,10 @@ class PartialStream:
             The stream preview to upload.
 
             This is an HTTP operation.
+        camera_thumbnail: :class:`bytes`
+            The camera stream preview to upload.
+
+            This is an HTTP operation.
 
         Raises
         ------
@@ -109,11 +114,19 @@ class PartialStream:
         if paused is not MISSING:
             ws = state._get_websocket()
             await ws.set_stream_paused(self.key, paused=paused)
+
         if thumbnail is not MISSING:
             await state.http.upload_stream_preview(
                 self.key,
                 thumbnail=_bytes_to_base64_data(thumbnail),
             )
+
+        if camera_thumbnail is not MISSING:
+            await state.http.upload_video_stream_preview(
+                self.key,
+                thumbnail=_bytes_to_base64_data(camera_thumbnail),
+            )
+
         ret = copy(self)
         if isinstance(ret, Stream) and paused is not MISSING:
             ret.paused = paused

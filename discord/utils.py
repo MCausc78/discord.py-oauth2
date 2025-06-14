@@ -171,6 +171,9 @@ __all__ = (
     '_ActiveDecompressionContext',
     '_format_call_duration',
     '_RawReprMixin',
+    '_ReactiveSequenceProxy',
+    '_ReactiveMappingProxy',
+    '_parse_localizations',
 )
 
 DISCORD_EPOCH = 1420070400000
@@ -213,12 +216,12 @@ class _cached_property:
 
 if TYPE_CHECKING:
     from functools import cached_property as cached_property
-
     from typing_extensions import ParamSpec, Self, TypeGuard
 
-    from .permissions import Permissions
     from .abc import Snowflake
+    from .enums import Locale
     from .invite import Invite
+    from .permissions import Permissions
     from .template import Template
 
     class _DecompressionContext(Protocol):
@@ -1678,3 +1681,21 @@ class _ReactiveMappingProxy(MutableMapping[K, T]):
 
     def __len__(self) -> int:
         return self._original.__len__()
+
+
+def _parse_localizations(source: Any, key: str) -> Tuple[str, Dict[Locale, str]]:
+    from .enums import try_enum, Locale
+
+    try:
+        localizations = source[key + '_localizations']
+    except KeyError:
+        inner = source[key]
+        if isinstance(inner, dict):
+            try:
+                localizations = inner['localizations']
+            except KeyError:
+                return inner['default'], {}
+            return inner['default'], {try_enum(Locale, k): v for k, v in localizations.items()}
+        return inner, {}
+    else:
+        return source[key], {try_enum(Locale, k): v for k, v in localizations.items()}

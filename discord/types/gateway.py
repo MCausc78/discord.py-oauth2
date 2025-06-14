@@ -32,7 +32,9 @@ from .appinfo import GatewayAppInfo, PartialAppInfo
 from .audit_log import AuditLogEntry
 from .automod import AutoModerationAction, AutoModerationRuleTriggerType
 from .channel import ChannelType, DMChannel, GroupDMChannel, StageInstance, VoiceChannelEffect
+from .connections import ConnectionRequestData
 from .emoji import Emoji, PartialEmoji
+from .entitlements import Entitlement
 from .game_invite import GameInvite
 from .guild import Guild, UnavailableGuild
 from .integration import BaseIntegration, IntegrationApplication
@@ -44,7 +46,6 @@ from .message import Message, LobbyMessage, ReactionType
 from .role import Role
 from .scheduled_event import GuildScheduledEvent
 from .settings import GatewayUserSettings, AudioContext, AudioSettings
-from .sku import Entitlement
 from .snowflake import Snowflake
 from .soundboard import SoundboardSound
 from .sticker import GuildSticker
@@ -103,6 +104,8 @@ class ReadyEvent(TypedDict):
     guilds: List[Guild]
     game_relationships: List[GameRelationship]
     feature_flags: GatewayFeatureFlags
+    connection_request_data: NotRequired[ConnectionRequestData]
+    # {"analytics_properties": {"handoff_type": "CREATE_NEW_CALL"}}
     av_sf_protocol_floor: int
     application: GatewayAppInfo
     analytics_token: str
@@ -504,20 +507,12 @@ class LobbyDeleteEvent(TypedDict):
 class _LobbyMembersEvent(TypedDict):
     member: LobbyMember
     lobby_id: Snowflake
-    application_id: Snowflake
+    application_id: NotRequired[Snowflake]  # Not present only in LOBBY_MEMBER_CONNECT and LOBBY_MEMBER_DISCONNECT
 
 
-LobbyMemberAddEvent = LobbyMemberUpdateEvent = LobbyMemberRemoveEvent = _LobbyMembersEvent
-
-
-class LobbyMemberConnectEvent(TypedDict):
-    member: LobbyMember
-    lobby_id: Snowflake
-
-
-class LobbyMemberDisconnectEvent(TypedDict):
-    member: LobbyMember
-    lobby_id: Snowflake
+LobbyMemberAddEvent = (
+    LobbyMemberUpdateEvent
+) = LobbyMemberRemoveEvent = LobbyMemberConnectEvent = LobbyMemberDisconnectEvent = _LobbyMembersEvent
 
 
 LobbyMessageCreateEvent = LobbyMessage
@@ -606,3 +601,13 @@ class StreamDeleteEvent(TypedDict):
         'invalid_channel',
     ]
     unavailable: NotRequired[bool]
+
+
+class ActivityInviteCreateEvent(TypedDict):
+    message_id: NotRequired[Snowflake]
+    channel_id: NotRequired[Snowflake]
+    author: NotRequired[User]  # SDK only needs author.id? Need a full payload.
+    id: Snowflake
+    application: NotRequired[IntegrationApplication]
+    activity: NotRequired[Activity]  # Assumption
+    # TODO: There might be another object merged? I can't figure out ActivityInvite::ActivityInvite constructor... They seem to be reading from uninitialized std::basic_string<T>...

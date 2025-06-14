@@ -47,6 +47,7 @@ from typing import (
 )
 
 import aiohttp
+from yarl import URL
 
 from .activity import BaseActivity, Spotify, ActivityTypes, Session, HeadlessSession, create_activity
 from .appinfo import AppInfo
@@ -56,6 +57,7 @@ from .dispatcher import _loop, Dispatcher
 from .impersonate import Impersonate, DefaultImpersonate
 from .connections import Connection
 from .emoji import Emoji
+from .entitlements import Entitlement
 from .enums import ActivityType, ChannelType, Status, RelationshipType, ClientType
 from .errors import *
 from .flags import ApplicationFlags, Intents
@@ -66,8 +68,8 @@ from .invite import Invite
 from .lobby import Lobby
 from .mentions import AllowedMentions
 from .object import Object
-from .sku import Entitlement
 from .soundboard import SoundboardSound
+from .sku import SKU
 from .stage_instance import StageInstance
 from .state import ConnectionState
 from .sticker import GuildSticker
@@ -219,9 +221,9 @@ class Client(Dispatcher):
         To enable these events, this must be set to ``True``. Defaults to ``False``.
 
         .. versionadded:: 2.0
-    sync_presence: :class:`bool`
+    sync_presence: Optional[:class:`bool`]
         Whether to keep presences up-to-date across clients.
-        The default behavior is ``True`` (what the client does).
+        The default behavior is ``True`` (what the SDK does).
     enable_raw_presences: :class:`bool`
         Whether to manually enable or disable the :func:`on_raw_presence_update` event.
 
@@ -258,10 +260,10 @@ class Client(Dispatcher):
     """
 
     def __init__(self, *, intents: Optional[Intents] = None, **options: Any) -> None:
-        self.loop: asyncio.AbstractEventLoop = _loop
+        super().__init__(logger=_log)
+
         # self.ws is set in the connect method
         self.ws: DiscordWebSocket = None  # type: ignore
-        self._listeners: Dict[str, List[Tuple[asyncio.Future, Callable[..., bool]]]] = {}
 
         impersonate = options.get('impersonate')
         if impersonate is None:
@@ -296,7 +298,7 @@ class Client(Dispatcher):
         }
 
         self._enable_debug_events: bool = options.pop('enable_debug_events', False)
-        self._sync_presences: bool = options.pop('sync_presence', True)
+        self._sync_presences: Optional[bool] = options.pop('sync_presence', None)
         self._connection: ConnectionState[Self] = self._get_state(intents=intents, **options)
         self._closing_task: Optional[asyncio.Task[None]] = None
         self._ready: asyncio.Event = MISSING
@@ -343,6 +345,14 @@ class Client(Dispatcher):
         """
         ws = self.ws
         return float('nan') if not ws else ws.latency
+
+    @property
+    def sync_presences(self) -> bool:
+        """:class:`bool`: Whether to keep presences up-to-date across clients."""
+        if self._sync_presences is None:
+            scopes = self.scopes
+            return any(scope in ('activities.write', 'presences.write') for scope in scopes)
+        return self._sync_presences
 
     def is_ws_ratelimited(self) -> bool:
         """:class:`bool`: Whether the websocket is currently rate limited.
@@ -590,7 +600,7 @@ class Client(Dispatcher):
         return self._ready is not MISSING and self._ready.is_set()
 
     async def on_internal_settings_update(self, old_settings: UserSettings, new_settings: UserSettings, /):
-        if not self._sync_presences:
+        if not self.sync_presences:
             return
 
         if (
@@ -714,10 +724,10 @@ class Client(Dispatcher):
         self._connection.user = ClientUser(state=self._connection, data=data)
         await self.setup_hook()
 
-    async def connect(self, *, reconnect: bool = True) -> None:
+    async def connect(self, *, reconnect: bool = True, nonce: Optional[str] = None) -> None:
         """|coro|
 
-        Creates a websocket connection and lets the websocket listen
+        Creates a WebSocket connection and lets the WebSocket listen
         to messages from Discord. This is a loop that runs the entire
         event system and miscellaneous aspects of the library. Control
         is not resumed until the WebSocket connection is terminated.
@@ -729,6 +739,10 @@ class Client(Dispatcher):
             failure or a specific failure on Discord's part. Certain
             disconnects that lead to bad state will not be handled (such as
             invalid intents or bad tokens).
+        nonce: Optional[:class:`str`]
+            The console connection request nonce.
+
+            .. versionadded:: 3.0
 
         Raises
         ------
@@ -739,9 +753,13 @@ class Client(Dispatcher):
             The websocket connection has been terminated.
         """
 
+        gateway_url = await self.http.get_gateway_url()
+        gateway = URL(gateway_url)
+
         backoff = ExponentialBackoff()
         ws_params: Dict[str, Any] = {
             'initial': True,
+            'nonce': nonce,
         }
         if self.resume is not None:
             seq, session_id = self.resume
@@ -749,7 +767,7 @@ class Client(Dispatcher):
 
         while not self.is_closed():
             try:
-                coro = DiscordWebSocket.from_client(self, **ws_params)
+                coro = DiscordWebSocket.from_client(self, gateway=gateway, **ws_params)
                 self.ws = await asyncio.wait_for(coro, timeout=60.0)
                 ws_params['initial'] = False
                 while True:
@@ -759,7 +777,7 @@ class Client(Dispatcher):
                 self.dispatch('disconnect')
                 ws_params.update(sequence=self.ws.sequence, resume=e.resume, session=self.ws.session_id)
                 if e.resume:
-                    ws_params['gateway'] = self.ws.gateway
+                    gateway = self.ws.gateway
                 continue
             except (
                 OSError,
@@ -851,7 +869,7 @@ class Client(Dispatcher):
         self._connection.clear()
         self.http.clear()
 
-    async def start(self, token: str, *, reconnect: bool = True) -> None:
+    async def start(self, token: str, *, reconnect: bool = True, nonce: Optional[str] = None) -> None:
         """|coro|
 
         A shorthand coroutine for :meth:`login` + :meth:`connect`.
@@ -866,6 +884,10 @@ class Client(Dispatcher):
             failure or a specific failure on Discord's part. Certain
             disconnects that lead to bad state will not be handled (such as
             invalid intents or bad tokens).
+        nonce: Optional[:class:`str`]
+            The console connection request nonce.
+
+            .. versionadded:: 3.0
 
         Raises
         ------
@@ -873,7 +895,7 @@ class Client(Dispatcher):
             An unexpected keyword argument was received.
         """
         await self.login(token)
-        await self.connect(reconnect=reconnect)
+        await self.connect(reconnect=reconnect, nonce=nonce)
 
     def run(
         self,
@@ -884,6 +906,7 @@ class Client(Dispatcher):
         log_formatter: logging.Formatter = MISSING,
         log_level: int = MISSING,
         root_logger: bool = False,
+        nonce: Optional[str] = None,
     ) -> None:
         """A blocking call that abstracts away the event loop
         initialisation from you.
@@ -940,11 +963,15 @@ class Client(Dispatcher):
             Defaults to ``False``.
 
             .. versionadded:: 2.0
+        nonce: Optional[:class:`str`]
+            The console connection request nonce.
+
+            .. versionadded:: 3.0
         """
 
         async def runner():
             async with self:
-                await self.start(token, reconnect=reconnect)
+                await self.start(token, reconnect=reconnect, nonce=nonce)
 
         if log_handler is not None:
             setup_logging(
@@ -2296,7 +2323,7 @@ class Client(Dispatcher):
                     custom_activity = activity
 
         if update_presence is MISSING:
-            update_presence = (not edit_settings) or self._sync_presences
+            update_presence = (not edit_settings) or self.sync_presences
 
         if update_presence:
             await self.ws.change_presence(status=status, activities=activities, afk=afk, since=since)
@@ -2368,6 +2395,8 @@ class Client(Dispatcher):
         state = self._connection
         data = await state.http.get_connections()
         return [Connection(data=d, state=state) for d in data]
+
+    # Voice
 
     async def change_voice_state(
         self,
@@ -2727,6 +2756,215 @@ class Client(Dispatcher):
         """
         data = await self.http.get_preferred_voice_regions()
         return {v['region']: v['ips'] for v in data}
+
+    async def fetch_skus(self) -> List[SKU]:
+        """|coro|
+
+        Retrieves the application's available SKUs.
+
+        .. versionadded:: 2.4
+
+        Raises
+        ------
+        MissingApplicationID
+            The application ID could not be found.
+        HTTPException
+            Retrieving the SKUs failed.
+
+        Returns
+        --------
+        List[:class:`SKU`]
+            The application's available SKUs.
+        """
+
+        if self.application_id is None:
+            raise MissingApplicationID
+
+        state = self._connection
+        # data = await state.http.get_skus(self.application_id)
+        data = []
+        return [SKU(data=d, state=state) for d in data]
+
+    async def fetch_entitlement(self, entitlement_id: int, /) -> Entitlement:
+        """|coro|
+
+        Retrieves a :class:`.Entitlement` with the specified ID.
+
+        .. versionadded:: 2.4
+
+        Parameters
+        ----------
+        entitlement_id: :class:`int`
+            The entitlement's ID to fetch from.
+
+        Raises
+        ------
+        NotFound
+            An entitlement with this ID does not exist.
+        MissingApplicationID
+            The application ID could not be found.
+        HTTPException
+            Fetching the entitlement failed.
+
+        Returns
+        -------
+        :class:`Entitlement`
+            The entitlement you requested.
+        """
+
+        if self.application_id is None:
+            raise MissingApplicationID
+
+        state = self._connection
+        data = await state.http.get_application_entitlement(self.application_id, entitlement_id)
+        return Entitlement(data=data, state=state)
+
+    async def entitlements(
+        self,
+        *,
+        limit: Optional[int] = 100,
+        before: Optional[SnowflakeTime] = None,
+        after: Optional[SnowflakeTime] = None,
+        skus: Optional[Sequence[Snowflake]] = None,
+        user: Optional[Snowflake] = None,
+        guild: Optional[Snowflake] = None,
+        exclude_ended: bool = False,
+        exclude_deleted: bool = True,
+    ) -> AsyncIterator[Entitlement]:
+        """Retrieves an :term:`asynchronous iterator` of the :class:`.Entitlement` that applications has.
+
+        .. versionadded:: 2.4
+
+        Examples
+        --------
+
+        Usage ::
+
+            async for entitlement in client.entitlements(limit=100):
+                print(entitlement.user_id, entitlement.ends_at)
+
+        Flattening into a list ::
+
+            entitlements = [entitlement async for entitlement in client.entitlements(limit=100)]
+            # entitlements is now a list of Entitlement...
+
+        All parameters are optional.
+
+        Parameters
+        ----------
+        limit: Optional[:class:`int`]
+            The number of entitlements to retrieve. If ``None``, it retrieves every entitlement for this application.
+            Note, however, that this would make it a slow operation. Defaults to ``100``.
+        before: Optional[Union[:class:`~discord.abc.Snowflake`, :class:`datetime.datetime`]]
+            Retrieve entitlements before this date or entitlement.
+            If a datetime is provided, it is recommended to use a UTC aware datetime.
+            If the datetime is naive, it is assumed to be local time.
+        after: Optional[Union[:class:`~discord.abc.Snowflake`, :class:`datetime.datetime`]]
+            Retrieve entitlements after this date or entitlement.
+            If a datetime is provided, it is recommended to use a UTC aware datetime.
+            If the datetime is naive, it is assumed to be local time.
+        skus: Optional[Sequence[:class:`~discord.abc.Snowflake`]]
+            A list of SKUs to filter by.
+        user: Optional[:class:`~discord.abc.Snowflake`]
+            The user to filter by.
+        guild: Optional[:class:`~discord.abc.Snowflake`]
+            The guild to filter by.
+        exclude_ended: :class:`bool`
+            Whether to exclude ended entitlements. Defaults to ``False``.
+        exclude_deleted: :class:`bool`
+            Whether to exclude deleted entitlements. Defaults to ``True``.
+
+            .. versionadded:: 2.5
+
+        Raises
+        ------
+        MissingApplicationID
+            The application ID could not be found.
+        HTTPException
+            Fetching the entitlements failed.
+        TypeError
+            Both ``after`` and ``before`` were provided, as Discord does not
+            support this type of pagination.
+
+        Yields
+        ------
+        :class:`Entitlement`
+            The entitlement with the application.
+        """
+
+        if self.application_id is None:
+            raise MissingApplicationID
+
+        if before is not None and after is not None:
+            raise TypeError('Entitlements pagination does not support both before and after')
+
+        # This endpoint paginates in ascending order.
+        endpoint = self.http.get_application_entitlements
+
+        async def _before_strategy(retrieve: int, before: Optional[Snowflake], limit: Optional[int]):
+            before_id = before.id if before else None
+            data = await endpoint(
+                self.application_id,  # type: ignore  # We already check for None above
+                limit=retrieve,
+                before=before_id,
+                sku_ids=[sku.id for sku in skus] if skus else None,
+                user_id=user.id if user else None,
+                guild_id=guild.id if guild else None,
+                exclude_ended=exclude_ended,
+                exclude_deleted=exclude_deleted,
+            )
+
+            if data:
+                if limit is not None:
+                    limit -= len(data)
+
+                before = Object(id=int(data[0]['id']))
+
+            return data, before, limit
+
+        async def _after_strategy(retrieve: int, after: Optional[Snowflake], limit: Optional[int]):
+            after_id = after.id if after else None
+            data = await endpoint(
+                self.application_id,  # type: ignore  # We already check for None above
+                limit=retrieve,
+                after=after_id,
+                sku_ids=[sku.id for sku in skus] if skus else None,
+                user_id=user.id if user else None,
+                guild_id=guild.id if guild else None,
+                exclude_ended=exclude_ended,
+            )
+
+            if data:
+                if limit is not None:
+                    limit -= len(data)
+
+                after = Object(id=int(data[-1]['id']))
+
+            return data, after, limit
+
+        if isinstance(before, datetime):
+            before = Object(id=time_snowflake(before, high=False))
+        if isinstance(after, datetime):
+            after = Object(id=time_snowflake(after, high=True))
+
+        if before:
+            strategy, state = _before_strategy, before
+        else:
+            strategy, state = _after_strategy, after
+
+        while True:
+            retrieve = 100 if limit is None else min(limit, 100)
+            if retrieve < 1:
+                return
+
+            data, state, limit = await strategy(retrieve, state, limit)
+
+            # Terminate loop on next iteration; there's no data left after this
+            if len(data) < 100:
+                limit = 0
+
+            for e in data:
+                yield Entitlement(data=e, state=self._connection)
 
     async def create_dm(self, user: Snowflake) -> Union[DMChannel, EphemeralDMChannel]:
         """|coro|

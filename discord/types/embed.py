@@ -63,7 +63,7 @@ EmbedType = Literal['rich', 'image', 'video', 'gifv', 'article', 'link', 'poll_r
 
 class Embed(TypedDict, total=False):
     title: str
-    type: EmbedType
+    type: Required[EmbedType]
     description: str
     url: str
     timestamp: str

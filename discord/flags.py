@@ -56,6 +56,7 @@ __all__ = (
     'AutoModPresets',
     'ChannelFlags',
     'EmbedFlags',
+    'GiftFlags',
     'Intents',
     'LobbyMemberFlags',
     'MemberCacheFlags',
@@ -923,7 +924,7 @@ class ChannelFlags(BaseFlags):
 
 @fill_with_flags()
 class EmbedFlags(BaseFlags):
-    r"""Wraps up the Discord Embed flags
+    r"""Wraps up the Discord Embed flags.
 
     .. versionadded:: 2.5
 
@@ -986,8 +987,80 @@ class EmbedFlags(BaseFlags):
 
 
 @fill_with_flags()
+class GiftFlags(BaseFlags):
+    r"""Wraps up the Discord Gift flags.
+
+    .. versionadded:: 3.0
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two GiftFlags are equal.
+
+        .. describe:: x != y
+
+            Checks if two GiftFlags are not equal.
+
+        .. describe:: x | y, x |= y
+
+            Returns an GiftFlags instance with all enabled flags from
+            both x and y.
+
+        .. describe:: x ^ y, x ^= y
+
+            Returns an GiftFlags instance with only flags enabled on
+            only one of x or y, not on both.
+
+        .. describe:: ~x
+
+            Returns an GiftFlags instance with all flags inverted from x.
+
+        .. describe:: hash(x)
+
+            Returns the flag's hash.
+
+        .. describe:: iter(x)
+
+            Returns an iterator of ``(name, value)`` pairs. This allows it
+            to be, for example, constructed as a dict or a list of pairs.
+            Note that aliases are not shown.
+
+        .. describe:: bool(b)
+
+            Returns whether any flag is set to ``True``.
+
+    Attributes
+    ----------
+    value: :class:`int`
+        The raw value. You should query flags via the properties
+        rather than using this raw value.
+    """
+
+    @flag_value
+    def payment_source_required(self) -> int:
+        """:class:`bool`: Returns ``True`` if the gift requires a payment source to be redeemed."""
+        return 1 << 0
+
+    @flag_value
+    def existing_subscription_disallowed(self) -> int:
+        """:class:`bool`: Returns ``True`` if the gift cannot be redeemed by users with existing premium subscription."""
+        return 1 << 1
+
+    @flag_value
+    def not_self_redeemable(self) -> int:
+        """:class:`bool`: Returns ``True`` if the gift cannot be redeemed by the gifter."""
+        return 1 << 2
+
+    @flag_value
+    def promotion(self) -> int:
+        """:class:`bool`: Returns ``True`` if the gift is from a promotion."""
+        return 1 << 3
+
+
+@fill_with_flags()
 class Intents(BaseFlags):
-    r"""Wraps up a Discord Gateway intent flag.
+    r"""Wraps up a Discord Gateway intent flags.
 
     Similar to :class:`Permissions`\, the properties provided are two way.
     You can set and retrieve individual bits using the properties as if they
@@ -1723,6 +1796,7 @@ class Intents(BaseFlags):
         - :func:`on_call_create`
         - :func:`on_call_update`
         - :func:`on_call_delete`
+        - :func:`on_voice_state_update`
         """
         return 1 << 19
 

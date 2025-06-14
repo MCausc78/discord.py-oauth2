@@ -68,7 +68,7 @@ class GameRelationship(Hashable):
 
         .. describe:: hash(x)
 
-            Return the relationship's hash.
+            Returns the relationship's hash.
 
     Attributes
     ----------
@@ -120,9 +120,10 @@ class GameRelationship(Hashable):
         self.type: RelationshipType = try_enum(RelationshipType, data['type'])
         if 'user' in data:
             self.user: User = self._state.store_user(data['user'])
-        elif 'user_id' in data:
-            user_id = int(data['user_id'])
+        else:
+            user_id = int(data['id'])
             self.user = self._state.get_user(user_id) or Object(id=user_id)  # type: ignore # Lying for better developer UX
+
         self.since: datetime = parse_time(data['since'])
         self.dm_access_type: int = data.get('dm_access_type', 0)  # I've seen it always 0
 
@@ -252,7 +253,7 @@ class GameRelationship(Hashable):
 
             This is only reliably provided for type :class:`RelationshipType.friend`.
         """
-        return try_enum(Status, self.client_status.web or 'offline')
+        return try_enum(Status, self.client_status.embedded or 'offline')
 
     def is_on_mobile(self) -> bool:
         """:class:`bool`: A helper function that determines if a user is active on a mobile device.

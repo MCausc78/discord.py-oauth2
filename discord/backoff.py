@@ -87,7 +87,7 @@ class ExponentialBackoff(Generic[T]):
         ...
 
     def delay(self) -> Union[int, float]:
-        """Compute the next delay
+        """Compute the next delay.
 
         Returns the next delay to wait according to the exponential
         backoff algorithm.  This is a value between 0 and base * 2^exp

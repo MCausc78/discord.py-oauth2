@@ -24,24 +24,12 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import TypedDict
-
-from .connections import ConnectionType
-from .snowflake import Snowflake
+from typing import Dict, TypedDict, Union
 
 
-class GameInvite(TypedDict):
-    invite_id: Snowflake
-    platform_type: ConnectionType
-    launch_parameters: str
-    # A JSON string, which decodes as
-    # {
-    #   titleId: undefined | null | string,
-    #   inviteToken: undefined | null | string
-    # }
-    installed: bool
-    joinable: bool
-    inviter_id: Snowflake
-    created_at: str  # ISO8601 timestamp
-    application_asset: str
-    application_name: str
+class Localized(TypedDict):
+    default: str
+    localizations: Dict[str, str]
+
+
+MaybeLocalized = Union[Localized, str]

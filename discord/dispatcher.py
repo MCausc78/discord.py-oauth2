@@ -33,7 +33,13 @@ class Dispatcher:
     """
 
     _listeners: Dict[str, List[Tuple[asyncio.Future, Callable[..., bool]]]] = {}
+    _logger: logging.Logger
     loop: asyncio.AbstractEventLoop
+
+    def __init__(self, *, logger: logging.Logger) -> None:
+        self._listeners = {}
+        self._logger: logging.Logger = logger
+        self.loop = _loop
 
     async def _run_event(
         self,
@@ -89,7 +95,8 @@ class Dispatcher:
         \*\*kwargs: Any
             The event keyword arguments.
         """
-        _log.debug('Dispatching event %s', event)
+
+        self._logger.debug('Dispatching event %s', event)
         method = 'on_' + event
 
         listeners = self._listeners.get(event)
