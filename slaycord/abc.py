@@ -640,6 +640,7 @@ class Messageable:
     - :class:`~slaycord.PartialMessageable`
     - :class:`~slaycord.User`
     - :class:`~slaycord.Member`
+    - :class:`~slaycord.Lobby`
     """
 
     __slots__ = ()
@@ -661,7 +662,7 @@ class Messageable:
         file: File = ...,
         delete_after: float = ...,
         allowed_mentions: AllowedMentions = ...,
-        metadata: Optional[Dict[str, str]] = None,
+        metadata: Optional[Dict[str, str]] = MISSING,
     ) -> Message:
         ...
 
@@ -673,7 +674,7 @@ class Messageable:
         files: Sequence[File] = ...,
         delete_after: float = ...,
         allowed_mentions: AllowedMentions = ...,
-        metadata: Optional[Dict[str, str]] = None,
+        metadata: Optional[Dict[str, str]] = MISSING,
     ) -> Message:
         ...
 
@@ -685,7 +686,7 @@ class Messageable:
         files: Optional[Sequence[File]] = None,
         delete_after: Optional[float] = None,
         allowed_mentions: Optional[AllowedMentions] = None,
-        metadata: Optional[Dict[str, str]] = None,
+        metadata: Optional[Dict[str, str]] = MISSING,
     ) -> Message:
         """|coro|
 

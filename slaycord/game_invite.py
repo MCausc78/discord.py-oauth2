@@ -43,6 +43,26 @@ __all__ = ('GameInvite',)
 class GameInvite(Hashable):
     """Represents a game invite.
 
+    .. versionadded:: 3.0
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two game invites are the same.
+
+        .. describe:: x != y
+
+            Checks if two game invites are not the same.
+
+        .. describe:: hash(x)
+
+            Returns the game invite's hash.
+
+        .. describe:: str(x)
+
+            Returns a string representation of the game invite.
+
     Attributes
     ----------
     id: :class:`int`
@@ -102,7 +122,10 @@ class GameInvite(Hashable):
     def __repr__(self) -> str:
         return f'<GameInvite id={self.id} platform_type={self.platform_type!r} inviter_id={self.inviter_id} application_name={self.application_name!r}>'
 
+    def __str__(self) -> str:
+        return f'Invite to {self.application_name} on {self.platform_type.value.capitalize()}'
+
     @property
     def inviter(self) -> Optional[User]:
-        """Optional[:class:`User`]: The user that is subscribed."""
+        """Optional[:class:`User`]: The user that created this invite."""
         return self._state.get_user(self.inviter_id)

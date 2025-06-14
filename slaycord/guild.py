@@ -129,7 +129,7 @@ class _GuildLimit(NamedTuple):
 class GuildPreview(Hashable):
     """Represents a preview of a Discord guild.
 
-        .. versionadded:: 2.5
+    .. versionadded:: 2.5
 
     .. container:: operations
 
@@ -949,7 +949,7 @@ class Guild(UserGuild):
         """
         return self._channels.get(channel_id) or self._threads.get(channel_id)
 
-    def get_channel(self, channel_id: int, /) -> Optional[GuildChannel]:
+    def get_channel(self, channel_id: Optional[int], /) -> Optional[GuildChannel]:
         """Returns a channel with the given ID.
 
         .. note::
@@ -970,6 +970,9 @@ class Guild(UserGuild):
         Optional[:class:`.abc.GuildChannel`]
             The returned channel or ``None`` if not found.
         """
+        if channel_id is None:
+            return None
+
         return self._channels.get(channel_id)
 
     def get_thread(self, thread_id: int, /) -> Optional[Thread]:

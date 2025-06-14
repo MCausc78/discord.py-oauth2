@@ -4,10 +4,11 @@ import asyncio
 import logging
 import sys
 import struct
-from typing import Any, Callable, Optional, TYPE_CHECKING, Tuple
+from typing import Any, Callable, Dict, Optional, TYPE_CHECKING, Tuple
 from typing_extensions import Self
 
 from ..utils import _from_json, _to_json
+from .errors import RPCException
 from .utils import get_ipc_path
 
 if TYPE_CHECKING:
@@ -21,9 +22,10 @@ _RECV_STRUCT = struct.Struct('<ii')
 
 class IPCTransport:
     __slots__ = (
-        '_command_parsers',
         '_dispatch',
         '_event_parsers',
+        '_nonce_sequence',
+        '_pending_requests',
         '_reader',
         '_writer',
     )
@@ -36,6 +38,8 @@ class IPCTransport:
         writer: asyncio.StreamWriter,
     ) -> None:
         self._dispatch: Callable[..., None] = dispatch
+        self._nonce_sequence: int = 0
+        self._pending_requests: Dict[str, asyncio.Future[Any]] = {}
         self._reader: asyncio.StreamReader = reader
         self._writer: asyncio.StreamWriter = writer
 
@@ -70,6 +74,7 @@ class IPCTransport:
 
         _log.debug('Connection is opened.')
         transport = cls(dispatch=dispatch, reader=reader, writer=writer)
+        transport._event_parsers = client._connection.parsers
         return transport
 
     async def recv(self) -> Tuple[int, Any]:
@@ -86,10 +91,76 @@ class IPCTransport:
 
         self._writer.write(_SEND_STRUCT.pack(op, len(raw)) + raw.encode('utf-8'))
 
-    async def poll_event(self) -> None:
+    async def poll_event(self) -> bool:
         op, data = await self.recv()
 
         self._dispatch('raw_event', op, data)
+
         if op == 1:
-            # TODO
-            pass  # d = _from_json(data)
+            payload = _from_json(data)
+
+            cmd = payload['cmd']
+            evt = payload.get('evt')
+
+            # 1 b'{"cmd":"DISPATCH","data":{"code":4000,"message":"Payload requires a nonce"},"evt":"ERROR","nonce":null}'
+
+            if evt == 'ERROR':
+                nonce = payload.get('nonce')
+                if nonce:
+                    try:
+                        future = self._pending_requests.pop(nonce)
+                    except KeyError:
+                        pass
+                    else:
+                        data = payload['data']
+                        exc = RPCException(code=data['code'], text=data['message'])
+                        future.set_exception(exc)
+                else:
+                    data = payload['data']
+                    raise RPCException(code=data['code'], text=data['message'])
+            elif cmd == 'DISPATCH':
+                try:
+                    parser = self._event_parsers[evt]
+                except KeyError:
+                    _log.warning('Unknown IPC event %s.', evt)
+                else:
+                    parser(payload.get('data'))
+            else:
+                # Else it's a response
+                nonce = payload.get('nonce')
+                if nonce:
+                    try:
+                        future = self._pending_requests.pop(nonce)
+                    except KeyError:
+                        pass
+                    else:
+                        future.set_result(payload.get('data'))
+                else:
+                    _log.warning('Received a response without nonce: %s', nonce)
+        elif op == 2:
+            return False
+        elif op == 3:
+            await self.send(4, data)
+        elif op == 4:
+            pass
+        else:
+            _log.warning('Unknown IPC opcode %s.', op, data)
+
+        return True
+
+    async def send_command(self, *, command: str, args: Any, event: Optional[str] = None) -> Any:
+        future = asyncio.Future()
+        nonce = str(self._nonce_sequence)
+        self._nonce_sequence += 1
+        self._pending_requests[nonce] = future
+
+        payload = {
+            'cmd': command,
+            'args': args,
+            'nonce': nonce,
+        }
+        if event:
+            payload['evt'] = event
+
+        await self.send(1, payload)
+        return await future

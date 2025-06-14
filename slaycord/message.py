@@ -1712,14 +1712,13 @@ class Message(PartialMessage, Hashable):
                         chan, _ = state._get_guild_channel(resolved, ref.guild_id)
 
                     # the channel will be the correct type here
-                    ref.resolved = self.__class__(channel=chan, data=resolved, state=state)  # type: ignore
+                    ref.resolved = Message(channel=chan, data=resolved, state=state)  # type: ignore
 
             if self.type is MessageType.poll_result:
-                if isinstance(self.reference.resolved, self.__class__):
+                if isinstance(self.reference.resolved, Message):
                     self._state._update_poll_results(self, self.reference.resolved)
-                else:
-                    if self.reference.message_id:
-                        self._state._update_poll_results(self, self.reference.message_id)
+                elif self.reference.message_id:
+                    self._state._update_poll_results(self, self.reference.message_id)
 
         self.application: Optional[MessageApplication] = None
         try:

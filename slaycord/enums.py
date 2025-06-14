@@ -52,6 +52,7 @@ __all__ = (
     'ConnectionType',
     'ContentFilter',
     'DefaultAvatar',
+    'EntitlementFulfillmentStatus',
     'EntitlementOwnerType',
     'EntitlementType',
     'EntityType',
@@ -60,6 +61,7 @@ __all__ = (
     'ExpireBehaviour',
     'ForumLayoutType',
     'ForumOrderType',
+    'GiftStyle',
     'InteractionResponseType',
     'InteractionType',
     'InviteTarget',
@@ -533,12 +535,21 @@ class ComponentType(Enum):
     role_select = 6
     mentionable_select = 7
     channel_select = 8
+    section = 9
+    text_display = 10
+    thumbnail = 11
+    media_gallery = 12
+    file = 13
+    separator = 14
+    # ??? = 15 # DV8 told me that's reserved for now
+    content_inventory_entry = 16
+    container = 17
 
     def __int__(self) -> int:
         return self.value
 
 
-class ConnectionType(Enum):
+class ConnectionType(Enum, comparable=True):
     amazon_music = 'amazon-music'
     battle_net = 'battlenet'
     bluesky = 'bluesky'
@@ -583,7 +594,7 @@ class ContentFilter(Enum, comparable=True):
         return self.name
 
 
-class DefaultAvatar(Enum):
+class DefaultAvatar(Enum, comparable=True):
     blurple = 0
     grey = 1
     gray = 1
@@ -596,12 +607,34 @@ class DefaultAvatar(Enum):
         return self.name
 
 
-class EntitlementOwnerType(Enum):
+class EntitlementFulfillmentStatus(Enum, comparable=True):
+    unknown = 0
+    fulfillment_not_needed = 1
+    fulfillment_needed = 2
+    fulfilled = 3
+    fulfillment_failed = 4
+    unfulfillment_ended = 5
+    unfulfilled = 6
+    unfulfillment_failed = 7
+
+
+class EntitlementOwnerType(Enum, comparable=True):
     guild = 1
     user = 2
 
 
-class EntitlementType(Enum):
+class EntitlementSourceType(Enum, comparable=True):
+    quest_reward = 1
+    developer_gift = 2
+    invoice = 3
+    reverse_trial = 4
+    user_gift = 5
+    guild_powerup = 6
+    holiday_promotion = 7
+    fractional_premium_giveback = 8
+
+
+class EntitlementType(Enum, comparable=True):
     purchase = 1
     premium_subscription = 2
     developer_gift = 3
@@ -610,6 +643,11 @@ class EntitlementType(Enum):
     user_gift = 6
     premium_purchase = 7
     application_subscription = 8
+    free_staff_purchase = 9
+    quest_reward = 10
+    fractional_redemption = 11
+    virtual_currency_redemption = 12
+    guild_powerup = 13
 
 
 class EntityType(Enum):
@@ -642,12 +680,27 @@ class ForumLayoutType(Enum):
     gallery_view = 2
 
 
-class ForumOrderType(Enum):
+class ForumOrderType(Enum, comparable=True):
     latest_activity = 0
     creation_date = 1
 
 
-class GuildBadgeType(Enum):
+class GiftStyle(Enum, comparable=True):
+    snowglobe = 1
+    box = 2
+    cup = 3
+    standard_box = 4
+    cake = 5
+    chest = 6
+    coffee = 7
+    seasonal_standard_box = 8
+    seasonal_cake = 9
+    seasonal_chest = 10
+    seasonal_coffee = 11
+    nitroween_standard = 12
+
+
+class GuildBadgeType(Enum, comparable=True):
     sword = 0
     water_drop = 1
     skull = 2
@@ -671,7 +724,7 @@ class GuildBadgeType(Enum):
     wind = 20
 
 
-class GuildVisibility(Enum):
+class GuildVisibility(Enum, comparable=True):
     public = 1
     restricted = 2
     public_with_recruitment = 3
@@ -705,13 +758,13 @@ class InviteTarget(Enum):
     embedded_application = 2
 
 
-class InviteType(Enum):
+class InviteType(Enum, comparable=True):
     guild = 0
     group_dm = 1
     friend = 2
 
 
-class Locale(Enum):
+class Locale(Enum, comparable=True):
     american_english = 'en-US'
     british_english = 'en-GB'
     bulgarian = 'bg'
@@ -754,13 +807,13 @@ class MFALevel(Enum, comparable=True):
     require_2fa = 1
 
 
-class MessageReferenceType(Enum):
+class MessageReferenceType(Enum, comparable=True):
     default = 0
     reply = 0
     forward = 1
 
 
-class MessageType(Enum):
+class MessageType(Enum, comparable=True):
     default = 0
     recipient_add = 1
     recipient_remove = 2
@@ -833,7 +886,7 @@ class NotificationLevel(Enum, comparable=True):
 # There are tons of different operating system/client enums in the API,
 # so we try to unify them here
 # They're normalized as the numbered enum, and converted from the stringified enum(s)
-class OperatingSystem(Enum):
+class OperatingSystem(Enum, comparable=True):
     windows = 1
     macos = 2
     linux = 3
@@ -897,6 +950,22 @@ class PremiumType(Enum):
 
 class PrivacyLevel(Enum):
     guild_only = 2
+
+
+class QuestPlatformType(Enum):
+    cross_platform = 0
+    xbox = 1
+    playstation = 2
+    switch = 3
+    pc = 4
+
+
+class QuestRewardType(Enum):
+    reward_code = 1
+    in_game = 2
+    collectible = 3
+    virtual_currency = 4
+    fractional_premium = 5
 
 
 class ReactionType(Enum):

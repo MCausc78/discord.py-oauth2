@@ -89,3 +89,17 @@ class Connection(PartialConnection):
     two_way_link: bool
     visibility: VisibilityType
     access_token: NotRequired[str]
+
+
+ConsoleHandoffType = Literal[
+    'CREATE_NEW_CALL',
+    'TRANSFER_EXISTING_CALL',
+]
+
+
+class ConnectRequestProperties(TypedDict):
+    handoff_type: ConsoleHandoffType
+
+
+class ConnectionRequestData(TypedDict):
+    analytics_properties: ConnectionRequestData

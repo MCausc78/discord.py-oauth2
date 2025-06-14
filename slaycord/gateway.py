@@ -314,7 +314,7 @@ class DiscordWebSocket:
     INVALIDATE_SESSION          = 9
     HELLO                       = 10
     HEARTBEAT_ACK               = 11
-    GUILD_SYNC                  = 12
+    GUILD_SYNC                  = 12 # :(
     CALL_CONNECT                = 13
     LOBBY_VOICE_STATES          = 17
     CREATE_STREAM               = 18
@@ -344,6 +344,7 @@ class DiscordWebSocket:
         self._decompressor: _DecompressionContext = _ActiveDecompressionContext()
         self._close_code: Optional[int] = None
         self._rate_limiter: GatewayRatelimiter = GatewayRatelimiter()
+        self.nonce: Optional[str] = None
 
         # Presence state tracking
         self.afk: bool = False
@@ -368,12 +369,13 @@ class DiscordWebSocket:
         client: Client,
         *,
         initial: bool = False,
-        gateway: Optional[yarl.URL] = None,
+        gateway: yarl.URL,
         session: Optional[str] = None,
         sequence: Optional[int] = None,
         resume: bool = False,
         encoding: str = 'json',
         compress: bool = True,
+        nonce: Optional[str] = None,
     ) -> Self:
         """Creates a main websocket for Discord from a :class:`Client`.
 
@@ -382,13 +384,11 @@ class DiscordWebSocket:
         # Circular import
         from .http import INTERNAL_API_VERSION
 
-        gateway = gateway or cls.DEFAULT_GATEWAY
-
         if compress:
             params = {
                 'v': INTERNAL_API_VERSION,
                 'encoding': encoding,
-                'compress': _ActiveDecompressionContext.COMPRESSION_TYPE,
+                #'compress': _ActiveDecompressionContext.COMPRESSION_TYPE,
             }
         else:
             params = {
@@ -414,6 +414,7 @@ class DiscordWebSocket:
         ws.sequence = sequence
         ws._max_heartbeat_timeout = client._connection.heartbeat_timeout
         ws.impersonate = client.impersonate
+        ws.nonce = nonce
 
         if client._enable_debug_events:
             ws.send = ws.debug_send
@@ -426,11 +427,11 @@ class DiscordWebSocket:
         # poll event for OP Hello
         await ws.poll_event()
 
-        if not resume:
+        if resume:
+            await ws.resume()
+        else:
             await ws.identify()
-            return ws
 
-        await ws.resume()
         return ws
 
     def wait_for(
@@ -465,7 +466,7 @@ class DiscordWebSocket:
 
     async def identify(self) -> None:
         """Sends the IDENTIFY packet."""
-        properties = self.impersonate.get_client_properties()
+        properties = self.impersonate.get_client_properties(nonce=self.nonce)
         if isawaitable(properties):
             properties = await properties
 
@@ -475,7 +476,7 @@ class DiscordWebSocket:
                 # DEDUPE_USER_OBJECTS | PRIORITIZED_READY_PAYLOAD | AUTO_CALL_CONNECT | AUTO_LOBBY_CONNECT
                 'capabilities': (1 << 4) | (1 << 5) | (1 << 12) | (1 << 16),
                 'properties': properties,
-                'compress': True,
+                # 'compress': True,
                 # 'large_threshold': 250,
             },
             'op': self.IDENTIFY,
@@ -575,7 +576,9 @@ class DiscordWebSocket:
         if event == 'READY':
             self.sequence = msg['s']
             self.session_id = data['session_id']
-            self.gateway = yarl.URL(data['resume_gateway_url'])
+
+            # SDK replaces discord.gg with gaming-sdk.com, do same here
+            self.gateway = yarl.URL(data['resume_gateway_url'].replace('discord.gg', 'gaming-sdk.com'))
 
             scopes = data.get('scopes', ())
 
@@ -626,7 +629,7 @@ class DiscordWebSocket:
         # If the socket is closed remotely with 1000 and it's not our own explicit close
         # then it's an improper close that should be handled and reconnected
         is_improper_close = self._close_code is None and self.socket.close_code == 1000
-        return is_improper_close or code not in (1000, 4004, 4010, 4011, 4012, 4013, 4014)
+        return is_improper_close or code not in (1000, 4004, 4010, 4011, 4012, 4013, 4014, 4016)
 
     async def poll_event(self) -> None:
         """Polls for a DISPATCH event and handles the general gateway loop.

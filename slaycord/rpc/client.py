@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Literal
+import logging
+from typing import Literal, Optional
 
 from ..dispatcher import _loop, Dispatcher
 from .enums import Opcode
+from .state import RPCConnectionState
 from .transport import IPCTransport
 
 TransportType = Literal[
     'ipc',
 ]
+
+_log = logging.getLogger(__name__)
 
 
 class Client(Dispatcher):
@@ -18,8 +22,15 @@ class Client(Dispatcher):
         *,
         transport: TransportType = 'ipc',
     ) -> None:
-        self.loop: asyncio.AbstractEventLoop = _loop
+        super().__init__(logger=_log)
         self.transport_type: TransportType = transport
+        self._connection: RPCConnectionState = self._get_state()
+        self._transport: Optional[IPCTransport] = None
+
+    def _get_state(self) -> RPCConnectionState:
+        return RPCConnectionState(
+            dispatch=self.dispatch,
+        )
 
     async def _async_setup_hook(self) -> None:
         # Called whenever the client needs to initialise asyncio objects with a running loop
@@ -40,15 +51,13 @@ class Client(Dispatcher):
 
         .. warning::
 
-            Since this is called *before* the websocket connection is made therefore
-            anything that waits for the websocket will deadlock, this includes things
+            Since this is called *before* the IPC connection is made therefore
+            anything that waits for the IPC will deadlock, this includes things
             like :meth:`wait_for` and :meth:`wait_until_ready`.
-
-        .. versionadded:: 2.0
         """
         pass
 
-    async def start(self, *, client_id: int) -> None:
+    async def start(self, client_id: int) -> None:
         if self.loop is _loop:
             await self._async_setup_hook()
 
@@ -60,5 +69,7 @@ class Client(Dispatcher):
                 'client_id': str(client_id),
             },
         )
-        while True:
-            await transport.poll_event()
+
+        self._transport = transport
+        while await transport.poll_event():
+            pass

@@ -46,8 +46,6 @@ if TYPE_CHECKING:
         MuteConfig as MuteConfigPayload,
     )
 
-# {"t":"USER_SETTINGS_UPDATE","s":63,"op":0,"d":{"application_settings":{"1211781489931452447":{"app_dm_settings":{"allow_mobile_push":true}}}}}
-
 
 class GuildFolder:
     """Represents a guild folder or position if :attr:`id` is ``None``.
@@ -428,7 +426,7 @@ class AudioSettingsManager:
     def _copy(cls, instance: AudioSettingsManager) -> Self:
         self = cls.__new__(cls)
         self._state = instance._state
-        self.data = {k: copy(v) for k, v in self.data.items()}
+        self.data = {k: copy(v) for k, v in instance.data.items()}
         return self
 
     @overload

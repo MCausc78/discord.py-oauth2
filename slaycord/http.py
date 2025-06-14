@@ -84,6 +84,7 @@ if TYPE_CHECKING:
         channel,
         command,
         connections,
+        entitlements,
         gateway,
         guild,
         invite,
@@ -91,7 +92,6 @@ if TYPE_CHECKING:
         member,
         message,
         settings,
-        sku,
         subscription,
         template,
         user,
@@ -140,7 +140,7 @@ def handle_message_parameters(
     *,
     username: str = MISSING,
     avatar_url: Any = MISSING,
-    tts: bool = False,
+    tts: bool = MISSING,
     nonce: Optional[Union[int, str]] = None,
     flags: MessageFlags = MISSING,
     file: File = MISSING,
@@ -208,7 +208,9 @@ def handle_message_parameters(
         else:
             payload['sticker_ids'] = []
 
-    payload['tts'] = tts
+    if tts is not MISSING:
+        payload['tts'] = tts
+
     if avatar_url:
         payload['avatar_url'] = str(avatar_url)
     if username:
@@ -1259,6 +1261,109 @@ class HTTPClient:
 
     # SKU
 
+    def get_application_entitlements(
+        self,
+        application_id: Snowflake,
+        *,
+        user_id: Optional[Snowflake] = None,
+        sku_ids: Optional[List[Snowflake]] = None,
+        guild_id: Optional[Snowflake] = None,
+        exclude_ended: Optional[bool] = None,
+        exclude_deleted: Optional[bool] = None,
+        before: Optional[Snowflake] = None,
+        after: Optional[Snowflake] = None,
+        limit: Optional[int] = None,
+    ) -> Response[List[entitlements.Entitlement]]:
+        params = {}
+
+        if user_id is not None:
+            params['user_id'] = user_id
+
+        if sku_ids is not None:
+            params['sku_ids'] = sku_ids
+
+        if guild_id is not None:
+            params['guild_id'] = guild_id
+
+        if exclude_ended is not None:
+            params['exclude_ended'] = str(exclude_ended).lower()
+
+        if exclude_deleted is not None:
+            params['exclude_deleted'] = str(exclude_deleted).lower()
+
+        if before is not None:
+            params['before'] = before
+
+        if after is not None:
+            params['after'] = after
+
+        if limit is not None:
+            params['limit'] = limit
+
+        route = Route(
+            'GET',
+            '/applications/{application_id}/entitlements',
+            application_id=application_id,
+        )
+        return self.request(route, params=params)
+
+    def get_application_entitlement(
+        self,
+        application_id: Snowflake,
+        entitlement_id: Snowflake,
+    ) -> Response[entitlements.Entitlement]:
+        route = Route(
+            'GET',
+            '/applications/{application_id}/entitlements/{entitlement_id}',
+            application_id=application_id,
+            entitlement_id=entitlement_id,
+        )
+        return self.request(route)
+
+    def consume_application_entitlement(
+        self,
+        application_id: Snowflake,
+        entitlement_id: Snowflake,
+    ) -> Response[None]:
+        route = Route(
+            'POST',
+            '/applications/{application_id}/entitlements/{entitlement_id}/consume',
+            application_id=application_id,
+            entitlement_id=entitlement_id,
+        )
+        return self.request(route)
+
+    def delete_application_entitlement(
+        self,
+        application_id: Snowflake,
+        entitlement_id: Snowflake,
+    ) -> Response[None]:
+        route = Route(
+            'DELETE',
+            '/applications/{application_id}/entitlements/{entitlement_id}',
+            application_id=application_id,
+            entitlement_id=entitlement_id,
+        )
+        return self.request(route)
+
+    def get_gift(
+        self, code: str, *, with_application: Optional[bool] = None, with_subscription_plan: Optional[bool] = None
+    ) -> Response[entitlements.GiftCode]:
+        params = {}
+
+        if with_application is not None:
+            params['with_application'] = str(with_application).lower()
+
+        if with_subscription_plan is not None:
+            params['with_subscription_plan'] = str(with_subscription_plan).lower()
+
+        route = Route(
+            'GET',
+            '/entitlements/gift-codes/{gift_code}',
+            gift_code=code,
+        )
+        return self.request(route)
+
     # Following endpoints work for OAuth2:
     # - GET /applications/{application.id}/entitlements
     # - GET /applications/{application.id}/entitlements/{entitlement.id}
@@ -1301,74 +1406,6 @@ class HTTPClient:
     # - GET /oauth2/authorize (also unauthenticated)
     # - GET /skus/{sku.id}/subscriptions
     # - GET /skus/{sku.id}/subscriptions/{subscription.id}
-
-    def get_skus(self, application_id: Snowflake) -> Response[List[sku.SKU]]:
-        return self.request(Route('GET', '/applications/{application_id}/skus', application_id=application_id))
-
-    def get_entitlements(
-        self,
-        application_id: Snowflake,
-        user_id: Optional[Snowflake] = None,
-        sku_ids: Optional[SnowflakeList] = None,
-        before: Optional[Snowflake] = None,
-        after: Optional[Snowflake] = None,
-        limit: Optional[int] = None,
-        guild_id: Optional[Snowflake] = None,
-        exclude_ended: Optional[bool] = None,
-        exclude_deleted: Optional[bool] = None,
-    ) -> Response[List[sku.Entitlement]]:
-        params: Dict[str, Any] = {}
-
-        if user_id is not None:
-            params['user_id'] = user_id
-        if sku_ids is not None:
-            params['sku_ids'] = ','.join(map(str, sku_ids))
-        if before is not None:
-            params['before'] = before
-        if after is not None:
-            params['after'] = after
-        if limit is not None:
-            params['limit'] = limit
-        if guild_id is not None:
-            params['guild_id'] = guild_id
-        if exclude_ended is not None:
-            params['exclude_ended'] = int(exclude_ended)
-        if exclude_deleted is not None:
-            params['exclude_deleted'] = int(exclude_deleted)
-
-        return self.request(
-            Route('GET', '/applications/{application_id}/entitlements', application_id=application_id), params=params
-        )
-
-    def get_entitlement(self, application_id: Snowflake, entitlement_id: Snowflake) -> Response[sku.Entitlement]:
-        return self.request(
-            Route(
-                'GET',
-                '/applications/{application_id}/entitlements/{entitlement_id}',
-                application_id=application_id,
-                entitlement_id=entitlement_id,
-            ),
-        )
-
-    def consume_entitlement(self, application_id: Snowflake, entitlement_id: Snowflake) -> Response[None]:
-        return self.request(
-            Route(
-                'POST',
-                '/applications/{application_id}/entitlements/{entitlement_id}/consume',
-                application_id=application_id,
-                entitlement_id=entitlement_id,
-            ),
-        )
-
-    def delete_entitlement(self, application_id: Snowflake, entitlement_id: Snowflake) -> Response[None]:
-        return self.request(
-            Route(
-                'DELETE',
-                '/applications/{application_id}/entitlements/{entitlement_id}',
-                application_id=application_id,
-                entitlement_id=entitlement_id,
-            ),
-        )
 
     # Subscriptions
 
@@ -1658,6 +1695,14 @@ class HTTPClient:
             files=[file],
             form=[{'name': 'file', 'value': file.fp}],
         )
+
+    async def get_gateway_url(self) -> str:
+        try:
+            data = await self.request(Route('GET', '/gateway'))
+        except HTTPException as exc:
+            raise GatewayNotFound() from exc
+
+        return data['url']
 
     async def get_bot_gateway(self) -> Tuple[int, str, gateway.SessionStartLimit]:
         try:

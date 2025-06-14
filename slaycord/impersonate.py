@@ -42,6 +42,35 @@ if TYPE_CHECKING:
         'http',
     ]
 
+# History of SDK client properties:
+# in Omega Strikers:
+# - The SDK used scoffing-secrets-sdk.com as base API URL,
+# - The SDK sent following IDENTIFY payload:
+#   {
+#    "d":{
+#     "capabilities":4144,
+#     "properties":{
+#      "browser":"Discord Embedded",
+#      "client_build_number":4440,
+#      "device":"console",
+#      "os":"Unknown",
+#      "version":1
+#     },
+#     "token":"Bearer xxx"
+#    },
+#    "op":2
+#   }
+# - The SDK sent following X-Super-Properties:
+#   {
+#    "browser":"Discord Embedded",
+#    "browser_user_agent":"Discord Embedded/0.0.8",
+#    "browser_version":"0.0.8",
+#    "client_build_number":4440,
+#    "design_id":0,
+#    "os":"Windows",
+#    "release_channel":"unknown"
+#   }
+
 DEFAULT_USER_AGENT: Final[str] = "Discord Embedded/0.0.8"
 SDK_CLIENT_BUILD_NUMBER: Final[int] = 304683
 
@@ -91,10 +120,15 @@ class Impersonate:
         Called when client properties need to be set.
         """
 
-    def get_client_properties(self) -> MaybeAwaitable[Dict[str, Any]]:
+    def get_client_properties(self, *, nonce: Optional[str] = None) -> MaybeAwaitable[Dict[str, Any]]:
         """|maybecoro|
 
         Return client properties as :class:`dict`.
+
+        Parameters
+        ----------
+        nonce: Optional[:class:`str`]
+            The nonce.
         """
         raise NotImplementedError
 
@@ -187,7 +221,11 @@ class DefaultImpersonate(Impersonate):
             "device": "console",  # :clueless:
             "os": os.value,
             "version": 1,  # That's what populates :attr:`Session.version`
+            # "nonce": "XXXXXXXX",
+            # nonce is a console-only field, used to transferring existing/creating new calls on PlayStation.
+            # It should be same value as nonce from https://docs.slaycord.food/resources/connected-accounts#create-console-connection response
         }
+
         self._http_value: Dict[str, Any] = {
             "browser": "Discord Embedded",
             "browser_user_agent": self.user_agent,
@@ -304,7 +342,15 @@ class DefaultImpersonate(Impersonate):
         return self
 
     @copy_doc(Impersonate.get_client_properties)
-    def get_client_properties(self) -> MaybeAwaitable[Dict[str, Any]]:
+    def get_client_properties(self, *, nonce: Optional[str] = None) -> MaybeAwaitable[Dict[str, Any]]:
+        extra_properties = None
+
+        if nonce is not None:
+            extra_properties = {'nonce': nonce}
+
+        if extra_properties:
+            return {**self._gateway_value, **extra_properties}
+
         return self._gateway_value
 
     @copy_doc(Impersonate.get_client_properties_base64)

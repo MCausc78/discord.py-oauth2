@@ -256,6 +256,20 @@ class LobbyVoiceState:
 class Lobby(Hashable, Messageable):
     """Represents a Discord lobby.
 
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two lobbies are the same.
+
+        .. describe:: x != y
+
+            Checks if two lobbies are not the same.
+
+        .. describe:: hash(x)
+
+            Return the lobby's hash.
+
     Attributes
     ----------
     id: :class:`int`

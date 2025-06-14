@@ -24,24 +24,18 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Literal, Optional, TypedDict
 
-from .connections import ConnectionType
 from .snowflake import Snowflake
 
+QuestRewardType = Literal[1, 2, 3, 4, 5]
+QuestPlatformType = Literal[0, 1, 2, 3, 4]
 
-class GameInvite(TypedDict):
-    invite_id: Snowflake
-    platform_type: ConnectionType
-    launch_parameters: str
-    # A JSON string, which decodes as
-    # {
-    #   titleId: undefined | null | string,
-    #   inviteToken: undefined | null | string
-    # }
-    installed: bool
-    joinable: bool
-    inviter_id: Snowflake
-    created_at: str  # ISO8601 timestamp
-    application_asset: str
-    application_name: str
+
+class QuestRewardCode(TypedDict):
+    quest_id: Snowflake
+    code: str
+    platform: QuestPlatformType
+    user_id: Snowflake
+    claimed_at: str
+    tier: Optional[int]

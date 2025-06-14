@@ -77,11 +77,11 @@ class PartialEmoji(_EmojiTag, AssetMixin):
 
         .. describe:: hash(x)
 
-            Return the emoji's hash.
+            Returns the emoji's hash.
 
         .. describe:: str(x)
 
-            Returns the emoji rendered for slaycord.
+            Returns the emoji rendered for Discord.
 
     Attributes
     ----------

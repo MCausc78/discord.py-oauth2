@@ -1,5 +1,5 @@
-discord.py
-==========
+discord.py-oauth2
+=================
 
 .. image:: https://discord.com/api/guilds/336642139381301249/embed.png
    :target: https://discord.gg/r3sSKJJ
@@ -14,16 +14,43 @@ discord.py
 A modern, easy to use, feature-rich, and async ready API wrapper for Discord written in Python.
 
 Key Features
--------------
+------------
 
 - Modern Pythonic API using ``async`` and ``await``.
 - Proper rate limit handling.
 - Optimised in both speed and memory.
+- Implements a rich set of OAuth2 APIs. For a non-exhaustive list:
+  - Connections
+  - Relationships
+  - Headless Sessions
+  - Game Invites
+  - Voice
+    - Calls
+    - Stream API (This does not include actual UDP protocol implementation)
+  - Gateway
+    - Sessions
+  - Game Relationships
+  - Lobbies
+  - User Settings
 
 Installing
 ----------
 
 **Python 3.8 or higher is required**
+
+.. note::
+
+    For now, you will need to install from GitHub.
+    
+    Use following command to do so:
+
+    .. code:: sh
+
+        # Linux/macOS
+        python3 -m pip install -U git+https://github.com/MCausc78/discord.py@feat/oauth2-gateway
+
+        # Windows
+        py -3 -m pip install -U git+https://github.com/MCausc78/discord.py@feat/oauth2-gateway
 
 To install the library without full voice support, you can just run the following command:
 
@@ -119,6 +146,6 @@ You can find more examples in the examples directory.
 Links
 ------
 
-- `Documentation <https://discordpy.readthedocs.io/en/latest/index.html>`_
+- `Documentation <https://discordpy-oauth2.readthedocs.io/en/latest/index.html>`_
 - `Official Discord Server <https://discord.gg/r3sSKJJ>`_
 - `Discord API <https://discord.gg/discord-api>`_
