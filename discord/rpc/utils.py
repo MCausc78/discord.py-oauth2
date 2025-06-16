@@ -22,7 +22,13 @@ def get_ipc_path(pipe: Optional[int] = None) -> Optional[str]:
                 tempdir = path
             else:
                 tempdir = gettempdir()
-        paths = ['.', 'snap.discord', 'app/com.discordapp.Discord', 'app/com.discordapp.DiscordCanary']
+        paths = [
+            '.',
+            '..',
+            'snap.discord',
+            'app/com.discordapp.Discord',
+            'app/com.discordapp.DiscordCanary',
+        ]
     elif platform == 'win32':
         tempdir = r'\\?\pipe'
         paths = ['.']

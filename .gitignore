@@ -16,3 +16,7 @@ docs/crowdin.py
 *.mo
 /.coverage
 build/*
+/local
+/local_*.py
+/local_*.json
+/local_*.txt

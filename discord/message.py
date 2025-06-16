@@ -84,12 +84,12 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .abc import GuildChannel, MessageableChannel
-    from .components import ActionRow, ActionRowChildComponentType
+    from .components import MessageComponent
     from .lobby import Lobby
     from .mentions import AllowedMentions
     from .role import Role
     from .state import ConnectionState
-    from .types.components import Component as ComponentPayload
+    from .types.components import MessageComponent as MessageComponentPayload
     from .types.embed import Embed as EmbedPayload
     from .types.gateway import MessageReactionRemoveEvent, MessageUpdateEvent
     from .types.interactions import MessageInteraction as MessageInteractionPayload
@@ -115,8 +115,6 @@ if TYPE_CHECKING:
     from .user import User
 
     EmojiInputType = Union[Emoji, PartialEmoji, str]
-    MessageComponentType = Union[ActionRow, ActionRowChildComponentType]
-
 
 __all__ = (
     'Attachment',
@@ -530,9 +528,9 @@ class MessageSnapshot:
         if not message_snapshots:
             return []
 
-        return [cls(state, snapshot['message']) for snapshot in message_snapshots]
+        return [cls(snapshot['message'], state) for snapshot in message_snapshots]
 
-    def __init__(self, state: ConnectionState, data: MessageSnapshotPayload):
+    def __init__(self, data: MessageSnapshotPayload, state: ConnectionState):
         self.type: MessageType = try_enum(MessageType, data.get('type', 0))
         self.content: str = data['content']
         self.embeds: List[Embed] = list(map(Embed.from_dict, data.get('embeds', ())))
@@ -542,11 +540,11 @@ class MessageSnapshot:
         self.flags: MessageFlags = MessageFlags._from_value(data.get('flags', 0))
         self.stickers: List[StickerItem] = [StickerItem(data=d, state=state) for d in data.get('sticker_items', ())]
 
-        self.components: List[MessageComponentType] = []
+        self.components: List[MessageComponent] = []
         for component_data in data.get('components', ()):
-            component = _component_factory(component_data)
+            component = _component_factory(component_data, state)
             if component is not None:
-                self.components.append(component)
+                self.components.append(component)  # type: ignore
 
         self._state: ConnectionState = state
 
@@ -1613,14 +1611,14 @@ class Message(PartialMessage, Hashable):
         mentions: List[Union[User, Member]]
         author: Union[User, Member]
         role_mentions: List[Role]
-        components: List[MessageComponentType]
+        components: List[MessageComponent]
 
     def __init__(
         self,
         *,
+        data: MessagePayload,
         state: ConnectionState,
         channel: MessageableChannel,
-        data: MessagePayload,
     ) -> None:
         self.channel: MessageableChannel = channel
         self.id: int = int(data['id'])
@@ -1925,14 +1923,14 @@ class Message(PartialMessage, Hashable):
                 if role is not None:
                     self.role_mentions.append(role)
 
-    def _handle_components(self, data: List[ComponentPayload]) -> None:
+    def _handle_components(self, data: List[MessageComponentPayload]) -> None:
         self.components = []
 
         for component_data in data:
-            component = _component_factory(component_data)
+            component = _component_factory(component_data, self._state)
 
             if component is not None:
-                self.components.append(component)
+                self.components.append(component)  # type: ignore
 
     def _handle_interaction(self, data: MessageInteractionPayload):
         self._interaction = MessageInteraction(state=self._state, guild=self.guild, data=data)

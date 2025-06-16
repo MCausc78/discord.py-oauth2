@@ -80,7 +80,8 @@ class ClientOperatingSystem(Enum):
     ios = 'iOS'
     linux = 'Linux'
     osx = 'Mac OS X'
-    playstation = 'Playstation'
+    playstation_4 = 'Playstation'
+    playstation_5 = 'Playstation'
     windows = 'Windows'
     unknown = 'Unknown'
     xbox = 'Xbox'
@@ -96,6 +97,14 @@ class ClientOperatingSystem(Enum):
             'cygwin': cls.windows,
         }
         return lookup.get(sys.platform, cls.unknown)  # type: ignore
+
+    @property
+    def version(self) -> int:
+        lookup = {
+            self.playstation_4: 4,
+            self.playstation_5: 5,
+        }
+        return lookup.get(self, 1)
 
 
 class Impersonate:
@@ -220,7 +229,7 @@ class DefaultImpersonate(Impersonate):
             "client_build_number": SDK_CLIENT_BUILD_NUMBER,
             "device": "console",  # :clueless:
             "os": os.value,
-            "version": 1,  # That's what populates :attr:`Session.version`
+            "version": os.version,  # That's what populates :attr:`Session.version`
             # "nonce": "XXXXXXXX",
             # nonce is a console-only field, used to transferring existing/creating new calls on PlayStation.
             # It should be same value as nonce from https://docs.discord.food/resources/connected-accounts#create-console-connection response
