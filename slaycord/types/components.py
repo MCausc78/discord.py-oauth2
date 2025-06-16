@@ -24,11 +24,12 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Literal, TypedDict, Union
-from typing_extensions import NotRequired
+from typing import List, Literal, Optional, TypedDict, Union
+from typing_extensions import NotRequired, Required
 
 from .channel import ChannelType
 from .emoji import PartialEmoji
+from .snowflake import Snowflake
 
 ComponentType = Literal[1, 2, 3, 4]
 ButtonStyle = Literal[1, 2, 3, 4, 5, 6]
@@ -36,12 +37,23 @@ TextStyle = Literal[1, 2]
 DefaultValueType = Literal['user', 'role', 'channel']
 
 
-class ActionRow(TypedDict):
+class BaseComponent(TypedDict):
+    id: NotRequired[int]
+
+
+class ActionRowBase(BaseComponent):
     type: Literal[1]
-    components: List[ActionRowChildComponent]
 
 
-class ButtonComponent(TypedDict):
+class MessageActionRow(ActionRowBase):
+    components: List[MessageActionRowChildComponent]
+
+
+class ContainerActionRow(ActionRowBase):
+    components: List[ContainerActionRowChildComponent]
+
+
+class Button(BaseComponent):
     type: Literal[2]
     style: ButtonStyle
     custom_id: NotRequired[str]
@@ -60,7 +72,7 @@ class SelectOption(TypedDict):
     emoji: NotRequired[PartialEmoji]
 
 
-class SelectComponent(TypedDict):
+class Select(BaseComponent):
     custom_id: str
     placeholder: NotRequired[str]
     min_values: NotRequired[int]
@@ -73,33 +85,33 @@ class SelectDefaultValues(TypedDict):
     type: DefaultValueType
 
 
-class StringSelectComponent(SelectComponent):
+class StringSelect(Select):
     type: Literal[3]
     options: NotRequired[List[SelectOption]]
 
 
-class UserSelectComponent(SelectComponent):
+class UserSelect(Select):
     type: Literal[5]
     default_values: NotRequired[List[SelectDefaultValues]]
 
 
-class RoleSelectComponent(SelectComponent):
+class RoleSelect(Select):
     type: Literal[6]
     default_values: NotRequired[List[SelectDefaultValues]]
 
 
-class MentionableSelectComponent(SelectComponent):
+class MentionableSelect(Select):
     type: Literal[7]
     default_values: NotRequired[List[SelectDefaultValues]]
 
 
-class ChannelSelectComponent(SelectComponent):
+class ChannelSelect(Select):
     type: Literal[8]
     channel_types: NotRequired[List[ChannelType]]
     default_values: NotRequired[List[SelectDefaultValues]]
 
 
-class TextInput(TypedDict):
+class TextInput(BaseComponent):
     type: Literal[4]
     custom_id: str
     style: TextStyle
@@ -111,12 +123,132 @@ class TextInput(TypedDict):
     max_length: NotRequired[int]
 
 
-class SelectMenu(SelectComponent):
+class SelectMenu(Select):
     type: Literal[3, 5, 6, 7, 8]
     options: NotRequired[List[SelectOption]]
     channel_types: NotRequired[List[ChannelType]]
     default_values: NotRequired[List[SelectDefaultValues]]
 
 
-ActionRowChildComponent = Union[ButtonComponent, SelectMenu, TextInput]
-Component = Union[ActionRow, ActionRowChildComponent]
+class Section(BaseComponent):
+    type: Literal[9]
+    components: List[TextDisplay]
+    accessory: Union[Thumbnail, Button]
+
+
+class TextDisplay(BaseComponent):
+    type: Literal[10]
+    content: str
+
+
+MediaItemLoadingState = Literal[
+    0,  # UNKNOWN
+    1,  # LOADING
+    2,  # LOADED_SUCCESS
+    3,  # LOADED_NOT_FOUND
+]
+
+
+class MediaItemScanMetadata(TypedDict):
+    version: int
+    flags: int  # EXPLICIT = 1 << 0, GORE = 1 << 1
+
+
+class UnfurledMediaItem(TypedDict, total=False):
+    url: Required[str]
+    proxy_url: str
+    height: Optional[int]
+    width: Optional[int]
+    placeholder: Optional[str]
+    placeholder_version: Optional[int]
+    content_type: str
+    loading_state: MediaItemLoadingState
+    content_scan_metadata: Optional[MediaItemScanMetadata]
+    flags: int
+    attachment_id: Snowflake
+
+
+class Thumbnail(BaseComponent):
+    type: Literal[11]
+    media: UnfurledMediaItem
+    description: NotRequired[str]
+    spoiler: NotRequired[bool]
+
+
+class MediaGalleryItem(TypedDict):
+    # Similar to Thumbnail...
+    media: UnfurledMediaItem
+    description: NotRequired[str]
+    spoiler: NotRequired[bool]
+
+
+class MediaGallery(BaseComponent):
+    type: Literal[12]
+    items: List[MediaGalleryItem]
+
+
+class FileComponent(BaseComponent):
+    type: Literal[13]
+    file: UnfurledMediaItem
+    spoiler: NotRequired[bool]
+    name: NotRequired[str]  # Always provided by the API
+    size: NotRequired[int]  # Always provided by the API
+
+
+SeparatorSpacingSize = Literal[1, 2]
+
+
+class Separator(BaseComponent):
+    type: Literal[14]
+    divider: NotRequired[bool]
+    spacing: NotRequired[SeparatorSpacingSize]
+
+
+# 15 is reserved
+
+
+class ContentInventoryEntry(BaseComponent):
+    type: Literal[16]
+
+
+class Container(BaseComponent):
+    type: Literal[17]
+    components: List[Union[ContainerActionRow, Section, TextDisplay, MediaGallery, FileComponent, Separator]]
+    accent_color: NotRequired[Optional[int]]
+    spoiler: NotRequired[bool]
+
+
+MessageActionRowChildComponent = Union[Button, SelectMenu, TextInput]
+ContainerActionRowChildComponent = Union[
+    MessageActionRowChildComponent,
+    Section,
+    TextDisplay,
+    MediaGallery,
+    FileComponent,
+    Separator,
+]
+MessageComponent = Union[
+    MessageActionRow,
+    Section,
+    TextDisplay,
+    MediaGallery,
+    FileComponent,
+    Separator,
+    ContentInventoryEntry,
+    Container,
+]
+ActionRow = Union[MessageActionRow, ContainerActionRow]
+Component = Union[
+    ActionRow,
+    Button,
+    SelectMenu,
+    TextInput,
+    Section,
+    TextDisplay,
+    Thumbnail,
+    MediaGallery,
+    FileComponent,
+    Separator,
+    ContentInventoryEntry,
+    Container,
+]

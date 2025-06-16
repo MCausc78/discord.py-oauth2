@@ -24,10 +24,25 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Any, Dict, TypedDict
 
 from .connections import ConnectionType
 from .snowflake import Snowflake
+
+# This seems enough to trigger a fake game invite:
+# GatewaySocket._handleDispatch({
+#     invite_id: SnowflakeUtils.fromTimestamp(Date.now()),
+#     platform_type: "xbox",
+#     launch_parameters: JSON.stringify({ titleId: "title ID", inviteToken: "invite token" }),
+#     installed: true,
+#     joinable: true,
+#     inviter_id: UserStore.getCurrentUser().id,
+#     created_at: new Date().toISOString(),
+#     ttl: 86400,
+#     application_asset: "https://cdn.discordapp.com/embed/avatars/1.png",
+#     application_name: "SentinelGameInvite",
+#     parsed_launch_parameters: { titleId: "title ID", inviteToken: "invite token" },
+# }, "GAME_INVITE_CREATE", null);
 
 
 class GameInvite(TypedDict):
@@ -43,5 +58,7 @@ class GameInvite(TypedDict):
     joinable: bool
     inviter_id: Snowflake
     created_at: str  # ISO8601 timestamp
+    ttl: int  # TTL in seconds
     application_asset: str
     application_name: str
+    parsed_launch_parameters: Dict[str, Any]

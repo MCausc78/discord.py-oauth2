@@ -81,6 +81,7 @@ if TYPE_CHECKING:
 
     from .types import (
         activity,
+        billing,
         channel,
         command,
         connections,
@@ -626,7 +627,9 @@ class HTTPClient:
             xsp = self.impersonate.get_client_properties_base64()
             if isawaitable(xsp):
                 xsp = await xsp
-            headers['X-Super-Properties'] = xsp
+
+            if xsp is not None:
+                headers['X-Super-Properties'] = xsp
 
         supplemental_headers = kwargs.pop('supplemental_headers', None)
         if supplemental_headers:
@@ -1529,6 +1532,7 @@ class HTTPClient:
 
         return self.request(route, json=payload)
 
+    # Calls
     def get_ringability(self, channel_id: Snowflake) -> Response[channel.CallEligibility]:
         return self.request(Route('GET', '/channels/{channel_id}/call', channel_id=channel_id))
 
@@ -1545,7 +1549,6 @@ class HTTPClient:
         return self.request(Route('PATCH', '/channels/{channel_id}/call', channel_id=channel_id), json=payload)
 
     # Relationships
-
     def get_relationships(self, *, with_implicit: Optional[bool] = None) -> Response[List[user.Relationship]]:
         params = {}
         if with_implicit is not None:
@@ -1602,6 +1605,40 @@ class HTTPClient:
 
     def remove_game_relationship(self, user_id: Snowflake) -> Response[None]:
         return self.request(Route('DELETE', '/users/@me/game-relationships/{user_id}', user_id=user_id))
+
+    # Billing
+
+    def popup_bridge_callback(
+        self,
+        payment_source_type: billing.PaymentSourceType,
+        *,
+        state: str,
+        path: str,
+        # Not sure about optionality and nullability of these fields (in client)
+        query: Optional[Dict[str, str]] = MISSING,
+        insecure: Optional[bool] = MISSING,
+    ) -> Response[None]:
+        payload: Dict[str, Any] = {
+            'state': state,
+            'path': path,
+        }
+        if query is not MISSING:
+            payload['query'] = query
+
+        if insecure is not MISSING:
+            payload['insecure'] = insecure
+
+        return self.request(
+            Route(
+                'POST',
+                '/billing/popup-bridge/{payment_source_type}/callback',
+                payment_source_type=payment_source_type,
+            ),
+            json=payload,
+        )
+
+    # /api/v9/billing/popup-bridge/{payment_source_type}/callback/{state}/{response_type}
+    # redirects to https://discord.com/billing/popup-bridge/callback?path=/billing/popup-bridge/{payment_source_type}/callback/{state}/{response_type}&state={state}&response_type={response_type}&payment_source_type={payment_source_type}'
 
     # Misc
 

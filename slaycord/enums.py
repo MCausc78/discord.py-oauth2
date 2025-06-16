@@ -68,17 +68,21 @@ __all__ = (
     'InviteType',
     'Locale',
     'MFALevel',
+    'MediaItemLoadingState',
     'MessageReferenceType',
     'MessageType',
     'NSFWLevel',
     'NotificationLevel',
     'OperatingSystem',
+    'PaymentSourceType',
     'PollLayoutType',
     'PremiumType',
     'PrivacyLevel',
     'ReactionType',
     'RelationshipType',
     'SKUType',
+    'SafetyWarningType',
+    'SeparatorSpacingSize',
     'SelectDefaultValueType',
     'SlayerSDKReceiveInGameDMs',
     'SpeakingState',
@@ -807,6 +811,13 @@ class MFALevel(Enum, comparable=True):
     require_2fa = 1
 
 
+class MediaItemLoadingState(Enum, comparable=True):
+    unknown = 0
+    loading = 1
+    loaded_success = 2
+    loaded_not_found = 3
+
+
 class MessageReferenceType(Enum, comparable=True):
     default = 0
     reply = 0
@@ -926,6 +937,28 @@ class OperatingSystem(Enum, comparable=True):
         return self.to_string()
 
 
+class PaymentSourceType(Enum):
+    unknown = 0
+    card = 1
+    paypal = 2
+    giropay = 3
+    sofort = 4
+    przzelewy24 = 5
+    sepa_debit = 6
+    paysafecard = 7
+    gcash = 8
+    grabpay = 9
+    momo_wallet = 10
+    venmo = 11
+    gopay_wallet = 12
+    kakaopay = 13
+    bancontact = 14
+    eps = 15
+    ideal = 16
+    cash_app = 17
+    payment_request = 99
+
+
 class PollLayoutType(Enum):
     default = 1
 
@@ -995,6 +1028,11 @@ class SafetyWarningType(Enum):
     inappropriate_conversation_tier_1 = 2
     inappropriate_conversation_tier_2 = 3
     likely_ato = 4
+
+
+class SeparatorSpacingSize(Enum):
+    small = 1
+    large = 2
 
 
 class SelectDefaultValueType(Enum):

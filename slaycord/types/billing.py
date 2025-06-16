@@ -24,43 +24,27 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Literal, TypedDict
+from typing import Literal
 
-# from typing_extensions import NotRequired
-
-from ...types.snowflake import Snowflake
-from .message import Message
-from .voice_state import VoiceState
-
-GuildChannelType = Literal[
-    0,
-    2,
-    4,
-    5,
-    6,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    # 17: LOBBY
-    # 18: DM_SDK
+PaymentSourceType = Literal[
+    0,  # UNKNOWN
+    1,  # CARD
+    2,  # PAYPAL
+    3,  # GIROPAY
+    4,  # SOFORT
+    5,  # PRZELEWY24
+    6,  # SEPA_DEBIT
+    7,  # PAYSAFE_CARD
+    8,  # GCASH
+    9,  # GRABPAY_MY
+    10,  # MOMO_WALLET
+    11,  # VENMO
+    12,  # GOPAY_WALLET
+    13,  # KAKAOPAY
+    14,  # BANCONTACT
+    15,  # EPS
+    16,  # IDEAL
+    17,  # CASH_APP
+    18,  # APPLE
+    99,  # PAYMENT_REQUEST
 ]
-
-
-class PartialGuildChannel(TypedDict):
-    id: Snowflake
-    name: str
-    type: GuildChannelType
-
-
-class GuildChannel(PartialGuildChannel):
-    topic: str
-    bitrate: int
-    user_limit: int
-    guild_id: Snowflake
-    position: int
-    messages: List[Message]
-    voice_states: List[VoiceState]
