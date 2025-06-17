@@ -58,7 +58,7 @@ from .impersonate import Impersonate, DefaultImpersonate
 from .connections import Connection
 from .emoji import Emoji
 from .entitlements import Entitlement
-from .enums import ActivityType, ChannelType, Status, RelationshipType, ClientType
+from .enums import ActivityType, ChannelType, ClientType, PaymentSourceType, RelationshipType, Status
 from .errors import *
 from .flags import ApplicationFlags, Intents
 from .gateway import *
@@ -2214,7 +2214,7 @@ class Client(Dispatcher):
         listeners.append((future, check))
         return asyncio.wait_for(future, timeout)
 
-    # event registration
+    # Gateway
 
     async def change_presence(
         self,
@@ -2337,6 +2337,9 @@ class Client(Dispatcher):
             if payload:
                 await self.settings.edit(**payload)
 
+    # HTTP operations
+
+    # Activities
     async def create_headless_session(
         self, *, activities: List[ActivityTypes], token: Optional[str] = None
     ) -> HeadlessSession:
@@ -2373,6 +2376,22 @@ class Client(Dispatcher):
             state=state,
         )
 
+    # Billing
+
+    async def popup_bridge_callback(
+        self,
+        payment_source_type: PaymentSourceType,
+        *,
+        state: str,
+        path: str,
+        # Not sure about optionality and nullability of these fields (in client)
+        query: Optional[Dict[str, str]] = MISSING,
+        insecure: Optional[bool] = MISSING,
+    ) -> None:
+        await self.http.popup_bridge_callback(
+            payment_source_type.value, state=state, path=path, query=query, insecure=insecure
+        )
+
     # Connections
 
     async def fetch_connections(self) -> List[Connection]:
@@ -2395,37 +2414,6 @@ class Client(Dispatcher):
         state = self._connection
         data = await state.http.get_connections()
         return [Connection(data=d, state=state) for d in data]
-
-    # Voice
-
-    async def change_voice_state(
-        self,
-        *,
-        channel: Optional[Snowflake],
-        self_mute: bool = False,
-        self_deaf: bool = False,
-        self_video: bool = False,
-    ) -> None:
-        """|coro|
-
-        Changes client's private channel voice state.
-
-        Parameters
-        ----------
-        channel: Optional[:class:`~slaycord.abc.Snowflake`]
-            Channel the client wants to join (must be a private channel). Use ``None`` to disconnect.
-        self_mute: :class:`bool`
-            Indicates if the client should be self-muted.
-        self_deaf: :class:`bool`
-            Indicates if the client should be self-deafened.
-        self_video: :class:`bool`
-            Indicates if the client should show camera.
-        """
-        state = self._connection
-        ws = self.ws
-        channel_id = channel.id if channel else None
-
-        await ws.voice_state(None, channel_id, self_mute, self_deaf, self_video)
 
     # Guild stuff
 
@@ -2652,111 +2640,57 @@ class Client(Dispatcher):
         )
         return Invite.from_incomplete(state=self._connection, data=data)
 
-    # Miscellaneous stuff
+    # Lobbies
 
-    async def fetch_widget(self, guild_id: int, /) -> Widget:
+    async def create_or_join_lobby(
+        self,
+        secret: str,
+        *,
+        lobby_metadata: Optional[Dict[str, str]] = None,
+        member_metadata: Optional[Dict[str, str]] = None,
+        idle_timeout: Optional[int] = None,
+    ) -> Lobby:
         """|coro|
 
-        Gets a :class:`.Widget` from a guild ID.
-
-        .. note::
-
-            The guild must have the widget enabled to get this information.
-
-        .. versionchanged:: 2.0
-
-            ``guild_id`` parameter is now positional-only.
+        Creates or joins an existing lobby by secret.
 
         Parameters
         ----------
-        guild_id: :class:`int`
-            The ID of the guild.
+        secret: :class:`str`
+            The secret for joining/creating a lobby.
+        lobby_metadata: Optional[Dict[:class:`str`, :class:`str`]]
+            The lobby's metadata. Must be 1000 characters in total (length of keys + values).
+        member_metadata: Optional[Dict[:class:`str`, :class:`str`]]
+            The member's metadata to assign to yourself. Must be 1000 characters in total (length of keys + values).
+        idle_timeout: Optional[:class:`int`]
+            The seconds to wait before shutting down a lobby after it becomes idle. Must be between 5 seconds and 1 week.
+
+            Defaults to 5 minutes if not provided.
 
         Raises
         ------
         Forbidden
-            The widget for this guild is disabled.
+            You do not have proper permissions to join lobby.
         HTTPException
-            Retrieving the widget failed.
+            Creating/joining the lobby failed.
 
         Returns
         -------
-        :class:`.Widget`
-            The guild's widget.
+        :class:`Lobby`
+            The joined or created lobby.
         """
-        data = await self.http.get_widget(guild_id)
 
-        return Widget(state=self._connection, data=data)
-
-    async def fetch_game_relationships(self) -> List[GameRelationship]:
-        """|coro|
-
-        Retrieves all your game relationships.
-
-        .. note::
-
-            This method is an API call. For general usage, consider :attr:`game_relationships` instead.
-
-        Raises
-        ------
-        HTTPException
-            Retrieving your game relationships failed.
-
-        Returns
-        -------
-        List[:class:`.GameRelationship`]
-            All your game relationships.
-        """
         state = self._connection
-        data = await state.http.get_game_relationships()
-        return [GameRelationship(state=state, data=d) for d in data]
+        data = await state.http.create_or_join_lobby(
+            secret=secret,
+            lobby_metadata=lobby_metadata,
+            member_metadata=member_metadata,
+            idle_timeout_seconds=idle_timeout,
+        )
 
-    async def fetch_relationships(self, *, with_implicit: Optional[bool] = None) -> List[Relationship]:
-        """|coro|
+        return Lobby(data=data, state=state)
 
-        Retrieves all your relationships.
-
-        .. note::
-
-            This method is an API call. For general usage, consider :attr:`relationships` instead.
-
-        Parameters
-        ----------
-        with_implicit: Optional[:class:`bool`]
-            Whether to include :attr:`~RelationshipType.implicit` relationships as well. Defaults to ``False``.
-
-        Raises
-        ------
-        HTTPException
-            Retrieving your relationships failed.
-
-        Returns
-        -------
-        List[:class:`.Relationship`]
-            All your relationships.
-        """
-        state = self._connection
-        data = await state.http.get_relationships(with_implicit=with_implicit)
-        return [Relationship(state=state, data=d) for d in data]
-
-    async def fetch_preferred_rtc_regions(self) -> Dict[str, List[str]]:
-        """|coro|
-
-        Retrieves the preferred RTC regions of the client.
-
-        Raises
-        ------
-        HTTPException
-            Retrieving the preferred voice regions failed.
-
-        Returns
-        -------
-        Dict[:class:`str`, List[:class:`str`]]
-            The region name and list of IPs for the closest voice regions.
-        """
-        data = await self.http.get_preferred_voice_regions()
-        return {v['region']: v['ips'] for v in data}
-
+    # Store
     async def fetch_skus(self) -> List[SKU]:
         """|coro|
 
@@ -2966,81 +2900,141 @@ class Client(Dispatcher):
             for e in data:
                 yield Entitlement(data=e, state=self._connection)
 
-    async def create_dm(self, user: Snowflake) -> Union[DMChannel, EphemeralDMChannel]:
+    # Voice
+
+    async def change_voice_state(
+        self,
+        *,
+        channel: Optional[Snowflake],
+        self_mute: bool = False,
+        self_deaf: bool = False,
+        self_video: bool = False,
+    ) -> None:
         """|coro|
 
-        Creates a :class:`.DMChannel` with this user.
-
-        This should be rarely called, as this is done transparently for most
-        people.
-
-        .. versionadded:: 2.0
+        Changes client's private channel voice state.
 
         Parameters
         ----------
-        user: :class:`~slaycord.abc.Snowflake`
-            The user to create a DM with.
+        channel: Optional[:class:`~slaycord.abc.Snowflake`]
+            Channel the client wants to join (must be a private channel). Use ``None`` to disconnect.
+        self_mute: :class:`bool`
+            Indicates if the client should be self-muted.
+        self_deaf: :class:`bool`
+            Indicates if the client should be self-deafened.
+        self_video: :class:`bool`
+            Indicates if the client should show camera.
+        """
+        state = self._connection
+        ws = self.ws
+        channel_id = channel.id if channel else None
+
+        await ws.voice_state(None, channel_id, self_mute, self_deaf, self_video)
+
+    async def fetch_preferred_rtc_regions(self) -> Dict[str, List[str]]:
+        """|coro|
+
+        Retrieves the preferred RTC regions of the client.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving the preferred voice regions failed.
 
         Returns
         -------
-        Union[:class:`.DMChannel`, :class:`.EphemeralDMChannel`]
-            The channel that was created.
+        Dict[:class:`str`, List[:class:`str`]]
+            The region name and list of IPs for the closest voice regions.
         """
-        state = self._connection
-        found = state._get_private_channel_by_user(user.id)
-        if found:
-            return found
+        data = await self.http.get_preferred_voice_regions()
+        return {v['region']: v['ips'] for v in data}
 
-        data = await state.http.start_private_message(user.id)
-        return state.add_dm_channel(data)
+    # Miscellaneous stuff
 
-    async def create_or_join_lobby(
-        self,
-        secret: str,
-        *,
-        lobby_metadata: Optional[Dict[str, str]] = None,
-        member_metadata: Optional[Dict[str, str]] = None,
-        idle_timeout: Optional[int] = None,
-    ) -> Lobby:
+    async def fetch_widget(self, guild_id: int, /) -> Widget:
         """|coro|
 
-        Creates or joins an existing lobby by secret.
+        Gets a :class:`.Widget` from a guild ID.
+
+        .. note::
+
+            The guild must have the widget enabled to get this information.
+
+        .. versionchanged:: 2.0
+
+            ``guild_id`` parameter is now positional-only.
 
         Parameters
         ----------
-        secret: :class:`str`
-            The secret for joining/creating a lobby.
-        lobby_metadata: Optional[Dict[:class:`str`, :class:`str`]]
-            The lobby's metadata. Must be 1000 characters in total (length of keys + values).
-        member_metadata: Optional[Dict[:class:`str`, :class:`str`]]
-            The member's metadata to assign to yourself. Must be 1000 characters in total (length of keys + values).
-        idle_timeout: Optional[:class:`int`]
-            The seconds to wait before shutting down a lobby after it becomes idle. Must be between 5 seconds and 1 week.
-
-            Defaults to 5 minutes if not provided.
+        guild_id: :class:`int`
+            The ID of the guild.
 
         Raises
         ------
         Forbidden
-            You do not have proper permissions to join lobby.
+            The widget for this guild is disabled.
         HTTPException
-            Creating/joining the lobby failed.
+            Retrieving the widget failed.
 
         Returns
         -------
-        :class:`Lobby`
-            The joined or created lobby.
+        :class:`.Widget`
+            The guild's widget.
         """
+        data = await self.http.get_widget(guild_id)
 
+        return Widget(state=self._connection, data=data)
+
+    # Relationships
+    async def fetch_game_relationships(self) -> List[GameRelationship]:
+        """|coro|
+
+        Retrieves all your game relationships.
+
+        .. note::
+
+            This method is an API call. For general usage, consider :attr:`game_relationships` instead.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving your game relationships failed.
+
+        Returns
+        -------
+        List[:class:`GameRelationship`]
+            All your game relationships.
+        """
         state = self._connection
-        data = await state.http.create_or_join_lobby(
-            secret=secret,
-            lobby_metadata=lobby_metadata,
-            member_metadata=member_metadata,
-            idle_timeout_seconds=idle_timeout,
-        )
+        data = await state.http.get_game_relationships()
+        return [GameRelationship(data=d, state=state) for d in data]
 
-        return Lobby(data=data, state=state)
+    async def fetch_relationships(self) -> List[Relationship]:
+        """|coro|
+
+        Retrieves all your relationships.
+
+        .. note::
+
+            This method is an API call. For general usage, consider :attr:`relationships` instead.
+
+        .. note::
+
+            This methods returns only relationships of :class:`~RelationshipType.friend` type.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving your relationships failed.
+
+        Returns
+        -------
+        List[:class:`Relationship`]
+            All your relationships.
+        """
+        state = self._connection
+        data = await state.http.get_relationships()
+        return [Relationship(data=d, state=state) for d in data]
 
     @overload
     async def send_friend_request(self, user: Union[_UserTag, str, int], /) -> None:
@@ -3121,10 +3115,10 @@ class Client(Dispatcher):
             await client.send_game_friend_request(user)
 
             # Passing a username
-            await client.send_game_friend_request('dolfies')
+            await client.send_game_friend_request('gatewaydisc.rdgg')
 
             # Passing a ID
-            await client.send_game_friend_request(852892297661906993)
+            await client.send_game_friend_request(1073325901825187841)
 
 
         Parameters
@@ -3152,3 +3146,31 @@ class Client(Dispatcher):
             return
 
         await state.http.send_game_friend_request(username)
+
+    async def create_dm(self, user: Snowflake) -> Union[DMChannel, EphemeralDMChannel]:
+        """|coro|
+
+        Creates a :class:`.DMChannel` with this user.
+
+        This should be rarely called, as this is done transparently for most
+        people.
+
+        .. versionadded:: 2.0
+
+        Parameters
+        ----------
+        user: :class:`~slaycord.abc.Snowflake`
+            The user to create a DM with.
+
+        Returns
+        -------
+        Union[:class:`.DMChannel`, :class:`.EphemeralDMChannel`]
+            The channel that was created.
+        """
+        state = self._connection
+        found = state._get_private_channel_by_user(user.id)
+        if found:
+            return found
+
+        data = await state.http.start_private_message(user.id)
+        return state.add_dm_channel(data)

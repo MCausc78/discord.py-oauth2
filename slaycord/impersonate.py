@@ -101,8 +101,8 @@ class ClientOperatingSystem(Enum):
     @property
     def version(self) -> int:
         lookup = {
-            self.playstation_4: 4,
-            self.playstation_5: 5,
+            ClientOperatingSystem.playstation_4: 4,
+            ClientOperatingSystem.playstation_5: 5,
         }
         return lookup.get(self, 1)
 

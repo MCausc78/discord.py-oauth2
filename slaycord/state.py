@@ -50,7 +50,7 @@ from typing import (
 # import weakref
 
 from ._types import ClientT
-from .activity import BaseActivity, Session, create_activity
+from .activity import BaseActivity, Session, ActivityInvite, create_activity
 from .automod import AutoModRule, AutoModAction
 from .channel import *
 from .channel import _private_channel_factory, _channel_factory
@@ -898,6 +898,11 @@ class ConnectionState(Generic[ClientT]):
 
         self.dispatch('remote_command', data)
 
+    def parse_activity_invite_create(self, data: gw.ActivityInviteCreateEvent) -> None:
+        invite = ActivityInvite.from_event(data, state=self)
+
+        self.dispatch('activity_invite', invite)
+
     def parse_message_create(self, data: gw.MessageCreateEvent) -> None:
         channel, _ = self._get_guild_channel(data)
         # channel would be the correct type here
@@ -905,6 +910,13 @@ class ConnectionState(Generic[ClientT]):
         self.dispatch('message', message)
         if self._messages is not None:
             self._messages.append(message)
+
+        # Should be correct:tm: (SDK does not do message.application_id == self.application_id check,
+        # for some reason)
+        if message.activity is not None:  # and message.application_id == self.application_id:
+            activity_invite = ActivityInvite.from_message(message)
+
+            self.dispatch('activity_invite', activity_invite)
 
         # We ensure that the channel is either a TextChannel, VoiceChannel, or Thread
         if channel and channel.__class__ in (TextChannel, VoiceChannel, Thread, StageChannel):
@@ -1781,7 +1793,7 @@ class ConnectionState(Generic[ClientT]):
             return
 
         channel_id = _get_as_snowflake(data, 'channel_id')
-        channel = guild.get_channel(channel_id)  # type: ignore # None is okay here
+        channel = guild.get_channel(channel_id)
 
         if channel is None:
             _log.warning('WEBHOOKS_UPDATE referencing an unknown channel ID: %s. Discarding.', data['channel_id'])

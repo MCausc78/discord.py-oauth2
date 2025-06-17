@@ -59,6 +59,8 @@ def _extract_user_id(data: LobbyMemberPayload, /) -> int:
 class LinkedLobby:
     """Represents channel link to a lobby.
 
+    .. verseionadded:: 3.0
+
     Attributes
     ----------
     application_id: :class:`int`
@@ -100,7 +102,7 @@ class LinkedLobby:
 class LobbyMember(Hashable):
     """Represents a Discord member to a :class:`Lobby`.
 
-    .. versionadded:: 2.6
+    .. versionadded:: 3.0
 
     Attributes
     ----------
@@ -173,6 +175,8 @@ class LobbyMember(Hashable):
 
 class LobbyVoiceState:
     """Represents a Discord user's voice state in a lobby.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------
@@ -255,6 +259,8 @@ class LobbyVoiceState:
 
 class Lobby(Hashable, Messageable):
     """Represents a Discord lobby.
+
+    .. versionadded:: 3.0
 
     .. container:: operations
 

@@ -35,8 +35,8 @@ if TYPE_CHECKING:
     from .guild import Guild
     from .state import ConnectionState
     from .types.appinfo import (
-        AppInfo as AppInfoPayload,
-        PartialAppInfo as PartialAppInfoPayload,
+        Application as ApplicationPayload,
+        PartialApplication as PartialApplicationPayload,
         Team as TeamPayload,
         InstallParams as InstallParamsPayload,
         AppIntegrationTypeConfig as AppIntegrationTypeConfigPayload,
@@ -181,7 +181,7 @@ class AppInfo:
         '_integration_types_config',
     )
 
-    def __init__(self, state: ConnectionState, data: AppInfoPayload):
+    def __init__(self, *, data: ApplicationPayload, state: ConnectionState) -> None:
         from .team import Team
 
         self._state: ConnectionState = state
@@ -352,7 +352,7 @@ class PartialAppInfo:
         'role_connections_verification_url',
     )
 
-    def __init__(self, *, state: ConnectionState, data: PartialAppInfoPayload):
+    def __init__(self, *, data: PartialApplicationPayload, state: ConnectionState):
         self._state: ConnectionState = state
         self.id: int = int(data['id'])
         self.name: str = data['name']

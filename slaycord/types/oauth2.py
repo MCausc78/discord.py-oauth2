@@ -27,7 +27,7 @@ from __future__ import annotations
 from typing import List, TypedDict
 from typing_extensions import NotRequired
 
-from .appinfo import PartialAppInfo
+from .application import PartialAppInfo
 from .user import User
 
 

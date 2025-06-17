@@ -106,3 +106,11 @@ class Activity(_BaseActivity, total=False):
     instance: bool
     buttons: List[str]
     sync_id: str
+
+
+class ActivitySubscription(TypedDict):
+    user_id: Snowflake
+    application_id: Snowflake
+    party_id: str
+    message_id: Snowflake
+    channel_id: Snowflake

@@ -38,7 +38,7 @@ from .enums import (
     SeparatorSpacingSize,
     TextStyle,
 )
-from .flags import AttachmentFlags
+from .flags import AttachmentFlags, MediaScanFlags
 from .partial_emoji import PartialEmoji, _EmojiTag
 from .utils import MISSING, _get_as_snowflake, get_slots
 
@@ -887,6 +887,11 @@ class UnfurledMediaItem(AssetMixin):
         self._content_scan_flags: int = 0
         self._flags: int = 0
         self.attachment_id: Optional[int] = None
+
+    @property
+    def content_scan_flags(self) -> MediaScanFlags:
+        """:class:`MediaScanFlags`: The media scan flags."""
+        return MediaScanFlags._from_value(self._content_scan_flags)
 
     @property
     def flags(self) -> AttachmentFlags:
