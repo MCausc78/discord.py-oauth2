@@ -1642,15 +1642,19 @@ class HTTPClient:
 
     # Misc
 
-    def science(self, properties: Dict[str, Any], *, token: str, type: str) -> Response[None]:
+    def science(self, properties: Dict[str, Any], *, token: str, type: str, external: bool = False) -> Response[None]:
         payload = {
             'properties': properties,
             'token': token,
             'type': type,
         }
 
-        # TODO: POST /external/science
-        return self.request(Route('POST', '/science'), json=payload)
+        if external:
+            route = Route('POST', '/external/science')
+        else:
+            route = Route('POST', '/science')
+
+        return self.request(route, json=payload)
 
     def create_headless_session(
         self,

@@ -42,7 +42,7 @@ class AppIntegrationTypeConfig(TypedDict):
     oauth2_install_params: NotRequired[InstallParams]
 
 
-class BaseAppInfo(TypedDict):
+class BaseApplication(TypedDict):
     id: Snowflake
     name: str
     verify_key: str
@@ -60,7 +60,7 @@ class BaseAppInfo(TypedDict):
     role_connections_verification_url: NotRequired[Optional[str]]
 
 
-class AppInfo(BaseAppInfo):
+class Application(BaseApplication):
     owner: User
     bot_public: bool
     bot_require_code_grant: bool
@@ -76,13 +76,13 @@ class AppInfo(BaseAppInfo):
     integration_types_config: NotRequired[Dict[Literal['0', '1'], AppIntegrationTypeConfig]]
 
 
-class PartialAppInfo(BaseAppInfo, total=False):
+class PartialApplication(BaseApplication, total=False):
     hook: bool
     max_participants: int
     approximate_guild_count: int
 
 
-class GatewayAppInfo(TypedDict):
+class GatewayApplication(TypedDict):
     id: Snowflake
     name: str
     flags: int

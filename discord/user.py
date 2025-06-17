@@ -63,11 +63,12 @@ __all__ = (
 
 class _UserTag:
     __slots__ = ()
+
     id: int
 
 
 class PrimaryUserGuild:
-    """Represents a partial primary guild accessible via a user.
+    """Represents a partial primary guild accessible via an user.
 
     .. container:: operations
 
@@ -79,18 +80,21 @@ class PrimaryUserGuild:
 
             Checks if two primary user guilds are not equal.
 
-
     Attributes
     ----------
     enabled: :class:`bool`
         Whether the user is displaying their clan tag.
     guild_id: Optional[:class:`int`]
         The guild ID the clan is from.
+
         .. note::
+
             This will be ``None`` if :attr:`.enabled` is ``False``.
     tag: Optional[:class:`str`]
-        The clan tag.
+        The guild tag.
+
         .. note::
+
             This will be ``None`` if :attr:`.enabled` is ``False``.
     """
 
@@ -495,7 +499,6 @@ class ClientUser(BaseUser):
         Specifies if the user is a system user (i.e. represents Discord officially).
 
         .. versionadded:: 1.3
-
     primary_guild: Optional[:class:`PrimaryUserGuild`]
         The primary guild the user is frequently participates in.
     verified: :class:`bool`

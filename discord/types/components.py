@@ -149,7 +149,7 @@ MediaItemLoadingState = Literal[
 ]
 
 
-class MediaItemScanMetadata(TypedDict):
+class MediaScanMetadata(TypedDict):
     version: int
     flags: int  # EXPLICIT = 1 << 0, GORE = 1 << 1
 
@@ -163,7 +163,7 @@ class UnfurledMediaItem(TypedDict, total=False):
     placeholder_version: Optional[int]
     content_type: str
     loading_state: MediaItemLoadingState
-    content_scan_metadata: Optional[MediaItemScanMetadata]
+    content_scan_metadata: Optional[MediaScanMetadata]
     flags: int
     attachment_id: Snowflake
 

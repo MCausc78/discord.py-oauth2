@@ -28,11 +28,11 @@ from typing import Dict, List, Literal, TypedDict, Union
 from typing_extensions import NotRequired
 
 from .channel import ChannelTypeWithoutThread, ThreadMetadata, GuildChannel, DMChannel, GroupDMChannel
+from .entitlements import Entitlement
 from .guild import GuildFeature
 from .member import Member
 from .message import Attachment, Message
 from .role import Role
-from .sku import Entitlement
 from .snowflake import Snowflake
 from .threads import ThreadType
 from .user import User

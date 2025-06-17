@@ -217,6 +217,9 @@ class KeepAliveHandler(threading.Thread):
 
 
 class VoiceKeepAliveHandler(KeepAliveHandler):
+    if TYPE_CHECKING:
+        ws: DiscordVoiceWebSocket
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         name: str = kwargs.pop('name', f'voice-keep-alive-handler:{id(self):#x}')
         super().__init__(*args, name=name, **kwargs)
@@ -473,8 +476,8 @@ class DiscordWebSocket:
         payload = {
             'd': {
                 'token': 'Bearer ' + (self.token or ''),
-                # DEDUPE_USER_OBJECTS | PRIORITIZED_READY_PAYLOAD | AUTO_CALL_CONNECT | AUTO_LOBBY_CONNECT
-                'capabilities': (1 << 4) | (1 << 5) | (1 << 12) | (1 << 16),
+                # DEDUPE_USER_OBJECTS(4) | PRIORITIZED_READY_PAYLOAD(5) | AUTO_CALL_CONNECT(12) | AUTO_LOBBY_CONNECT(16)
+                'capabilities': 69680,
                 'properties': properties,
                 # 'compress': True,
                 # 'large_threshold': 250,
@@ -494,9 +497,9 @@ class DiscordWebSocket:
         """Sends the RESUME packet."""
         payload = {
             'd': {
-                'seq': self.sequence,
-                'session_id': self.session_id,
                 'token': 'Bearer ' + (self.token or ''),
+                'session_id': self.session_id,
+                'seq': self.sequence,
             },
             'op': self.RESUME,
         }
@@ -632,12 +635,12 @@ class DiscordWebSocket:
         return is_improper_close or code not in (1000, 4004, 4010, 4011, 4012, 4013, 4014, 4016)
 
     async def poll_event(self) -> None:
-        """Polls for a DISPATCH event and handles the general gateway loop.
+        """Polls for a DISPATCH event and handles the general Gateway loop.
 
         Raises
         ------
         ConnectionClosed
-            The websocket connection was terminated for unhandled reasons.
+            The WebSocket connection was terminated for unhandled reasons.
         """
         try:
             msg = await self.socket.receive(timeout=self._max_heartbeat_timeout)
@@ -663,10 +666,10 @@ class DiscordWebSocket:
 
             code = self._close_code or self.socket.close_code
             if self._can_handle_close():
-                _log.debug('Websocket closed with %s, attempting a reconnect.', code)
+                _log.debug('WebSocket closed with %s, attempting a reconnect.', code)
                 raise ReconnectWebSocket() from None
             else:
-                _log.debug('Websocket closed with %s, cannot reconnect.', code)
+                _log.debug('WebSocket closed with %s, cannot reconnect.', code)
                 raise ConnectionClosed(self.socket, code=code) from None
 
     async def debug_send(self, data: str, /) -> None:
@@ -710,7 +713,12 @@ class DiscordWebSocket:
 
         payload = {
             'op': self.PRESENCE,
-            'd': {'activities': activities_data, 'afk': afk, 'since': since, 'status': str(status or 'unknown')},
+            'd': {
+                'status': str(status or 'unknown'),
+                'activities': activities_data,
+                'afk': afk,
+                'since': since,
+            },
         }
 
         _log.debug('Sending %s to change presence.', payload['d'])
@@ -904,7 +912,6 @@ class DiscordVoiceWebSocket:
         _connection: VoiceConnectionState
         gateway: str
         _max_heartbeat_timeout: float
-        sequence: Optional[int]
 
     # fmt: off
     IDENTIFY            = 0
@@ -933,6 +940,8 @@ class DiscordVoiceWebSocket:
         self._keep_alive: Optional[VoiceKeepAliveHandler] = None
         self._close_code: Optional[int] = None
         self.secret_key: Optional[List[int]] = None
+        # Defaulting to -1
+        self.sequence: int = -1
         if hook:
             self._hook = hook  # type: ignore
 
@@ -975,7 +984,6 @@ class DiscordVoiceWebSocket:
         cls,
         state: VoiceConnectionState,
         *,
-        sequence: Optional[int] = None,
         resume: bool = False,
         hook: Optional[Callable[..., Coroutine[Any, Any, Any]]] = None,
     ) -> Self:
@@ -991,7 +999,6 @@ class DiscordVoiceWebSocket:
         ws = cls(socket, loop=client.loop, hook=hook)
         ws.gateway = gateway
         ws._connection = state
-        ws.sequence = sequence
         ws._max_heartbeat_timeout = 60.0
         ws.thread_id = threading.get_ident()
 
@@ -1035,6 +1042,7 @@ class DiscordVoiceWebSocket:
                 'delay': 0,
                 'ssrc': self._connection.ssrc,
             },
+            'seq': self.sequence,
         }
 
         await self.send_as_json(payload)

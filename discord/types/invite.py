@@ -27,7 +27,7 @@ from __future__ import annotations
 from typing import Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired
 
-from .appinfo import PartialAppInfo
+from .appinfo import PartialApplication
 from .channel import PartialChannel
 from .guild import InviteGuild, _GuildPreviewUnique
 from .scheduled_event import GuildScheduledEvent
@@ -62,7 +62,7 @@ class Invite(IncompleteInvite, total=False):
     inviter: PartialUser
     target_user: PartialUser
     target_type: InviteTargetType
-    target_application: PartialAppInfo
+    target_application: PartialApplication
     guild_scheduled_event: GuildScheduledEvent
     type: InviteType
 
@@ -83,7 +83,7 @@ class GatewayInviteCreate(TypedDict):
     inviter: NotRequired[PartialUser]
     target_type: NotRequired[InviteTargetType]
     target_user: NotRequired[PartialUser]
-    target_application: NotRequired[PartialAppInfo]
+    target_application: NotRequired[PartialApplication]
 
 
 class GatewayInviteDelete(TypedDict):

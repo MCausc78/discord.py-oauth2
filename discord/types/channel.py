@@ -191,7 +191,8 @@ GuildChannel = Union[
 
 class _BaseDMChannel(_BaseChannel):
     last_message_id: Optional[Snowflake]
-    recipients: List[PartialUser]
+    recipients: NotRequired[List[PartialUser]]
+    recipient_ids: NotRequired[List[Snowflake]]
 
 
 class SafetyWarning(TypedDict):

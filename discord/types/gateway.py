@@ -28,7 +28,7 @@ from typing import Dict, List, Literal, Optional, TypedDict, Tuple, Union
 from typing_extensions import NotRequired, Required
 
 from .activity import StatusType, PartialPresenceUpdate, Activity
-from .appinfo import GatewayAppInfo, PartialAppInfo
+from .appinfo import GatewayApplication, PartialApplication
 from .audit_log import AuditLogEntry
 from .automod import AutoModerationAction, AutoModerationRuleTriggerType
 from .channel import ChannelType, DMChannel, GroupDMChannel, StageInstance, VoiceChannelEffect
@@ -42,7 +42,7 @@ from .interactions import Interaction
 from .invite import InviteTargetType
 from .lobby import LobbyMember, LobbyVoiceState, Lobby
 from .member import MemberWithUser
-from .message import Message, LobbyMessage, ReactionType
+from .message import MessageActivity, MessageApplication, Message, LobbyMessage, ReactionType
 from .role import Role
 from .scheduled_event import GuildScheduledEvent
 from .settings import GatewayUserSettings, AudioContext, AudioSettings
@@ -107,7 +107,7 @@ class ReadyEvent(TypedDict):
     connection_request_data: NotRequired[ConnectionRequestData]
     # {"analytics_properties": {"handoff_type": "CREATE_NEW_CALL"}}
     av_sf_protocol_floor: int
-    application: GatewayAppInfo
+    application: GatewayApplication
     analytics_token: str
 
 
@@ -224,7 +224,7 @@ class InviteCreateEvent(TypedDict):
     inviter: NotRequired[User]
     target_type: NotRequired[InviteTargetType]
     target_user: NotRequired[User]
-    target_application: NotRequired[PartialAppInfo]
+    target_application: NotRequired[PartialApplication]
 
 
 class InviteDeleteEvent(TypedDict):
@@ -606,8 +606,6 @@ class StreamDeleteEvent(TypedDict):
 class ActivityInviteCreateEvent(TypedDict):
     message_id: NotRequired[Snowflake]
     channel_id: NotRequired[Snowflake]
-    author: NotRequired[User]  # SDK only needs author.id? Need a full payload.
-    id: Snowflake
-    application: NotRequired[IntegrationApplication]
-    activity: NotRequired[Activity]  # Assumption
-    # TODO: There might be another object merged? I can't figure out ActivityInvite::ActivityInvite constructor... They seem to be reading from uninitialized std::basic_string<T>...
+    author: NotRequired[User]  # SDK only needs author.id
+    application: NotRequired[MessageApplication]
+    activity: NotRequired[MessageActivity]

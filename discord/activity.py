@@ -32,7 +32,7 @@ from .asset import Asset
 from .color import Color
 from .enums import try_enum, ActivityType, ClientType, OperatingSystem, Status
 from .partial_emoji import PartialEmoji
-from .utils import MISSING, _get_as_snowflake, parse_time
+from .utils import MISSING, _get_as_snowflake, cached_slot_property, find, parse_time
 
 __all__ = (
     'BaseActivity',
@@ -41,6 +41,8 @@ __all__ = (
     'Game',
     'Spotify',
     'CustomActivity',
+    'HeadlessSession',
+    'ActivityInvite',
 )
 
 """If curious, this is the current schema for an activity.
@@ -92,6 +94,7 @@ t.ActivityFlags = {
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .message import MessageApplication, Message
     from .state import ConnectionState
     from .types.activity import (
         Activity as ActivityPayload,
@@ -100,10 +103,15 @@ if TYPE_CHECKING:
         ActivityAssets,
         ActivitySecrets,
     )
-    from .types.gateway import Session as SessionPayload
+    from .types.gateway import (
+        Session as SessionPayload,
+        ActivityInviteCreateEvent as ActivityInviteCreateEventPayload,
+    )
+    from .types.message import MessageActivity as MessageActivityPayload
     from .types.settings import (
         UserSettingsCustomStatus as UserSettingsCustomStatusPayload,
     )
+    from .user import User
 
 
 class BaseActivity:
@@ -1151,6 +1159,171 @@ class HeadlessSession:
             activities=tuple(create_activity(d, state) for d in data['activities']),
             state=state,
         )
+
+
+class ActivityInvite:
+    """Represents an activity invite.
+
+    Attributes
+    ----------
+    channel_id: Optional[:class:`int`]
+        The ID of the channel the message was sent in.
+    message_id: Optional[:class:`int`]
+        The ID of the message associated with this invite.
+    author: Optional[:class:`User`]
+        The user who created this invite.
+    application: Optional[:class:`MessageApplication`]
+        The application associated with this invite.
+    activity: Optional[:class:`dict`]
+        The activity associated with this invite.
+
+        This is a dictionary with the following optional keys:
+
+        - ``type``: An integer denoting the type of message activity being requested.
+        - ``party_id``: The party ID associated with the party.
+    """
+
+    __slots__ = (
+        '_state',
+        '_message',
+        'channel_id',
+        'message_id',
+        'author',
+        'application',
+        'activity',
+    )
+
+    def __init__(
+        self,
+        *,
+        channel_id: Optional[int],
+        message: Optional[Message] = None,
+        message_id: Optional[int] = None,
+        author: Optional[User] = None,
+        application: Optional[MessageApplication] = None,
+        activity: Optional[MessageActivityPayload] = None,
+        state: ConnectionState,
+    ) -> None:
+        self._state: ConnectionState = state
+        self._message: Optional[Message] = message
+        self.channel_id: Optional[int] = channel_id
+        self.message_id: Optional[int] = message_id
+        self.author: Optional[User] = author
+        self.application: Optional[MessageApplication] = application
+        self.activity: Optional[MessageActivityPayload] = activity
+
+    @cached_slot_property('_cs_message')
+    def message(self) -> Optional[Message]:
+        """Optional[:class:`~discord.Message`]: The message associated with this Rich Presence invite."""
+        return self._message or self._state._get_message(self.message_id)
+
+    @classmethod
+    def from_event(cls, data: ActivityInviteCreateEventPayload, state: ConnectionState) -> Self:
+        from .message import MessageApplication
+
+        raw_author = data.get('author')
+        raw_application = data.get('application')
+
+        if raw_author is None:
+            author = None
+        else:
+            author = state.store_user(raw_author, cache=False)
+
+        if raw_application is None:
+            application = None
+        else:
+            application = MessageApplication(data=raw_application, state=state)
+
+        return cls(
+            channel_id=_get_as_snowflake(data, 'channel_id'),
+            message=None,
+            message_id=_get_as_snowflake(data, 'message_id'),
+            author=author,
+            application=application,
+            activity=data.get('activity'),
+            state=state,
+        )
+
+    @classmethod
+    def from_message(cls, message: Message) -> Self:
+        from .member import Member
+
+        state = message._state
+
+        if isinstance(message.author, Member):
+            # Downgrade Member to User
+            author = message.author._user
+        else:
+            author = message.author
+
+        return cls(
+            channel_id=message.channel.id,
+            message=message,
+            message_id=message.id,
+            author=author,
+            application=message.application,
+            activity=message.activity,
+            state=state,
+        )
+
+    async def accept_activity_invite(self, *, session_id: Optional[str] = None) -> str:
+        """|coro|
+
+        Accepts an activity invite.
+
+        Parameters
+        ----------
+        session_id: Optional[:class:`str`]
+            The session ID. Only required if user presence
+            is unavailable (e.g. due to being not connected to Gateway).
+
+        Raises
+        ------
+        Forbidden
+            You are not allowed to accept activity invites.
+        HTTPException
+            Accepting activity invite failed.
+        """
+        activity = self.activity
+        if not activity:
+            raise TypeError('Invite does not have activity')
+
+        application = self.application
+        if not application:
+            raise TypeError('Application is unavailable for some reason')
+
+        author_id = 0
+        if session_id is None:
+            if self.author is None:
+                raise TypeError('Please set session ID manually')
+            author_id = self.author.id
+
+            r = self.author.relationship
+            if r is None:
+                raise TypeError('Cannot get user activities')
+            activities = r.activities
+
+            a = find(
+                lambda a, /: (
+                    isinstance(a, Game) and a.application_id == application.id and a.party == activity['party_id']
+                ),
+                activities,
+            )
+            if a is None:
+                raise TypeError('Invite is invalid')
+
+            assert isinstance(a, Game), 'Invite is not game invite'
+            session_id = a.session_id or ''
+
+        data = await self._state.http.get_activity_secret(
+            author_id,
+            session_id,
+            application.id,
+            1,
+            channel_id=self.channel_id or 0,
+            message_id=self.message_id or 0,
+        )
+        return data['secret']
 
 
 ActivityTypes = Union[Activity, Game, CustomActivity, Streaming, Spotify]

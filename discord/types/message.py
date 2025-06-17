@@ -97,9 +97,14 @@ class MessageActivity(TypedDict):
 
 class MessageApplication(TypedDict):
     id: Snowflake
-    description: str
-    icon: Optional[str]
+    # summary: Literal['']
     name: str
+    is_verified: bool
+    is_monetized: bool
+    is_discoverable: bool
+    icon: Optional[str]
+    description: str
+    bot: NotRequired[User]
     cover_image: NotRequired[str]
 
 
