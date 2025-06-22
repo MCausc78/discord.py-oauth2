@@ -24,7 +24,8 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Any, Dict, TypedDict
+from typing import Optional, TypedDict
+from typing_extensions import NotRequired
 
 from .connections import ConnectionType
 from .snowflake import Snowflake
@@ -44,21 +45,46 @@ from .snowflake import Snowflake
 #     parsed_launch_parameters: { titleId: "title ID", inviteToken: "invite token" },
 # }, "GAME_INVITE_CREATE", null);
 
+# And here's a real game invite:
+# {
+#   't': 'GAME_INVITE_CREATE',
+#   's': 11,
+#   'op': 0,
+#   'd': {
+#     'ttl': 900,
+#     'recipient_id': '1169421761859833997',
+#     'platform_type': 'xbox',
+#     'launch_parameters': '',
+#     'inviter_id': '1073325901825187841',
+#     'invite_id': '1385215083558342749',
+#     'fallback_url': None,
+#     'created_at': '2025-06-19T11:10:11.976253+00:00',
+#     'application_name': 'GTA 5',
+#     'application_asset': 'https://images-ext-1.discordapp.net/external/GyQicPLz_zQO15bOMtiGTtC4Kud7JjQbs1Ecuz7RrtU/https/cdn.discordapp.com/embed/avatars/1.png?format=png'
+#   }
+# }
+
 
 class GameInvite(TypedDict):
-    invite_id: Snowflake
+    ttl: int  # TTL in seconds
+    recipient_id: Snowflake
     platform_type: ConnectionType
     launch_parameters: str
-    # A JSON string, which decodes as
+    # launch_parameters is a JSON string, which decodes as
     # {
     #   titleId: undefined | null | string,
     #   inviteToken: undefined | null | string
     # }
-    installed: bool
-    joinable: bool
+    # However it is arbitrary string, meaning it should be treated as untrusted data
     inviter_id: Snowflake
+    invite_id: Snowflake
+    fallback_url: Optional[str]
     created_at: str  # ISO8601 timestamp
-    ttl: int  # TTL in seconds
-    application_asset: str
+    installed: NotRequired[bool]
+    joinable: NotRequired[bool]
     application_name: str
-    parsed_launch_parameters: Dict[str, Any]
+    application_asset: str
+
+
+class CreateGameInviteResponse(TypedDict):
+    invite_id: Snowflake

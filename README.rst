@@ -32,6 +32,13 @@ Key Features
   - Game Relationships
   - Lobbies
   - User Settings
+  - Transferring calls from Desktop/Mobile to PlayStation
+  - RPC
+    - Billing
+    - Event Subscriptions
+    - Voice Settings
+    - Activity Invites
+    - Store (Entitlements, SKUs)
 
 Installing
 ----------

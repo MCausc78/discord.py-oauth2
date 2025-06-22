@@ -141,7 +141,7 @@ class Impersonate:
         """
         raise NotImplementedError
 
-    def get_client_properties_base64(self) -> MaybeAwaitable[str]:
+    def get_client_properties_base64(self) -> MaybeAwaitable[Optional[str]]:
         """|maybecoro|
 
         Return client properties as base64-encoded :class:`str`.
@@ -363,7 +363,7 @@ class DefaultImpersonate(Impersonate):
         return self._gateway_value
 
     @copy_doc(Impersonate.get_client_properties_base64)
-    def get_client_properties_base64(self) -> MaybeAwaitable[str]:
+    def get_client_properties_base64(self) -> MaybeAwaitable[Optional[str]]:
         return self._cs_http_value_base64
 
     @copy_doc(Impersonate.get_http_user_agent)
@@ -477,7 +477,7 @@ class SimpleImpersonate(Impersonate):
         return self._gateway_value
 
     @copy_doc(Impersonate.get_client_properties_base64)
-    def get_client_properties_base64(self) -> MaybeAwaitable[str]:
+    def get_client_properties_base64(self) -> MaybeAwaitable[Optional[str]]:
         return self._cs_http_value_base64
 
     @copy_doc(Impersonate.get_http_user_agent)

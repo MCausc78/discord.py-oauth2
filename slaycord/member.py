@@ -59,9 +59,11 @@ if TYPE_CHECKING:
     from .activity import ActivityTypes
     from .channel import DMChannel, GroupChannel, VoiceChannel, StageChannel
     from .flags import PublicUserFlags
+    from .game_relationship import GameRelationship
     from .guild import UserGuild, Guild
     from .message import Message
     from .presences import RawPresenceUpdateEvent
+    from .relationship import Relationship
     from .role import Role
     from .state import ConnectionState
     from .types.gateway import GuildMemberUpdateEvent
@@ -311,12 +313,26 @@ class Member(slaycord.abc.Messageable, _UserTag):
         dm_channel: Optional[DMChannel]
         create_dm: Callable[[], Awaitable[DMChannel]]
         mutual_guilds: List[Guild]
+        mutual_groups: List[GroupChannel]
         public_flags: PublicUserFlags
         banner: Optional[Asset]
         accent_color: Optional[Color]
         accent_colour: Optional[Color]
         avatar_decoration: Optional[Asset]
         avatar_decoration_sku_id: Optional[int]
+
+        game_relationship: Optional[GameRelationship]
+        relationship: Optional[Relationship]
+        is_friend: Callable[[], bool]
+        is_game_friend: Callable[[], bool]
+        is_blocked: Callable[[], bool]
+        is_ignored: Callable[[], bool]
+        block: Callable[[], Awaitable[None]]
+        unblock: Callable[[], Awaitable[None]]
+        remove_friend: Callable[[], Awaitable[None]]
+        remove_game_friend: Callable[[], Awaitable[None]]
+        send_friend_request: Callable[[], Awaitable[None]]
+        send_game_friend_request: Callable[[], Awaitable[None]]
 
     def __init__(self, *, data: MemberWithUserPayload, guild: Union[UserGuild, Guild], state: ConnectionState):
         self._state: ConnectionState = state

@@ -476,7 +476,10 @@ class DiscordWebSocket:
         payload = {
             'd': {
                 'token': 'Bearer ' + (self.token or ''),
-                # DEDUPE_USER_OBJECTS(4) | PRIORITIZED_READY_PAYLOAD(5) | AUTO_CALL_CONNECT(12) | AUTO_LOBBY_CONNECT(16)
+                # DEDUPE_USER_OBJECTS(4)
+                # | PRIORITIZED_READY_PAYLOAD(5)
+                # | AUTO_CALL_CONNECT(12)
+                # | AUTO_LOBBY_CONNECT(16)
                 'capabilities': 69680,
                 'properties': properties,
                 # 'compress': True,

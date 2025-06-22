@@ -51,7 +51,7 @@ from .channel import PartialMessageable
 from .components import _component_factory
 from .embeds import Embed
 from .emoji import Emoji
-from .enums import try_enum, ApplicationDisclosureType, ChannelType, InteractionType, MessageReferenceType, MessageType
+from .enums import try_enum, AppDisclosureType, ChannelType, InteractionType, MessageReferenceType, MessageType
 from .errors import HTTPException
 from .file import File
 from .flags import MessageFlags, AttachmentFlags
@@ -1549,7 +1549,7 @@ class Message(PartialMessage, Hashable):
         The message snapshots attached to this message.
 
         .. versionadded:: 2.5
-    disclosure_type: Optional[:class:`ApplicationDisclosureType`]
+    disclosure_type: Optional[:class:`AppDisclosureType`]
         The message disclosure type.
     metadata: Optional[Dict[:class:`str`, :class:`str`]]
         The message metadata.
@@ -1742,13 +1742,13 @@ class Message(PartialMessage, Hashable):
         else:
             self.purchase_notification = PurchaseNotification(purchase_notification)
 
-        self.disclosure_type: Optional[ApplicationDisclosureType] = None
+        self.disclosure_type: Optional[AppDisclosureType] = None
         try:
             disclosure_type = data['disclosure_type']  # pyright: ignore[reportTypedDictNotRequiredAccess]
         except KeyError:
             pass
         else:
-            self.disclosure_type = try_enum(ApplicationDisclosureType, disclosure_type)
+            self.disclosure_type = try_enum(AppDisclosureType, disclosure_type)
 
         self.metadata: Optional[Dict[str, str]] = data.get('metadata')
         self.recipient_id: Optional[int] = _get_as_snowflake(data, 'recipient_id')

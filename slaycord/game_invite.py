@@ -69,9 +69,17 @@ class GameInvite(Hashable):
         The ID of the game invite.
     created_at: :class:`~datetime.datetime`
         When the game invite was created.
+    ttl: :class:`int`
+        Duration in seconds when the game invite expires in.
+    inviter_id: :class:`int`
+        The ID of the user that invited you to game.
+    recipient_id: :class:`int`
+        The ID of the user that received the game invite.
     platform_type: :class:`ConnectionType`
         The platform type. Currently only :attr:`~ConnectionType.xbox` is permitted here.
-    launch_parameters: Dict[:class:`str`, Any]
+    launch_parameters: :class:`str`
+        The launch parameters, typically a JSON string.
+    parsed_launch_parameters: Dict[:class:`str`, Any]
         A dictionary representing the parameters for launching game.
         It contains the following optional and nullable keys:
 
@@ -81,11 +89,11 @@ class GameInvite(Hashable):
         Whether the game is installed.
     joinable: :class:`bool`
         Whether the game is joinable.
-    inviter_id: :class:`int`
-        The ID of the user that invited you to game.
-    application_asset_url: :class:`str`
-        The game's asset URL.
-    application_name: :class:`str`
+    fallback_url: Optional[:class:`str`]
+        The URL for installing the game.
+    game_icon_url: :class:`str`
+        The game's icon URL.
+    game_name: :class:`str`
         The game's name.
     """
 
@@ -93,39 +101,52 @@ class GameInvite(Hashable):
         '_state',
         'id',
         'created_at',
+        'ttl',
+        'inviter_id',
+        'recipient_id',
         'platform_type',
         'launch_parameters',
+        'parsed_launch_parameters',
         'installed',
         'joinable',
-        'inviter_id',
-        'application_asset_url',
-        'application_name',
+        'fallback_url',
+        'game_icon_url',
+        'game_name',
     )
 
     def __init__(self, *, data: GameInvitePayload, state: ConnectionState) -> None:
         self._state: ConnectionState = state
         self.id: int = int(data['invite_id'])
         self.created_at: datetime = parse_time(data['created_at'])
+        self.ttl: int = data['ttl']
+        self.inviter_id: int = int(data['inviter_id'])
+        self.recipient_id: int = int(data['recipient_id'])
         self.platform_type: ConnectionType = try_enum(ConnectionType, data['platform_type'])
 
+        self.launch_parameters: str = data['launch_parameters']
         try:
-            self.launch_parameters: Dict[str, Any] = _from_json(data['launch_parameters'])
+            self.parsed_launch_parameters: Dict[str, Any] = _from_json(self.launch_parameters)
         except Exception:
-            self.launch_parameters = {}
+            self.parsed_launch_parameters = {}
 
-        self.installed: bool = data['installed']
-        self.joinable: bool = data['joinable']
-        self.inviter_id: int = int(data['inviter_id'])
-        self.application_asset_url: str = data['application_asset']
-        self.application_name: str = data['application_name']
+        self.installed: bool = data.get('installed', False)
+        self.joinable: bool = data.get('joinable', False)
+        self.fallback_url: Optional[str] = data.get('fallback_url')
+        self.game_icon_url: str = data['application_asset']
+        self.game_name: str = data['application_name']
 
     def __repr__(self) -> str:
-        return f'<GameInvite id={self.id} platform_type={self.platform_type!r} inviter_id={self.inviter_id} application_name={self.application_name!r}>'
+        return f'<GameInvite id={self.id} platform_type={self.platform_type!r} inviter_id={self.inviter_id} game_name={self.game_name!r}>'
 
     def __str__(self) -> str:
-        return f'Invite to {self.application_name} on {self.platform_type.value.capitalize()}'
+        return f'Invite to {self.game_name} on {self.platform_type.value.capitalize()}'
 
     @property
     def inviter(self) -> Optional[User]:
         """Optional[:class:`User`]: The user that created this invite."""
         return self._state.get_user(self.inviter_id)
+
+    @property
+    def recipient(self) -> Optional[User]:
+        """Optional[:class:`User`]: The user that received this game invite."""
+        return self._state.get_user(self.recipient_id)

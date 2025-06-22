@@ -84,42 +84,6 @@ class VoiceIOSettings(TypedDict):
     volume: float  # I assume thats 0-200
 
 
-"""
-# function et(e) {
-#     let t = E.Z.getSettings()
-#         , n = e => Object.values(e).sort( (e, t) => e.index - t.index).map(e => ({
-#         id: e.id,
-#         name: e.name
-#     })), r = e(t);
-#     return {
-#         input: {
-#             available_devices: n(E.Z.getInputDevices()),
-#             device_id: t.inputDeviceId,
-#             volume: t.inputVolume
-#         },
-#         output: {
-#             available_devices: n(E.Z.getOutputDevices()),
-#             device_id: t.outputDeviceId,
-#             volume: t.outputVolume
-#         },
-#         mode: {
-#             type: t.mode,
-#             auto_threshold: t.modeOptions.autoThreshold,
-#             threshold: t.modeOptions.threshold,
-#             shortcut: r,
-#             delay: t.modeOptions.delay
-#         },
-#         automatic_gain_control: t.automaticGainControl,
-#         echo_cancellation: t.echoCancellation,
-#         noise_suppression: t.noiseSuppression,
-#         qos: t.qos,
-#         silence_warning: t.silenceWarning,
-#         deaf: t.deaf,
-#         mute: t.mute
-#     }
-# }
-"""
-
 ShortcutKeyComboType = Literal[
     0,  # KEYBOARD_KEY
     1,  # MOUSE_BUTTON

@@ -35,10 +35,11 @@ if TYPE_CHECKING:
 __all__ = (
     'Enum',
     'ActivityType',
+    'AppCommandHandler',
     'AppCommandPermissionType',
     'AppCommandOptionType',
     'AppCommandType',
-    'ApplicationDisclosureType',
+    'AppDisclosureType',
     'AudioContext',
     'AuditLogAction',
     'AuditLogActionCategory',
@@ -62,6 +63,12 @@ __all__ = (
     'ForumLayoutType',
     'ForumOrderType',
     'GiftStyle',
+    'GuildBadgeType',
+    'GuildVisibility',
+    'HarvestBackendState',
+    'HarvestBackendType',
+    'HarvestState',
+    'HarvestStatus',
     'InteractionResponseType',
     'InteractionType',
     'InviteTarget',
@@ -240,6 +247,11 @@ class ActivityType(Enum):
         return self.value
 
 
+class AppCommandHandler(Enum):
+    app_handler = 1
+    discord_launch_activity = 2
+
+
 class AppCommandPermissionType(Enum):
     role = 1
     user = 2
@@ -261,12 +273,15 @@ class AppCommandOptionType(Enum):
 
 
 class AppCommandType(Enum):
+    unknown = -1
+
     chat_input = 1
     user = 2
     message = 3
+    primary_entry_point = 4
 
 
-class ApplicationDisclosureType(Enum):
+class AppDisclosureType(Enum):
     unspecified = 0
     ip_location = 1
     display_advertisements = 2
@@ -732,6 +747,37 @@ class GuildVisibility(Enum, comparable=True):
     public = 1
     restricted = 2
     public_with_recruitment = 3
+
+
+class HarvestBackendState(Enum, comparable=True):
+    initial = 'INITIAL'
+    running = 'RUNNING'
+    extracted = 'EXTRACTED'
+
+
+class HarvestBackendType(Enum, comparable=True):
+    users = 'users'
+    analytics = 'analytics'
+    activities_e = 'activities_e'
+    activities_w = 'activities_w'
+    messages = 'messages'
+    hubspot = 'hubspot'
+    guilds = 'guilds'
+    ads = 'ads'
+
+
+class HarvestState(Enum, comparable=True):
+    incomplete = 'INCOMPLETE'
+    delivered = 'DELIVERED'
+    canceled = 'CANCELLED'
+
+
+class HarvestStatus(Enum, comparable=True):
+    queued = 0
+    running = 1
+    failed = 2
+    completed = 3
+    canceled = 4
 
 
 class InteractionResponseType(Enum):
