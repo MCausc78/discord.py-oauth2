@@ -63,6 +63,7 @@ from .errors import *
 from .flags import ApplicationFlags, Intents
 from .gateway import *
 from .guild import UserGuild, Guild
+from .harvest import Harvest
 from .http import HTTPClient
 from .invite import Invite
 from .lobby import Lobby
@@ -2573,6 +2574,54 @@ class Client(Dispatcher):
         data = await self.http.get_template(code)
         return Template(data=data, state=self._connection)
 
+    # Harvest
+    async def create_harvest(self, email: str) -> Harvest:
+        """|coro|
+
+        Creates an user data harvest request.
+
+        Parameters
+        ----------
+        email: :class:`str`
+            The email to send harvest to.
+
+        Raises
+        ------
+        Forbidden
+            You are not allowed to create the user data harvest request.
+        HTTPException
+            Creating the user data harvest request failed.
+
+        Returns
+        -------
+        :class:`Harvest`
+            The created harvest.
+        """
+
+        data = await self.http.create_user_harvest(email=email)
+        return Harvest(data=data)
+
+    async def fetch_harvest(self) -> Optional[Harvest]:
+        """|coro|
+
+        Retrieves user's harvest, if any.
+
+        Raises
+        ------
+        Forbidden
+            You are not allowed to retrieve user's harvest.
+        HTTPException
+            Getting the user's harvest failed.
+
+        Returns
+        -------
+        Optional[:class:`Harvest`]
+            The user's harvest.
+        """
+        data = await self.http.get_user_harvest()
+        if data:
+            return Harvest(data=data)
+
     # Invite management
 
     async def fetch_invite(
@@ -2689,6 +2738,63 @@ class Client(Dispatcher):
         )
 
         return Lobby(data=data, state=state)
+
+    # Game Invites
+    async def create_game_invite(
+        self,
+        recipient: Snowflake,
+        *,
+        launch_parameters: str,  # max 8192 characters
+        game_name: str,  # 2-128 characters
+        game_icon_url: str,  # max 2048 characters
+        fallback_url: Optional[str] = MISSING,
+        ttl: Optional[int] = MISSING,  # 300-86400, default 900
+    ) -> int:
+        """|coro|
+
+        Creates a game invite for specified user.
+
+        The Bearer token must be associated with Xbox application (ID: 622174530214821906).
+
+        Parameters
+        ----------
+        recipient: :class:`User`
+            The user to create game invite for.
+        launch_parameters: :class:`str`
+            The parameters for launching game. Typically this is a JSON string containing two optional and nullable string keys:
+
+            - ``titleId``: The ID of the game invite title.
+            - ``inviteToken``: The token of the game invite.
+        game_name: :class:`str`
+            The name of the game.
+        game_icon_url: :class:`str`
+            The URL of the game icon.
+        fallback_url: Optional[:class:`str`]
+            The URL for installing the game.
+        ttl: Optional[:class:`int`]
+            Duration in seconds when game invite should expire in. Must be between 300 (5 minutes) and 86400 (1 day). Defaults to 900 (15 minutes).
+
+        Raises
+        ------
+        Forbidden
+            You are not allowed to send game invite to this user.
+        HTTPException
+            Sending the game invite failed.
+
+        Returns
+        -------
+        :class:`int`
+            The ID of the game invite.
+        """
+        data = await self.http.create_game_invite(
+            recipient.id,
+            launch_parameters=launch_parameters,
+            application_name=game_name,
+            application_icon_url=game_icon_url,
+            fallback_url=fallback_url,
+            ttl=ttl,
+        )
+        return int(data['invite_id'])
 
     # Store
     async def fetch_skus(self) -> List[SKU]:

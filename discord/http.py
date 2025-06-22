@@ -83,11 +83,13 @@ if TYPE_CHECKING:
         activity,
         billing,
         channel,
-        command,
+        commands,
         connections,
         entitlements,
         gateway,
+        game_invite,
         guild,
+        harvest,
         invite,
         lobby,
         member,
@@ -1125,11 +1127,12 @@ class HTTPClient:
 
         return self.request(Route('GET', '/invites/{invite_id}', invite_id=invite_id), params=params)
 
-    # Application commands (guild)
+    # Application commands
+    # TODO: Global app commands (excluding deleting and editing ofc)
 
-    def get_guild_commands(
+    def get_guild_application_commands(
         self, application_id: Snowflake, guild_id: Snowflake
-    ) -> Response[List[command.ApplicationCommand]]:
+    ) -> Response[List[commands.ApplicationCommand]]:
         r = Route(
             'GET',
             '/applications/{application_id}/guilds/{guild_id}/commands',
@@ -1138,12 +1141,12 @@ class HTTPClient:
         )
         return self.request(r)
 
-    def get_guild_command(
+    def get_guild_application_command(
         self,
         application_id: Snowflake,
         guild_id: Snowflake,
         command_id: Snowflake,
-    ) -> Response[command.ApplicationCommand]:
+    ) -> Response[commands.ApplicationCommand]:
         r = Route(
             'GET',
             '/applications/{application_id}/guilds/{guild_id}/commands/{command_id}',
@@ -1153,12 +1156,12 @@ class HTTPClient:
         )
         return self.request(r)
 
-    def upsert_guild_command(
+    def create_guild_application_command(
         self,
         application_id: Snowflake,
         guild_id: Snowflake,
-        payload: Dict[str, Any],
-    ) -> Response[command.ApplicationCommand]:
+        payload: commands.ApplicationCommandCreateRequestBody,
+    ) -> Response[commands.ApplicationCommand]:
         r = Route(
             'POST',
             '/applications/{application_id}/guilds/{guild_id}/commands',
@@ -1172,14 +1175,8 @@ class HTTPClient:
         application_id: Snowflake,
         guild_id: Snowflake,
         command_id: Snowflake,
-        payload: Dict[str, Any],
-    ) -> Response[command.ApplicationCommand]:
-        valid_keys = (
-            'name',
-            'description',
-            'options',
-        )
-        payload = {k: v for k, v in payload.items() if k in valid_keys}
+        payload: commands.ApplicationCommandUpdateRequestBody,
+    ) -> Response[commands.ApplicationCommand]:
         r = Route(
             'PATCH',
             '/applications/{application_id}/guilds/{guild_id}/commands/{command_id}',
@@ -1189,7 +1186,7 @@ class HTTPClient:
         )
         return self.request(r, json=payload)
 
-    def delete_guild_command(
+    def delete_guild_application_command(
         self,
         application_id: Snowflake,
         guild_id: Snowflake,
@@ -1204,12 +1201,12 @@ class HTTPClient:
         )
         return self.request(r)
 
-    def bulk_upsert_guild_commands(
+    def bulk_upsert_guild_application_commands(
         self,
         application_id: Snowflake,
         guild_id: Snowflake,
-        payload: List[Dict[str, Any]],
-    ) -> Response[List[command.ApplicationCommand]]:
+        payload: List[commands.UpdateApplicationCommand],
+    ) -> Response[List[commands.ApplicationCommand]]:
         r = Route(
             'PUT',
             '/applications/{application_id}/guilds/{guild_id}/commands',
@@ -1218,11 +1215,11 @@ class HTTPClient:
         )
         return self.request(r, json=payload)
 
-    def get_guild_application_command_permissions(
+    def get_guild_application_commands_permissions(
         self,
         application_id: Snowflake,
         guild_id: Snowflake,
-    ) -> Response[List[command.GuildApplicationCommandPermissions]]:
+    ) -> Response[List[commands.GuildApplicationCommandPermissions]]:
         r = Route(
             'GET',
             '/applications/{application_id}/guilds/{guild_id}/commands/permissions',
@@ -1231,12 +1228,12 @@ class HTTPClient:
         )
         return self.request(r)
 
-    def get_application_command_permissions(
+    def get_guild_application_command_permissions(
         self,
         application_id: Snowflake,
         guild_id: Snowflake,
         command_id: Snowflake,
-    ) -> Response[command.GuildApplicationCommandPermissions]:
+    ) -> Response[commands.GuildApplicationCommandPermissions]:
         r = Route(
             'GET',
             '/applications/{application_id}/guilds/{guild_id}/commands/{command_id}/permissions',
@@ -1453,7 +1450,7 @@ class HTTPClient:
             )
         )
 
-    # OAuth2 flow
+    # Authentication
     def unmerge_provisional_account(
         self,
         *,
@@ -1502,6 +1499,29 @@ class HTTPClient:
     # external_auth_token=balls
     # external_auth_type=UNITY_SERVICES_ID_TOKEN
 
+    # Calls
+    def get_ringability(self, channel_id: Snowflake) -> Response[channel.CallEligibility]:
+        return self.request(Route('GET', '/channels/{channel_id}/call', channel_id=channel_id))
+
+    def ring(self, channel_id: Snowflake, *recipients: Snowflake) -> Response[None]:
+        payload = {'recipients': recipients or None}
+        return self.request(Route('POST', '/channels/{channel_id}/call/ring', channel_id=channel_id), json=payload)
+
+    def stop_ringing(self, channel_id: Snowflake, *recipients: Snowflake) -> Response[None]:
+        payload = {'recipients': recipients}
+        return self.request(Route('POST', '/channels/{channel_id}/call/stop-ringing', channel_id=channel_id), json=payload)
+
+    def change_call_voice_region(self, channel_id: int, voice_region: str) -> Response[None]:
+        payload = {'region': voice_region}
+        return self.request(Route('PATCH', '/channels/{channel_id}/call', channel_id=channel_id), json=payload)
+
+    def get_user_harvest(self) -> Response[Optional[Union[Literal[''], harvest.Harvest]]]:
+        return self.request(Route('GET', '/users/@me/harvest'))
+
+    def create_user_harvest(self, *, email: str) -> Response[harvest.Harvest]:
+        payload = {'email': email}
+        return self.request(Route('POST', '/users/@me/harvest'), json=payload)
+
     # Lobbies
     def create_or_join_lobby(
         self,
@@ -1531,22 +1551,6 @@ class HTTPClient:
         route = Route('PATCH', '/lobbies/{lobby_id}/channel-linking', lobby_id=lobby_id)
 
         return self.request(route, json=payload)
-
-    # Calls
-    def get_ringability(self, channel_id: Snowflake) -> Response[channel.CallEligibility]:
-        return self.request(Route('GET', '/channels/{channel_id}/call', channel_id=channel_id))
-
-    def ring(self, channel_id: Snowflake, *recipients: Snowflake) -> Response[None]:
-        payload = {'recipients': recipients or None}
-        return self.request(Route('POST', '/channels/{channel_id}/call/ring', channel_id=channel_id), json=payload)
-
-    def stop_ringing(self, channel_id: Snowflake, *recipients: Snowflake) -> Response[None]:
-        payload = {'recipients': recipients}
-        return self.request(Route('POST', '/channels/{channel_id}/call/stop-ringing', channel_id=channel_id), json=payload)
-
-    def change_call_voice_region(self, channel_id: int, voice_region: str) -> Response[None]:
-        payload = {'region': voice_region}
-        return self.request(Route('PATCH', '/channels/{channel_id}/call', channel_id=channel_id), json=payload)
 
     # Relationships
     def get_relationships(self, *, with_implicit: Optional[bool] = None) -> Response[List[user.Relationship]]:
@@ -1639,6 +1643,32 @@ class HTTPClient:
 
     # /api/v9/billing/popup-bridge/{payment_source_type}/callback/{state}/{response_type}
     # redirects to https://discord.com/billing/popup-bridge/callback?path=/billing/popup-bridge/{payment_source_type}/callback/{state}/{response_type}&state={state}&response_type={response_type}&payment_source_type={payment_source_type}'
+
+    # Game Invites
+    def create_game_invite(
+        self,
+        recipient_id: Snowflake,
+        *,
+        launch_parameters: str,  # max 8192 characters
+        application_name: str,  # 2-128 characters
+        application_icon_url: str,  # max 2048 characters
+        fallback_url: Optional[str] = MISSING,
+        ttl: Optional[int] = MISSING,  # 300-86400, default 900
+    ) -> Response[game_invite.CreateGameInviteResponse]:
+        payload: Dict[str, Any] = {
+            'recipient_id': str(recipient_id),
+            'launch_parameters': launch_parameters,
+            'application_name': application_name,
+            'application_asset': application_icon_url,
+        }
+
+        if fallback_url is not MISSING:
+            payload['fallback_url'] = fallback_url
+
+        if ttl is not MISSING:
+            payload['ttl'] = ttl
+
+        return self.request(Route('POST', '/game-invite/@me'), json=payload)
 
     # Misc
 

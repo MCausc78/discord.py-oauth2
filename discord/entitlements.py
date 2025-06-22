@@ -235,7 +235,7 @@ class Entitlement(Hashable):
             Consuming the entitlement failed.
         """
 
-        await self._state.http.consume_entitlement(self.application_id, self.id)
+        await self._state.http.consume_application_entitlement(self.application_id, self.id)
 
     async def delete(self) -> None:
         """|coro|
@@ -250,7 +250,7 @@ class Entitlement(Hashable):
             Deleting the entitlement failed.
         """
 
-        await self._state.http.delete_entitlement(self.application_id, self.id)
+        await self._state.http.delete_application_entitlement(self.application_id, self.id)
 
 
 class TenantMetadata:

@@ -33,6 +33,7 @@ from .channel import *
 from .calls import *
 from .client import *
 from .color import *
+from .commands import *
 from .components import *
 from .connections import *
 from .embeds import *
@@ -44,6 +45,7 @@ from .flags import *
 from .game_invite import *
 from .game_relationship import *
 from .guild import *
+from .harvest import *
 from .impersonate import *
 from .integrations import *
 from .invite import *

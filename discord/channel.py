@@ -1991,6 +1991,9 @@ class GroupChannel(discord.abc.PrivateChannel, discord.abc.Connectable, Hashable
     def _add_call(self, **kwargs) -> GroupCall:
         return GroupCall(**kwargs)
 
+    async def _get_channel(self) -> GroupChannel:
+        return self
+
     def __str__(self) -> str:
         if self.name:
             return self.name

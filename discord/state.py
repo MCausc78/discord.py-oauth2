@@ -127,11 +127,25 @@ async def logging_coroutine(coroutine: Coroutine[Any, Any, T], *, info: str) -> 
         _log.exception('Exception occurred during %s', info)
 
 
-class ConnectionState(Generic[ClientT]):
+class BaseConnectionState:
+    def __init__(
+        self,
+        *,
+        dispatch: Callable[..., Any],
+        http: HTTPClient,
+        **options: Any,
+    ) -> None:
+        # Set later, after Client.login
+        self.loop: asyncio.AbstractEventLoop = MISSING
+        self.http: HTTPClient = http
+        self.dispatch: Callable[..., Any] = dispatch
+
+
+class ConnectionState(BaseConnectionState, Generic[ClientT]):
     if TYPE_CHECKING:
         _get_websocket: Callable[[], DiscordWebSocket]
         _get_client: Callable[[], ClientT]
-        _parsers: Dict[str, Callable[[Dict[str, Any]], None]]
+        _parsers: Dict[str, Callable[[Any], None]]
 
     def __init__(
         self,
@@ -142,9 +156,7 @@ class ConnectionState(Generic[ClientT]):
         http: HTTPClient,
         **options: Any,
     ) -> None:
-        # Set later, after Client.login
-        self.loop: asyncio.AbstractEventLoop = MISSING
-        self.http: HTTPClient = http
+        BaseConnectionState.__init__(self, dispatch=dispatch, http=http)
         self.max_messages: Optional[int] = options.get('max_messages', 1000)
         if self.max_messages is not None and self.max_messages <= 0:
             self.max_messages = 1000
@@ -153,7 +165,6 @@ class ConnectionState(Generic[ClientT]):
         if self.max_lobby_messages is not None and self.max_lobby_messages <= 0:
             self.max_lobby_messages = 1000
 
-        self.dispatch: Callable[..., Any] = dispatch
         self.handlers: Dict[str, Callable[..., Any]] = handlers
         self.hooks: Dict[str, Callable[..., Coroutine[Any, Any, Any]]] = hooks
         self.application_id: Optional[int] = _get_as_snowflake(options, 'application_id')
@@ -168,7 +179,7 @@ class ConnectionState(Generic[ClientT]):
 
         self.allowed_mentions: Optional[AllowedMentions] = allowed_mentions
 
-        activities = options.get('activities', [])
+        activities = options.get('activities', ())
         if not activities:
             activity = options.get('activity')
             if activity is not None:
@@ -179,7 +190,7 @@ class ConnectionState(Generic[ClientT]):
 
         activities = [activity.to_dict() for activity in activities]
 
-        status = options.get('status', None)
+        status = options.get('status')
         if status:
             if status is Status.offline:
                 status = 'invisible'
@@ -272,15 +283,18 @@ class ConnectionState(Generic[ClientT]):
         # extra dict to look up private channels by user id
         self._private_channels_by_user: Dict[int, Union[DMChannel, EphemeralDMChannel]] = {}
 
+        # self._messages: Optional[Deque[Message]]
+        # self._lobby_messages: Optional[Deque[LobbyMessage]]
+
         if self.max_messages is not None:
             self._messages: Optional[Deque[Message]] = deque(maxlen=self.max_messages)
         else:
-            self._messages: Optional[Deque[Message]] = None
+            self._messages = None
 
         if self.max_lobby_messages is not None:
             self._lobby_messages: Optional[Deque[LobbyMessage]] = deque(maxlen=self.max_lobby_messages)
         else:
-            self._lobby_messages: Optional[Deque[LobbyMessage]] = None
+            self._lobby_messages = None
 
     def call_handlers(self, key: str, *args: Any, **kwargs: Any) -> None:
         try:
@@ -528,7 +542,7 @@ class ConnectionState(Generic[ClientT]):
     def _get_message(self, msg_id: Optional[int]) -> Optional[Message]:
         return find(lambda m: m.id == msg_id, reversed(self._messages)) if self._messages else None
 
-    def _get_lobby_message(self, msg_id: Optional[int]) -> Optional[Message]:
+    def _get_lobby_message(self, msg_id: Optional[int]) -> Optional[LobbyMessage]:
         return find(lambda m: m.id == msg_id, reversed(self._lobby_messages)) if self._lobby_messages else None
 
     def _add_guild_from_data(self, data: GuildPayload) -> Guild:
@@ -1161,31 +1175,49 @@ class ConnectionState(Generic[ClientT]):
                 self.dispatch('raw_thread_delete', RawThreadDeleteEvent._from_thread(thread))
 
     def parse_channel_update(self, data: gw.ChannelUpdateEvent) -> None:
-        channel_type = try_enum(ChannelType, data.get('type'))
+        channel_type = data['type']
         channel_id = int(data['id'])
-        if channel_type is ChannelType.group:
+
+        if channel_type == ChannelType.group.value:
             channel = self._get_private_channel(channel_id)
-            if channel is not None:
-                old_channel = copy(channel)
-                # the channel is a GroupChannel rather than PrivateChannel
-                channel._update(data)  # type: ignore
-                self.dispatch('private_channel_update', old_channel, channel)
+            if channel is None:
+                _log.warning('CHANNEL_UPDATE referencing an unknown channel ID: %s. Caching.', channel_id)
+
+                channel = GroupChannel(me=self.user, state=self, data=data)  # type: ignore
+                self._add_private_channel(channel)
                 return
-            else:
-                _log.warning('CHANNEL_UPDATE referencing an unknown channel ID: %s. Discarding.', channel_id)
+
+            old_channel = copy(channel)
+            # The channel is a GroupChannel rather than PrivateChannel
+            channel._update(data)  # type: ignore
+            self.dispatch('private_channel_update', old_channel, channel)
+            return
 
         guild_id = _get_as_snowflake(data, 'guild_id')
+        if guild_id is None:
+            # Shouldn't be here
+            _log.warning('CHANNEL_UPDATE referencing a private channel ID: %s. Discarding.', channel_id)
+            return
+
         guild = self._get_guild(guild_id)
-        if guild is not None:
-            channel = guild.get_channel(channel_id)
-            if channel is not None:
-                old_channel = copy(channel)
-                channel._update(guild, data)  # type: ignore # the data payload varies based on the channel type.
-                self.dispatch('guild_channel_update', old_channel, channel)
-            else:
-                _log.warning('CHANNEL_UPDATE referencing an unknown channel ID: %s. Discarding.', channel_id)
-        else:
+        if guild is None:
             _log.warning('CHANNEL_UPDATE referencing an unknown guild ID: %s. Discarding.', guild_id)
+            return
+
+        channel = guild.get_channel(channel_id)
+        if channel is None:
+            # This can and will happen for TextChannel's if you have just guilds + voice scopes
+
+            _log.warning('CHANNEL_UPDATE referencing an unknown channel ID: %s. Caching.', channel_id)
+
+            cls, _ = _channel_factory(channel_type)
+            channel = cls(state=state, guild=guild, data=data)  # type: ignore
+            guild._add_channel(channel)  # type: ignore
+            return
+
+        old_channel = copy(channel)
+        channel._update(guild, data)  # type: ignore # the data payload varies based on the channel type.
+        self.dispatch('guild_channel_update', old_channel, channel)
 
     def parse_channel_update_partial(self, data: gw.ChannelUpdatePartialEvent) -> None:
         channel_id = int(data['id'])
@@ -1236,6 +1268,7 @@ class ConnectionState(Generic[ClientT]):
 
     def parse_channel_pins_update(self, data: gw.ChannelPinsUpdateEvent) -> None:
         channel_id = int(data['channel_id'])
+
         try:
             guild = self._get_guild(int(data['guild_id']))  # pyright: ignore[reportTypedDictNotRequiredAccess]
         except KeyError:
@@ -1256,9 +1289,10 @@ class ConnectionState(Generic[ClientT]):
             self.dispatch('guild_channel_pins_update', channel, last_pin)
 
     def parse_channel_recipient_add(self, data: gw.ChannelRecipientEvent) -> None:
-        channel = self._get_private_channel(int(data['channel_id']))
+        channel_id = int(data['channel_id'])
+        channel = self._get_private_channel(channel_id)
         if channel is None:
-            _log.warning('CHANNEL_RECIPIENT_ADD referencing an unknown channel ID: %s. Discarding.', data['channel_id'])
+            _log.warning('CHANNEL_RECIPIENT_ADD referencing an unknown channel ID: %s. Discarding.', channel_id)
             return
 
         user = self.store_user(data['user'])
@@ -1268,7 +1302,9 @@ class ConnectionState(Generic[ClientT]):
         self.dispatch('group_join', channel, user)
 
     def parse_channel_recipient_remove(self, data: gw.ChannelRecipientEvent) -> None:
-        channel = self._get_private_channel(int(data['channel_id']))
+        channel_id = int(data['channel_id'])
+        channel = self._get_private_channel(channel_id)
+
         if channel is None:
             _log.warning('CHANNEL_RECIPIENT_REMOVE referencing an unknown channel ID: %s. Discarding.', data['channel_id'])
             return
@@ -1654,10 +1690,13 @@ class ConnectionState(Generic[ClientT]):
             self.dispatch('guild_unavailable', guild)
             return
 
-        # do a cleanup of the messages cache
+        # Do a cleanup of the messages cache
         if self._messages is not None:
-            self._messages: Optional[Deque[Message]] = deque(
-                (msg for msg in self._messages if msg.guild != guild), maxlen=self.max_messages
+            self._messages = deque((msg for msg in self._messages if msg.guild != guild), maxlen=self.max_messages)
+
+        if self._lobby_messages is not None:
+            self._lobby_messages = deque(
+                (msg for msg in self._lobby_messages if msg.guild != guild), maxlen=self.max_lobby_messages
             )
 
         self._remove_guild(guild)
@@ -2072,6 +2111,9 @@ class ConnectionState(Generic[ClientT]):
         self._call_message_cache.pop(call._message_id, None)
         self.dispatch('call_delete', call)
 
+    # GUILD_RING_START/GUILD_RING_STOP:
+    # {"channel_id": "channel ID", "guild_id": "guild ID", "ringing": ["user ID"]}
+
     def parse_voice_state_update(self, data: gw.VoiceStateUpdateEvent) -> None:
         guild_id = _get_as_snowflake(data, 'guild_id')
         guild = self._get_guild(guild_id)
@@ -2245,6 +2287,11 @@ class ConnectionState(Generic[ClientT]):
         except KeyError:
             _log.warning('LOBBY_DELETE referencing an unknown lobby ID: %s. Discarding.', lobby_id)
         else:
+            if self._lobby_messages is not None:
+                self._lobby_messages = deque(
+                    (msg for msg in self._lobby_messages if msg.lobby_id != lobby_id), maxlen=self.max_lobby_messages
+                )
+
             self.dispatch('lobby_remove', lobby, data['reason'])
 
     def parse_lobby_member_add(self, data: gw.LobbyMemberAddEvent) -> None:

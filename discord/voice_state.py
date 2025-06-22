@@ -498,7 +498,8 @@ class VoiceConnectionState:
 
     async def soft_disconnect(self, *, with_state: ConnectionFlowState = ConnectionFlowState.got_both_voice_updates) -> None:
         _log.debug('Soft disconnecting from voice')
-        # Stop the websocket reader because closing the websocket will trigger an unwanted reconnect
+
+        # Stop the WebSocket reader because closing the WebSocket will trigger an unwanted reconnect
         if self._runner:
             self._runner.cancel()
             self._runner = None
@@ -627,8 +628,8 @@ class VoiceConnectionState:
                     # The following close codes are undocumented so I will document them here.
                     # 1000 - normal closure (obviously)
                     # 4014 - we were externally disconnected (voice channel deleted, we were moved, etc)
-                    # 4015 - voice server has crashed
-                    if exc.code in (1000, 4015):
+                    # 4015 - voice server has crashed, we should resume
+                    if exc.code == 1000:
                         # Don't call disconnect a second time if the websocket closed from a disconnect call
                         if not self._expecting_disconnect:
                             _log.info('Disconnecting from voice normally, close code %d.', exc.code)
@@ -636,10 +637,10 @@ class VoiceConnectionState:
                         break
 
                     if exc.code == 4014:
-                        # We were disconnected by discord
+                        # We were disconnected by Discord
                         # This condition is a race between the main ws event and the voice ws closing
                         if self._disconnected.is_set():
-                            _log.info('Disconnected from voice by discord, close code %d.', exc.code)
+                            _log.info('Disconnected from voice by Discord, close code %d.', exc.code)
                             await self.disconnect()
                             break
 
@@ -654,6 +655,21 @@ class VoiceConnectionState:
                             break
                         else:
                             continue
+
+                    if exc.code == 4015:
+                        try:
+                            await self._connect(
+                                reconnect=reconnect,
+                                timeout=self.timeout,
+                                self_deaf=(self.self_voice_state or self).self_deaf,
+                                self_mute=(self.self_voice_state or self).self_mute,
+                                resume=True,
+                            )
+                        except asyncio.TimeoutError:
+                            _log.warning('Could not resume the voice connection... Disconnecting...')
+                            if self.state is not ConnectionFlowState.disconnected:
+                                await self.disconnect()
+                            break
 
                     _log.debug('Not handling close code %s (%s)', exc.code, exc.reason or 'no reason')
 
@@ -718,6 +734,7 @@ class VoiceConnectionState:
         if channel_id is None:
             vc.channel = None  # type: ignore
             return
+
         g = self.guild
         if g is None:
             vc.channel = vc._state._get_private_channel(channel_id)  # type: ignore
