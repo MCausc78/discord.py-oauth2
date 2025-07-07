@@ -126,24 +126,34 @@ class UserSettings:
     ----------
     status: :class:`Status`
         The current status. Defaults to :attr:`~Status.online`.
+
+        You must have ``'activities.read'`` or ``'presences.read'`` OAuth2 scope for this attribute to be populated.
     show_current_game: :class:`bool`
         Whether to show the current game. Defaults to ``True``.
+
+        You must have ``'activities.read'`` or ``'presences.read'`` OAuth2 scope for this attribute to be populated.
     guild_folders: List[:class:`GuildFolder`]
         A list of guild folders.
 
         .. note::
 
-            A ``'voice'`` OAuth2 scope is required for this attribute to be not ``None``.
+        You must have ``'guilds'`` OAuth2 scope for this attribute to be populated.
     custom_activity: Optional[:class:`CustomActivity`]
         The current custom status.
+
+        You must have ``'activities.read'`` or ``'presences.read'`` OAuth2 scope for this attribute to be populated.
     allow_activity_party_privacy_friends: :class:`bool`
         Whether to allow friends to join your activity without sending a request.
 
         Defaults to ``True``.
+
+        You must have ``'activities.read'`` or ``'presences.write'`` OAuth2 scope for this attribute to be populated.
     allow_activity_party_privacy_voice_channel: :class:`bool`
         Whether to allow people in the same voice channel as you to join your activity without sending a request. Does not apply to Community guilds.
 
         Defaults to ``True``.
+
+        You must have ``'activities.read'`` or ``'presences.write'`` OAuth2 scope for this attribute to be populated.
     receive_in_game_dms: :class:`SlayerSDKReceiveInGameDMs`
         A setting for receiving in-game DMs via the social layer API.
 
@@ -151,13 +161,12 @@ class UserSettings:
     soundboard_volume: Optional[:class:`float`]
         The volume of the soundboard (0-100).
 
+        You must have ``voice`` OAuth2 scope for this attribute to be populated.
+
         .. warning::
 
             This attribute is not updated in real-time, and as such may be out of date sometimes.
 
-        .. note::
-
-            A ``'voice'`` OAuth2 scope is required for this attribute to be not ``None``.
     """
 
     __slots__ = (

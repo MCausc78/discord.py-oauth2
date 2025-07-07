@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import asyncio
-from collections import deque, OrderedDict
+from collections import OrderedDict, deque
 from copy import copy
 import inspect
 import logging
@@ -54,6 +54,7 @@ from .activity import BaseActivity, Session, ActivityInvite, create_activity
 from .automod import AutoModRule, AutoModAction
 from .channel import *
 from .channel import _private_channel_factory, _channel_factory
+from .connections import ConnectionRequest
 from .emoji import Emoji
 from .entitlements import Entitlement
 from .enums import try_enum, AudioContext, ChannelType, Status, StreamDeletionReason
@@ -104,7 +105,7 @@ if TYPE_CHECKING:
         DMChannel as DMChannelPayload,
         EphemeralDMChannel as EphemeralDMChannelPayload,
     )
-    from .types.command import GuildApplicationCommandPermissions as GuildApplicationCommandPermissionsPayload
+    from .types.commands import GuildApplicationCommandPermissions as GuildApplicationCommandPermissionsPayload
     from .types.emoji import Emoji as EmojiPayload, PartialEmoji as PartialEmojiPayload
     from .types.guild import Guild as GuildPayload
     from .types.member import MemberWithUser as MemberWithUserPayload
@@ -267,6 +268,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
         self.analytics_token: Optional[str] = None
         self.av_sf_protocol_floor: int = -1
+        self.connection_request: Optional[ConnectionRequest] = None
         self.disabled_gateway_events: Tuple[str, ...] = ()
         self.disabled_functions: Tuple[str, ...] = ()
         self.disclose: List[str] = []
@@ -282,9 +284,6 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         self._private_channels: OrderedDict[int, PrivateChannel] = OrderedDict()
         # extra dict to look up private channels by user id
         self._private_channels_by_user: Dict[int, Union[DMChannel, EphemeralDMChannel]] = {}
-
-        # self._messages: Optional[Deque[Message]]
-        # self._lobby_messages: Optional[Deque[LobbyMessage]]
 
         if self.max_messages is not None:
             self._messages: Optional[Deque[Message]] = deque(maxlen=self.max_messages)
@@ -695,10 +694,13 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         self.user = user = ClientUser(state=self, data=data['user'])
         self._users[user.id] = user  # type: ignore
 
+        raw_connection_request = data.get('connection_request_data')
         feature_flags = data.get('feature_flags') or {}  # ???
 
         self.analytics_token = data.get('analytics_token')
         self.av_sf_protocol_floor = data.get('av_sf_protocol_floor', -1)
+        if raw_connection_request is not None:
+            self.connection_request = ConnectionRequest(data=raw_connection_request, state=self)
         self.scopes = tuple(data.get('scopes', ()))
 
         # disabled_gateway_events is a list like ["LOBBY_CREATE", "LOBBY_UPDATE", "LOBBY_DELETE"] etc
@@ -1470,6 +1472,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         thread: Optional[Thread] = guild.get_thread(thread_id)
         raw = RawThreadMembersUpdate(data)
         if thread is None:
+            self.dispatch('raw_thread_member_remove', raw)
             _log.warning('THREAD_MEMBERS_UPDATE referencing an unknown thread ID: %s. Discarding.', thread_id)
             return
 
@@ -1487,13 +1490,14 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         for member_id in removed_member_ids:
             member = thread._pop_member(member_id)
             if member_id != self_id:
-                self.dispatch('raw_thread_member_remove', raw)
                 if member is not None:
                     self.dispatch('thread_member_remove', member)
                 else:
                     self.dispatch('raw_thread_member_remove', thread, member_id)
             else:
                 self.dispatch('thread_remove', thread)
+
+        self.dispatch('raw_thread_member_remove', raw)
 
     def parse_guild_member_add(self, data: gw.GuildMemberAddEvent) -> None:
         guild = self._get_guild(int(data['guild_id']))

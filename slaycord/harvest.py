@@ -13,6 +13,8 @@ if TYPE_CHECKING:
         Harvest as HarvestPayload,
     )
 
+__all__ = ('Harvest',)
+
 
 class Harvest(Hashable):
     """Represents an user's data harvest.

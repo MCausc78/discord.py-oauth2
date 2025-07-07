@@ -35,7 +35,11 @@ if TYPE_CHECKING:
     from .state import ConnectionState
     from .types.quests import QuestRewardCode as QuestRewardCodePayload
 
-__all__ = ('QuestRewardCode',)
+# fmt: off
+__all__ = (
+    'QuestRewardCode',
+)
+# fmt: on
 
 
 class QuestRewardCode:

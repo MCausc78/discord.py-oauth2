@@ -346,10 +346,10 @@ class Asset(AssetMixin):
         )
 
     @classmethod
-    def _from_clan_badge(cls, state: _State, guild_id: int, badge_hash: str) -> Self:
+    def _from_primary_guild(cls, state: _State, guild_id: int, badge_hash: str) -> Self:
         return cls(
             state,
-            url=f'{cls.BASE}/clan-badges/{guild_id}/{badge_hash}.png',
+            url=f'{cls.BASE}/guild-tag-badges/{guild_id}/{badge_hash}.png',
             key=badge_hash,
             animated=False,
         )
@@ -410,7 +410,6 @@ class Asset(AssetMixin):
         static_format: ValidStaticFormatTypes = MISSING,
     ) -> Self:
         """Returns a new asset with the passed components replaced.
-
 
         .. versionchanged:: 2.0
             ``static_format`` is now preferred over ``format``

@@ -25,13 +25,14 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional, TypedDict
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, Required
 
 from ...types.billing import PaymentSourceType
 from ...types.connections import ConnectionType
 from ...types.entitlements import Entitlement, GiftCode
+from ...types.interactions import InteractionInstallationType
 from ...types.invite import Invite, InviteWithCounts
-from ...types.oauth2 import GetCurrentAuthorizationInformationResponse
+from ...types.oauth2 import GetCurrentAuthorizationInformationResponseBody
 from ...types.sku import SKU
 from ...types.snowflake import Snowflake
 from ...types.soundboard import SoundboardSound
@@ -53,11 +54,41 @@ class SetConfigCommandResponse(TypedDict):
     use_interactive_pip: bool
 
 
-class AuthorizeCommandRequest(TypedDict):
-    client_id: Snowflake
-    response_type: NotRequired[str]
-    scopes: NotRequired[List[str]]  # This takes priority over scope
-    scope: NotRequired[List[str]]  # Deprecated I think?
+class AuthorizeCommandRequest(TypedDict, total=False):
+    client_id: Required[Snowflake]
+    response_type: str
+    scopes: List[str]  # This takes priority over scope
+    scope: List[str]  # Deprecated I think?
+
+    code_challenge: str
+    code_challenge_method: Literal['S256']
+    state: str
+    nonce: str
+    permissions: str
+    guild_id: Snowflake
+    channel_id: Snowflake
+    prompt: Literal['none', 'consent']  # Defaults to consent
+    disable_guild_select: bool  # Defaults to false
+    integration_type: InteractionInstallationType
+
+    # {
+    #   client_id: u,
+    #   response_type: y="code",
+    #   redirect_uri: v,
+    #   code_challenge: C,
+    #   code_challenge_method: S,
+    #   state: N,
+    #   nonce: T,
+    #   scope: P,
+    #   permissions: j,
+    #   guild_id: A,
+    #   channel_id: Z,
+    #   prompt: x,
+    #   disable_guild_select: L,
+    #   integration_type: w,
+    #   pid: R, (does nothing)
+    #   signal: D (doesn't work)
+    # }
 
 
 class AuthorizeCommandResponse(TypedDict):
@@ -68,7 +99,7 @@ class AuthenticateCommandRequest(TypedDict):
     access_token: str
 
 
-class AuthenticateCommandResponse(GetCurrentAuthorizationInformationResponse):
+class AuthenticateCommandResponse(GetCurrentAuthorizationInformationResponseBody):
     access_token: str
 
 

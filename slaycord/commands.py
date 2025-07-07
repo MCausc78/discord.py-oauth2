@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Dict, Generic, List, Literal, Optional, TYPE_CHECKING, TypeVar, Union, overload
+from typing import Any, Dict, Generic, List, Literal, Optional, TYPE_CHECKING, TypeVar, Union, overload
 
 from .enums import (
     try_enum,
@@ -40,6 +40,8 @@ from .permissions import Permissions
 from .utils import MISSING, _get_as_snowflake
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from .guild import Guild
     from .state import ConnectionState
     from .types.commands import (
@@ -52,9 +54,20 @@ if TYPE_CHECKING:
         ApplicationCommandStringOptionChoice as ApplicationCommandStringOptionChoicePayload,
         ApplicationCommandIntegerOptionChoice as ApplicationCommandIntegerOptionChoicePayload,
         ApplicationCommandNumberOptionChoice as ApplicationCommandNumberOptionChoicePayload,
+        SendableApplicationCommandSubcommandOption as SendableApplicationCommandSubcommandOptionPayload,
+        SendableApplicationCommandSubcommandGroupOption as SendableApplicationCommandSubcommandGroupOptionPayload,
+        SendableApplicationCommandStringOption as SendableApplicationCommandStringOptionPayload,
         SendableApplicationCommandStringOptionChoice as SendableApplicationCommandStringOptionChoicePayload,
+        SendableApplicationCommandIntegerOption as SendableApplicationCommandIntegerOptionPayload,
         SendableApplicationCommandIntegerOptionChoice as SendableApplicationCommandIntegerOptionChoicePayload,
+        SendableApplicationCommandBooleanOption as SendableApplicationCommandBooleanOptionPayload,
+        SendableApplicationCommandUserOption as SendableApplicationCommandUserOptionPayload,
+        SendableApplicationCommandChannelOption as SendableApplicationCommandChannelOptionPayload,
+        SendableApplicationCommandRoleOption as SendableApplicationCommandRoleOptionPayload,
+        SendableApplicationCommandMentionableOption as SendableApplicationCommandMentionableOptionPayload,
+        SendableApplicationCommandNumberOption as SendableApplicationCommandNumberOptionPayload,
         SendableApplicationCommandNumberOptionChoice as SendableApplicationCommandNumberOptionChoicePayload,
+        SendableApplicationCommandAttachmentOption as SendableApplicationCommandAttachmentOptionPayload,
         ApplicationCommandUpdateRequestBody as ApplicationCommandUpdateRequestBodyPayload,
     )
 
@@ -321,6 +334,126 @@ class SlashCommand(BaseCommand):
         """
         return any(isinstance(o, SlashCommandGroup) for o in self.options)
 
+    async def edit(
+        self,
+        *,
+        name: str = MISSING,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: str = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        options: List[Union[Option, SlashCommandGroup]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: Optional[bool] = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+    ) -> SlashCommand:
+        """|coro|
+
+        Edits the command.
+
+        All parameters are optional.
+
+        Parameters
+        ----------
+        name: :class:`str`
+            The new name for the slash command. Must be between 1 and 32 characters long.
+        name_localizations: Optional[Dict[:class:`~slaycord.Locale`, :class:`str`]]
+            The new name localizations for the slash command.
+
+            Each value must be between 1 and 32 characters.
+        description: :class:`str`
+            The new description for the slash command. Can be only up to 100 characters.
+        description_localizations: Optional[Dict[:class:`~slaycord.Locale`, :class:`str`]]
+            The new description localizations for the slash command.
+
+            Each value can be only up to 100 characters.
+        options: List[Union[:class:`Option`, :class:`SlashCommandGroup`]]
+            The new options for the slash command.
+        default_member_permissions: Optional[:class:`~slaycord.Permissions`]
+            The new default permissions needed to use this slash command.
+            Pass value of ``None`` to remove any permission requirements.
+        dm_permission: Optional[:class:`~slaycord.Permissions`]
+            Indicates if the application command can be used in DMs.
+
+            .. deprecated:: 3.0
+
+                Edit ``allowed_contexts`` instead.
+        allowed_contexts: Optional[:class:`AppCommandContext`]
+            The new contexts that this command should be allowed to be used in.
+            Overrides the ``dm_permission`` parameter.
+        allowed_installs: Optional[:class:`AppInstallationType`]
+            The new installation contexts that this command should be allowed to be installed in.
+
+        Raises
+        ------
+        NotFound
+            The application command was not found.
+        Forbidden
+            You do not have permission to edit this application command.
+        HTTPException
+            Editing the application command failed.
+        TypeError
+            The application command was global.
+
+        Returns
+        --------
+        :class:`~slaycord.SlashCommand`
+            The newly edited slash command.
+        """
+
+        if not self.guild_id:
+            raise TypeError('Cannot edit global commands in OAuth2 context')
+
+        payload: ApplicationCommandUpdateRequestBodyPayload = {}
+
+        if name is not MISSING:
+            payload['name'] = name
+
+        if name_localizations is not MISSING:
+            if name_localizations is None:
+                payload['name_localizations'] = None
+            else:
+                payload['name_localizations'] = {k.value: v for k, v in name_localizations.items()}
+
+        if description is not MISSING:
+            payload['description'] = description
+
+        if description_localizations is not MISSING:
+            if description_localizations is None:
+                payload['description_localizations'] = None
+            else:
+                payload['description_localizations'] = {k.value: v for k, v in description_localizations.items()}
+
+        if options is not MISSING:
+            payload['options'] = [o.to_dict() for o in options]
+
+        if default_member_permissions is not MISSING:
+            if default_member_permissions is None:
+                payload['default_member_permissions'] = '0'
+            else:
+                payload['default_member_permissions'] = str(default_member_permissions.value)
+
+        if dm_permission is not MISSING:
+            payload['dm_permission'] = dm_permission
+
+        if allowed_contexts is not MISSING:
+            if allowed_contexts is None:
+                payload['contexts'] = None
+            else:
+                # Should be fine:tm:
+                payload['contexts'] = allowed_contexts.to_array()  # type: ignore
+
+        if allowed_installs is not MISSING:
+            if allowed_installs is None:
+                payload['integration_types'] = None
+            else:
+                # Should be fine:tm:
+                payload['integration_types'] = allowed_installs.to_array()  # type: ignore
+
+        state = self._state
+        data = await state.http.edit_guild_command(self.application_id, self.guild_id, self.id, payload)
+        return SlashCommand(data=data, state=state)
+
 
 class UserCommand(BaseCommand):
     """Represents an user command.
@@ -371,6 +504,37 @@ class UserCommand(BaseCommand):
 
         Edits the command.
 
+        All parameters are optional.
+
+        Parameters
+        ----------
+        name: :class:`str`
+            The new name for the user command. Must be between 1 and 32 characters long.
+        name_localizations: Optional[Dict[:class:`~slaycord.Locale`, :class:`str`]]
+            The new name localizations for the user command.
+
+            Each value must be between 1 and 32 characters.
+        description: :class:`str`
+            The new description for the user command. Can be only up to 100 characters.
+        description_localizations: Optional[Dict[:class:`~slaycord.Locale`, :class:`str`]]
+            The new description localizations for the user command.
+
+            Each value can be only up to 100 characters.
+        default_member_permissions: Optional[:class:`~slaycord.Permissions`]
+            The new default permissions needed to use this user command.
+            Pass value of ``None`` to remove any permission requirements.
+        dm_permission: Optional[:class:`~slaycord.Permissions`]
+            Indicates if the application command can be used in DMs.
+
+            .. deprecated:: 3.0
+
+                Edit ``allowed_contexts`` instead.
+        allowed_contexts: Optional[:class:`AppCommandContext`]
+            The new contexts that this command should be allowed to be used in.
+            Overrides the ``dm_permission`` parameter.
+        allowed_installs: Optional[:class:`AppInstallationType`]
+            The new installation contexts that this command should be allowed to be installed in.
+
         Raises
         ------
         NotFound
@@ -381,6 +545,11 @@ class UserCommand(BaseCommand):
             Editing the application command failed.
         TypeError
             The application command was global.
+
+        Returns
+        --------
+        :class:`~slaycord.UserCommand`
+            The newly edited user command.
         """
 
         if not self.guild_id:
@@ -466,6 +635,120 @@ class MessageCommand(BaseCommand):
     def type(self) -> Literal[AppCommandType.message]:
         """:class:`AppCommandType`: The type of application command. This is always :attr:`AppCommandType.message`."""
         return AppCommandType.message
+
+    async def edit(
+        self,
+        *,
+        name: str = MISSING,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: str = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: Optional[bool] = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+    ) -> MessageCommand:
+        """|coro|
+
+        Edits the command.
+
+        All parameters are optional.
+
+        Parameters
+        ----------
+        name: :class:`str`
+            The new name for the message command. Must be between 1 and 32 characters long.
+        name_localizations: Optional[Dict[:class:`~slaycord.Locale`, :class:`str`]]
+            The new name localizations for the message command.
+
+            Each value must be between 1 and 32 characters.
+        description: :class:`str`
+            The new description for the message command. Can be only up to 100 characters.
+        description_localizations: Optional[Dict[:class:`~slaycord.Locale`, :class:`str`]]
+            The new description localizations for the message command.
+
+            Each value can be only up to 100 characters.
+        default_member_permissions: Optional[:class:`~slaycord.Permissions`]
+            The new default permissions needed to use this message command.
+            Pass value of ``None`` to remove any permission requirements.
+        dm_permission: Optional[:class:`~slaycord.Permissions`]
+            Indicates if the application command can be used in DMs.
+
+            .. deprecated:: 3.0
+
+                Edit ``allowed_contexts`` instead.
+        allowed_contexts: Optional[:class:`AppCommandContext`]
+            The new contexts that this command should be allowed to be used in.
+            Overrides the ``dm_permission`` parameter.
+        allowed_installs: Optional[:class:`AppInstallationType`]
+            The new installation contexts that this command should be allowed to be installed in.
+
+        Raises
+        ------
+        NotFound
+            The application command was not found.
+        Forbidden
+            You do not have permission to edit this application command.
+        HTTPException
+            Editing the application command failed.
+        TypeError
+            The application command was global.
+
+        Returns
+        --------
+        :class:`~slaycord.MessageCommand`
+            The newly edited message command.
+        """
+
+        if not self.guild_id:
+            raise TypeError('Cannot edit global commands in OAuth2 context')
+
+        payload: ApplicationCommandUpdateRequestBodyPayload = {}
+
+        if name is not MISSING:
+            payload['name'] = name
+
+        if name_localizations is not MISSING:
+            if name_localizations is None:
+                payload['name_localizations'] = None
+            else:
+                payload['name_localizations'] = {k.value: v for k, v in name_localizations.items()}
+
+        if description is not MISSING:
+            payload['description'] = description
+
+        if description_localizations is not MISSING:
+            if description_localizations is None:
+                payload['description_localizations'] = None
+            else:
+                payload['description_localizations'] = {k.value: v for k, v in description_localizations.items()}
+
+        if default_member_permissions is not MISSING:
+            if default_member_permissions is None:
+                payload['default_member_permissions'] = '0'
+            else:
+                payload['default_member_permissions'] = str(default_member_permissions.value)
+
+        if dm_permission is not MISSING:
+            payload['dm_permission'] = dm_permission
+
+        if allowed_contexts is not MISSING:
+            if allowed_contexts is None:
+                payload['contexts'] = None
+            else:
+                # Should be fine:tm:
+                payload['contexts'] = allowed_contexts.to_array()  # type: ignore
+
+        if allowed_installs is not MISSING:
+            if allowed_installs is None:
+                payload['integration_types'] = None
+            else:
+                # Should be fine:tm:
+                payload['integration_types'] = allowed_installs.to_array()  # type: ignore
+
+        state = self._state
+        data = await state.http.edit_guild_command(self.application_id, self.guild_id, self.id, payload)
+        return MessageCommand(data=data, state=state)
 
 
 class PrimaryEntryPointCommand(BaseCommand):
@@ -606,6 +889,7 @@ class Option:
 
     __slots__ = (
         '_state',
+        '_parent',
         'type',
         'name',
         'name_localized',
@@ -615,7 +899,6 @@ class Option:
         'description_localizations',
         'required',
         'choices',
-        'parent',
         'channel_types',
         'min_value',
         'max_value',
@@ -626,37 +909,105 @@ class Option:
 
     def __init__(
         self,
+        name: str,
         *,
-        data: ApplicationCommandOptionPayload,
-        parent: ApplicationCommandParent,
-        state: Optional[ConnectionState] = None,
+        type: AppCommandOptionType,
+        name_localizations: Optional[Dict[Locale, str]] = None,
+        description: str,
+        description_localizations: Optional[Dict[Locale, str]] = None,
+        required: bool = True,
+        choices: Optional[List[Choice[Union[int, float, str]]]] = None,
+        channel_types: Optional[List[ChannelType]] = None,
+        min_value: Optional[Union[int, float]] = None,
+        max_value: Optional[Union[int, float]] = None,
+        min_length: Optional[int] = None,
+        max_length: Optional[int] = None,
+        autocomplete: bool = False,
     ) -> None:
-        self._state: Optional[ConnectionState] = state
-        self.parent: ApplicationCommandParent = parent
-        self._from_data(data)
+        self._state: Optional[ConnectionState] = None
+        self._parent: ApplicationCommandParent = MISSING
+
+        self.type: AppCommandOptionType = type
+        self.name: str = name
+        self.name_localized: Optional[str] = None
+        self.name_localizations: Dict[Locale, str] = name_localizations or {}
+        self.description: str = description
+        self.description_localizations: Dict[Locale, str] = description_localizations or {}
+        self.required: bool = required
+        self.choices: List[Choice[Union[int, float, str]]] = choices or []
+        self.channel_types: List[ChannelType] = channel_types or []
+        self.min_value: Optional[Union[int, float]] = min_value
+        self.max_value: Optional[Union[int, float]] = max_value
+        self.min_length: Optional[int] = min_length
+        self.max_length: Optional[int] = max_length
+        self.autocomplete: bool = autocomplete
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} name={self.name!r} type={self.type!r} required={self.required}>'
 
-    def _from_data(self, data: ApplicationCommandOptionPayload) -> None:
-        self.type: AppCommandOptionType = try_enum(AppCommandOptionType, data['type'])
-        self.name: str = data['name']
-        self.name_localized: Optional[str] = data.get('name_localized')
-        self.name_localizations: Dict[Locale, str] = {
-            try_enum(Locale, k): v for k, v in (data.get('name_localizations') or {}).items()
+    @classmethod
+    def from_dict(
+        cls, data: ApplicationCommandOptionPayload, *, parent: ApplicationCommandParent, state: ConnectionState
+    ) -> Self:
+        self = cls(
+            type=try_enum(AppCommandOptionType, data['type']),
+            name=data['name'],
+            name_localizations={try_enum(Locale, k): v for k, v in (data.get('name_localizations') or {}).items()},
+            description=data['description'],
+            description_localizations={
+                try_enum(Locale, k): v for k, v in (data.get('description_localizations') or {}).items()
+            },
+            required=data.get('required', False),
+            choices=list(map(Choice.from_dict, data.get('choices', ()))),
+            channel_types=[try_enum(ChannelType, d) for d in data.get('channel_types', ())],
+            min_value=data.get('min_value'),
+            max_value=data.get('max_value'),
+            min_length=data.get('min_length'),
+            max_length=data.get('max_length'),
+            autocomplete=data.get('autocomplete', False),
+        )
+        self._parent = parent
+        self.name_localized = data.get('name_localized')
+        self.description_localized = data.get('description_localized')
+
+        return self
+
+    def to_dict(
+        self,
+    ) -> Union[
+        SendableApplicationCommandStringOptionPayload,
+        SendableApplicationCommandIntegerOptionPayload,
+        SendableApplicationCommandBooleanOptionPayload,
+        SendableApplicationCommandUserOptionPayload,
+        SendableApplicationCommandChannelOptionPayload,
+        SendableApplicationCommandRoleOptionPayload,
+        SendableApplicationCommandMentionableOptionPayload,
+        SendableApplicationCommandNumberOptionPayload,
+        SendableApplicationCommandAttachmentOptionPayload,
+    ]:
+        payload: Dict[str, Any] = {
+            'type': self.type.value,
+            'name': self.name,
+            'name_localizations': {k.value: v for k, v in self.name_localizations.items()},
+            'description': self.description,
+            'description_localizations': {k.value: v for k, v in self.description_localizations.items()},
+            'required': self.required,
+            'autocomplete': self.autocomplete,
         }
-        self.description: str = data['description']
-        self.description_localizations: Dict[Locale, str] = {
-            try_enum(Locale, k): v for k, v in (data.get('description_localizations') or {}).items()
-        }
-        self.required: bool = data.get('required', False)
-        self.choices: List[Choice[Union[int, float, str]]] = list(map(Choice.from_dict, data.get('choices', ())))
-        self.channel_types: List[ChannelType] = [try_enum(ChannelType, d) for d in data.get('channel_types', ())]
-        self.min_value: Optional[Union[int, float]] = data.get('min_value')
-        self.max_value: Optional[Union[int, float]] = data.get('max_value')
-        self.min_length: Optional[int] = data.get('min_length')
-        self.max_length: Optional[int] = data.get('max_length')
-        self.autocomplete: bool = data.get('autocomplete', False)
+        if self.choices:
+            payload['choices'] = [c.to_dict() for c in self.choices]
+        if self.channel_types:
+            payload['channel_types'] = [ct.value for ct in self.channel_types]
+        if self.min_value is not None:
+            payload['min_value'] = self.min_value
+        if self.max_value is not None:
+            payload['max_value'] = self.max_value
+        if self.min_length is not None:
+            payload['min_length'] = self.min_length
+        if self.max_length is not None:
+            payload['max_length'] = self.max_length
+
+        return payload  # type: ignore
 
 
 class SlashCommandGroup:
@@ -678,12 +1029,11 @@ class SlashCommandGroup:
         The localised descriptions of the subcommand. Used for display purposes.
     options: List[Union[:class:`Option`, :class:`SlashCommandGroup`]]
         A list of options.
-    parent: Union[:class:`SlashCommand`, :class:`SlashCommandGroup`]
-        The parent application command.
     """
 
     __slots__ = (
         '_state',
+        '_parent',
         'type',
         'name',
         'name_localized',
@@ -692,22 +1042,66 @@ class SlashCommandGroup:
         'description_localized',
         'description_localizations',
         'options',
-        'parent',
     )
 
     def __init__(
         self,
+        name: str,
         *,
-        data: ApplicationCommandOptionPayload,
-        parent: ApplicationCommandParent,
-        state: Optional[ConnectionState] = None,
+        type: AppCommandOptionType = AppCommandOptionType.subcommand_group,
+        description: str = '',
+        options: Optional[List[Union[Option, SlashCommandGroup]]] = None,
+        name_localizations: Optional[Dict[Locale, str]] = None,
+        description_localizations: Optional[Dict[Locale, str]] = None,
     ) -> None:
-        self._state: Optional[ConnectionState] = state
-        self.parent: ApplicationCommandParent = parent
-        self._from_data(data)
+        self._state: Optional[ConnectionState] = None
+        self._parent: ApplicationCommandParent = MISSING
+
+        self.type: AppCommandOptionType = type
+        self.name: str = name
+        self.description: str = description
+        self.options: List[Union[Option, SlashCommandGroup]] = options or []
+        self.name_localizations: Dict[Locale, str] = name_localizations or {}
+        self.description_localizations: Dict[Locale, str] = description_localizations or {}
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} name={self.name!r} type={self.type!r}>'
+
+    @classmethod
+    def from_dict(
+        cls, data: ApplicationCommandOptionPayload, *, parent: ApplicationCommandParent, state: ConnectionState
+    ) -> Self:
+        self = cls(
+            type=try_enum(AppCommandOptionType, data['type']),
+            name=data['name'],
+            options=[],
+            name_localizations={try_enum(Locale, k): v for k, v in (data.get('name_localizations') or {}).items()},
+            description_localizations={
+                try_enum(Locale, k): v for k, v in (data.get('description_localizations') or {}).items()
+            },
+        )
+        self._parent = parent
+        self.options = [app_command_option_factory(data=d, parent=self, state=state) for d in data.get('options', ())]
+        return self
+
+    def to_dict(
+        self,
+    ) -> Union[SendableApplicationCommandSubcommandOptionPayload, SendableApplicationCommandSubcommandGroupOptionPayload,]:
+        payload: Union[
+            SendableApplicationCommandSubcommandOptionPayload,
+            SendableApplicationCommandSubcommandGroupOptionPayload,
+        ] = {
+            'type': self.type.value,  # type: ignore
+            'name': self.name,
+            'description': self.description,
+            'required': True,  # Subcommands (and groups) must be required
+            'options': [o.to_dict() for o in self.options],
+        }
+        if self.name_localizations:
+            payload['name_localizations'] = {k.value: v for k, v in self.name_localizations.items()}
+        if self.description_localizations:
+            payload['description_localizations'] = {k.value: v for k, v in self.description_localizations.items()}
+        return payload
 
     @property
     def qualified_name(self) -> str:
@@ -745,21 +1139,14 @@ class SlashCommandGroup:
             command_id,
         )
 
-    def _from_data(self, data: ApplicationCommandOptionPayload) -> None:
-        state = self._state
+    @property
+    def parent(self) -> Union[SlashCommand, SlashCommandGroup]:
+        """Union[:class:`SlashCommand`, :class:`SlashCommandGroup`]: The parent application command."""
 
-        self.type: AppCommandOptionType = try_enum(AppCommandOptionType, data['type'])
-        self.name: str = data['name']
-        self.description: str = data['description']
-        self.options: List[Union[Option, SlashCommandGroup]] = [
-            app_command_option_factory(data=d, parent=self, state=state) for d in data.get('options', ())
-        ]
-        self.name_localizations: Dict[Locale, str] = {
-            try_enum(Locale, k): v for k, v in (data.get('name_localizations') or {}).items()
-        }
-        self.description_localizations: Dict[Locale, str] = {
-            try_enum(Locale, k): v for k, v in (data.get('description_localizations') or {}).items()
-        }
+        if self._parent is MISSING:
+            raise TypeError('Cannot access parent on user-created SlashCommandGroups')
+
+        return self._parent
 
 
 class Choice(Generic[T]):
@@ -802,7 +1189,7 @@ class Choice(Generic[T]):
         'value',
     )
 
-    def __init__(self, *, name: str, name_localizations: Optional[Dict[Locale, str]] = None, value: T):
+    def __init__(self, *, name: str, name_localizations: Optional[Dict[Locale, str]] = None, value: T) -> None:
         self.name: str = name
         self.name_localized: Optional[str] = None
         self.name_localizations: Optional[Dict[Locale, str]] = name_localizations
@@ -871,11 +1258,11 @@ def app_command_option_factory(
     data: ApplicationCommandOptionPayload,
     parent: ApplicationCommandParent,
     *,
-    state: Optional[ConnectionState] = None,
+    state: ConnectionState,
 ) -> Union[Option, SlashCommandGroup]:
     if data['type'] in (1, 2):
-        return SlashCommandGroup(data=data, parent=parent, state=state)
-    return Option(data=data, parent=parent, state=state)
+        return SlashCommandGroup.from_dict(data, parent=parent, state=state)
+    return Option.from_dict(data, parent=parent, state=state)
 
 
 @overload

@@ -51,6 +51,7 @@ __all__ = (
     'ClientType',
     'ComponentType',
     'ConnectionType',
+    'ConsoleHandoffType',
     'ContentFilter',
     'DefaultAvatar',
     'EntitlementFulfillmentStatus',
@@ -513,7 +514,7 @@ class ButtonStyle(Enum):
         return self.value
 
 
-class ChannelType(Enum, comparable=True):
+class ChannelType(Enum):
     text = 0
     private = 1
     voice = 2
@@ -568,7 +569,7 @@ class ComponentType(Enum):
         return self.value
 
 
-class ConnectionType(Enum, comparable=True):
+class ConnectionType(Enum):
     amazon_music = 'amazon-music'
     battle_net = 'battlenet'
     bluesky = 'bluesky'
@@ -604,6 +605,11 @@ class ConnectionType(Enum, comparable=True):
         return self.value
 
 
+class ConsoleHandoffType(Enum):
+    create_new_call = 'CREATE_NEW_CALL'
+    transfer_existing_call = 'TRANSFER_EXISTING_CALL'
+
+
 class ContentFilter(Enum, comparable=True):
     disabled = 0
     no_role = 1
@@ -613,7 +619,7 @@ class ContentFilter(Enum, comparable=True):
         return self.name
 
 
-class DefaultAvatar(Enum, comparable=True):
+class DefaultAvatar(Enum):
     blurple = 0
     grey = 1
     gray = 1
@@ -626,7 +632,7 @@ class DefaultAvatar(Enum, comparable=True):
         return self.name
 
 
-class EntitlementFulfillmentStatus(Enum, comparable=True):
+class EntitlementFulfillmentStatus(Enum):
     unknown = 0
     fulfillment_not_needed = 1
     fulfillment_needed = 2
@@ -637,12 +643,12 @@ class EntitlementFulfillmentStatus(Enum, comparable=True):
     unfulfillment_failed = 7
 
 
-class EntitlementOwnerType(Enum, comparable=True):
+class EntitlementOwnerType(Enum):
     guild = 1
     user = 2
 
 
-class EntitlementSourceType(Enum, comparable=True):
+class EntitlementSourceType(Enum):
     quest_reward = 1
     developer_gift = 2
     invoice = 3
@@ -653,7 +659,7 @@ class EntitlementSourceType(Enum, comparable=True):
     fractional_premium_giveback = 8
 
 
-class EntitlementType(Enum, comparable=True):
+class EntitlementType(Enum):
     purchase = 1
     premium_subscription = 2
     developer_gift = 3
@@ -699,12 +705,12 @@ class ForumLayoutType(Enum):
     gallery_view = 2
 
 
-class ForumOrderType(Enum, comparable=True):
+class ForumOrderType(Enum):
     latest_activity = 0
     creation_date = 1
 
 
-class GiftStyle(Enum, comparable=True):
+class GiftStyle(Enum):
     snowglobe = 1
     box = 2
     cup = 3
@@ -719,7 +725,7 @@ class GiftStyle(Enum, comparable=True):
     nitroween_standard = 12
 
 
-class GuildBadgeType(Enum, comparable=True):
+class GuildBadgeType(Enum):
     sword = 0
     water_drop = 1
     skull = 2
@@ -743,19 +749,19 @@ class GuildBadgeType(Enum, comparable=True):
     wind = 20
 
 
-class GuildVisibility(Enum, comparable=True):
+class GuildVisibility(Enum):
     public = 1
     restricted = 2
     public_with_recruitment = 3
 
 
-class HarvestBackendState(Enum, comparable=True):
+class HarvestBackendState(Enum):
     initial = 'INITIAL'
     running = 'RUNNING'
     extracted = 'EXTRACTED'
 
 
-class HarvestBackendType(Enum, comparable=True):
+class HarvestBackendType(Enum):
     users = 'users'
     analytics = 'analytics'
     activities_e = 'activities_e'
@@ -766,13 +772,13 @@ class HarvestBackendType(Enum, comparable=True):
     ads = 'ads'
 
 
-class HarvestState(Enum, comparable=True):
+class HarvestState(Enum):
     incomplete = 'INCOMPLETE'
     delivered = 'DELIVERED'
     canceled = 'CANCELLED'
 
 
-class HarvestStatus(Enum, comparable=True):
+class HarvestStatus(Enum):
     queued = 0
     running = 1
     failed = 2
@@ -808,13 +814,13 @@ class InviteTarget(Enum):
     embedded_application = 2
 
 
-class InviteType(Enum, comparable=True):
+class InviteType(Enum):
     guild = 0
     group_dm = 1
     friend = 2
 
 
-class Locale(Enum, comparable=True):
+class Locale(Enum):
     american_english = 'en-US'
     british_english = 'en-GB'
     bulgarian = 'bg'
@@ -857,20 +863,20 @@ class MFALevel(Enum, comparable=True):
     require_2fa = 1
 
 
-class MediaItemLoadingState(Enum, comparable=True):
+class MediaItemLoadingState(Enum):
     unknown = 0
     loading = 1
     loaded_success = 2
     loaded_not_found = 3
 
 
-class MessageReferenceType(Enum, comparable=True):
+class MessageReferenceType(Enum):
     default = 0
     reply = 0
     forward = 1
 
 
-class MessageType(Enum, comparable=True):
+class MessageType(Enum):
     default = 0
     recipient_add = 1
     recipient_remove = 2
@@ -943,7 +949,7 @@ class NotificationLevel(Enum, comparable=True):
 # There are tons of different operating system/client enums in the API,
 # so we try to unify them here
 # They're normalized as the numbered enum, and converted from the stringified enum(s)
-class OperatingSystem(Enum, comparable=True):
+class OperatingSystem(Enum):
     windows = 1
     macos = 2
     linux = 3
@@ -953,6 +959,7 @@ class OperatingSystem(Enum, comparable=True):
     playstation = -3
     xbox = -4
 
+    other = -98
     unknown = -99
 
     @classmethod
@@ -968,9 +975,14 @@ class OperatingSystem(Enum, comparable=True):
             'ios': cls.ios,
             'playstation': cls.playstation,
             'xbox': cls.xbox,
+            'other': cls.other,
             'unknown': cls.unknown,
         }
-        return lookup.get(value, create_unknown_value(cls, value))  # type: ignore
+
+        try:
+            return lookup[value]  # type: ignore
+        except KeyError:
+            return create_unknown_value(cls, value)
 
     def to_string(self):
         lookup = {
@@ -1171,7 +1183,7 @@ class TeamMemberRole(Enum):
     read_only = 'read_only'
 
 
-class TeamMembershipState(Enum):
+class TeamMembershipState(Enum, comparable=True):
     invited = 1
     accepted = 2
 

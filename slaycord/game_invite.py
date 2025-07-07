@@ -37,7 +37,11 @@ if TYPE_CHECKING:
     from .types.game_invite import GameInvite as GameInvitePayload
     from .user import User
 
-__all__ = ('GameInvite',)
+# fmt: off
+__all__ = (
+    'GameInvite',
+)
+# fmt: on
 
 
 class GameInvite(Hashable):

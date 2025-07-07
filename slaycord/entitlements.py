@@ -406,13 +406,16 @@ class Gift:
     )
 
     def __init__(self, *, data: GiftPayload, state: ConnectionState) -> None:
-        raw_gift_style = data.get('gift_style')
-        raw_user = data.get('user')
-
         self._state: ConnectionState = state
         self.code: str = data['code']
         self.sku_id: int = int(data['sku_id'])
         self.application_id: int = int(data['application_id'])
+        self._update(data)
+
+    def _update(self, data: GiftPayload) -> None:
+        raw_gift_style = data.get('gift_style')
+        raw_user = data.get('user')
+
         self._flags: int = data.get('flags', 0)
         self.uses: int = data['uses']
         self.max_uses: int = data['max_uses']
@@ -421,7 +424,7 @@ class Gift:
         self.batch_id: Optional[int] = _get_as_snowflake(data, 'batch_id')
         self.entitlement_branch_ids: List[int] = list(map(int, data.get('entitlement_branches', ())))
         self.style: Optional[GiftStyle] = None if raw_gift_style is None else try_enum(GiftStyle, raw_gift_style)
-        self.user: Optional[User] = None if raw_user is None else state.store_user(raw_user)
+        self.user: Optional[User] = None if raw_user is None else self._state.store_user(raw_user)
 
     def __eq__(self, other: object, /) -> bool:
         return self is other or isinstance(other, Gift) and self.code == other.code
@@ -431,6 +434,9 @@ class Gift:
 
     def __hash__(self) -> int:
         return hash(self.code)
+
+    def __repr__(self) -> str:
+        return f'<Gift code={self.code!r} uses={self.uses!r} max_uses={self.max_uses!r}>'
 
     def __str__(self) -> str:
         return self.url

@@ -51,7 +51,7 @@ if TYPE_CHECKING:
         PartialUser as PartialUserPayload,
         User as UserPayload,
         AvatarDecorationData as AvatarDecorationDataPayload,
-        PrimaryUserGuild as PrimaryUserGuildPayload,
+        PrimaryGuild as PrimaryGuildPayload,
     )
 
 
@@ -67,76 +67,62 @@ class _UserTag:
     id: int
 
 
-class PrimaryUserGuild:
-    """Represents a partial primary guild accessible via an user.
-
-    .. container:: operations
-
-        .. describe:: x == y
-
-            Checks if two primary user guilds are equal.
-
-        .. describe:: x != y
-
-            Checks if two primary user guilds are not equal.
+class PrimaryGuild:
+    """Represents the primary guild identity of a :class:`User`.
 
     Attributes
-    ----------
-    enabled: :class:`bool`
-        Whether the user is displaying their clan tag.
-    guild_id: Optional[:class:`int`]
-        The guild ID the clan is from.
-
-        .. note::
-
-            This will be ``None`` if :attr:`.enabled` is ``False``.
+    -----------
+    id: Optional[:class:`int`]
+        The ID of the user's primary guild, if any.
     tag: Optional[:class:`str`]
-        The guild tag.
+        The primary guild's tag.
+    identity_enabled: Optional[:class:`bool`]
+        Whether the user has their primary guild publicly displayed. If ``None``, the user has a public guild but has not reaffirmed the guild identity after a change.
 
         .. note::
-
-            This will be ``None`` if :attr:`.enabled` is ``False``.
+            Users can have their primary guild publicly displayed while still having an :attr:`id` of ``None``. Be careful when checking this attribute!
     """
 
-    __slots__ = (
-        '_state',
-        'guild_id',
-        'enabled',
-        'tag',
-        '_badge_hash',
-    )
+    __slots__ = ('id', 'identity_enabled', 'tag', '_badge', '_state')
 
-    def __init__(self, *, data: PrimaryUserGuildPayload, state: ConnectionState) -> None:
+    if TYPE_CHECKING:
+        _state: ConnectionState
+        id: Optional[int]
+        identity_enabled: Optional[bool]
+        tag: Optional[str]
+        _badge: Optional[str]
+
+    def __init__(self, *, data: PrimaryGuildPayload, state: ConnectionState) -> None:
         self._state: ConnectionState = state
-        self.guild_id: Optional[int] = _get_as_snowflake(data, 'identity_guild_id')
-        self.enabled: bool = data['identity_enabled']
-        self.tag: Optional[str] = data.get('tag')
-        self._badge_hash: Optional[str] = data.get('badge')
+        self._update(data)
 
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, self.__class__) and self.tag == other.tag and self.guild_id == other.guild_id
-
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
-
-    def __repr__(self) -> str:
-        return f'<PrimaryUserGuild enabled={self.enabled} guild_id={self.guild_id} tag={self.tag!r}>'
-
-    @property
-    def guild(self) -> Optional[Guild]:
-        """Optional[:class:`Guild`]: Returns the cached primary guild."""
-        return self._state._get_guild(self.guild_id)
+    def _update(self, data: PrimaryGuildPayload):
+        self.id = _get_as_snowflake(data, 'identity_guild_id')
+        self.identity_enabled = data.get('identity_enabled')
+        self.tag = data.get('tag')
+        self._badge = data.get('badge')
 
     @property
     def badge(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the primary guild badge asset.
+        """Optional[:class:`Asset`]: Returns the primary guild's asset."""
+        if self._badge and self.id:
+            return Asset._from_primary_guild(self._state, self.id, self._badge)
+        return None
 
-        .. note::
-            This will be ``None`` if :attr:`.enabled` is ``False``.
-        """
-        if self._badge_hash is None or self.guild_id is None:
-            return None
-        return Asset._from_clan_badge(self._state, self.guild_id, self._badge_hash)
+    @property
+    def created_at(self) -> Optional[datetime]:
+        """Optional[:class:`datetime.datetime`]: Returns the primary guild's creation time in UTC."""
+        if self.id:
+            return snowflake_time(self.id)
+        return None
+
+    @classmethod
+    def _default(cls, state: ConnectionState) -> Self:
+        payload: PrimaryGuildPayload = {"identity_guild_id": None, "identity_enabled": False, "tag": None, "badge": None}
+        return cls(state=state, data=payload)
+
+    def __repr__(self) -> str:
+        return f'<PrimaryGuild id={self.id} identity_enabled={self.identity_enabled} tag={self.tag!r}>'
 
 
 class BaseUser(_UserTag):
@@ -153,7 +139,7 @@ class BaseUser(_UserTag):
         '_public_flags',
         '_state',
         '_avatar_decoration_data',
-        'primary_guild',
+        '_primary_guild',
     )
 
     if TYPE_CHECKING:
@@ -169,7 +155,7 @@ class BaseUser(_UserTag):
         _accent_color: Optional[int]
         _public_flags: int
         _avatar_decoration_data: Optional[AvatarDecorationDataPayload]
-        primary_guild: Optional[PrimaryUserGuild]
+        _primary_guild: Optional[PrimaryGuildPayload]
 
     def __init__(self, *, state: ConnectionState, data: Union[UserPayload, PartialUserPayload]) -> None:
         self._state = state
@@ -207,11 +193,7 @@ class BaseUser(_UserTag):
         self.bot = data.get('bot', False)
         self.system = data.get('system', False)
         self._avatar_decoration_data = data.get('avatar_decoration_data')
-
-        primary_guild_data = data.get('primary_guild')
-        self.primary_guild = (
-            None if primary_guild_data is None else PrimaryUserGuild(data=primary_guild_data, state=self._state)
-        )
+        self._primary_guild = data.get('primary_guild')
 
     @classmethod
     def _copy(cls, user: Self) -> Self:
@@ -228,6 +210,7 @@ class BaseUser(_UserTag):
         self._state = user._state
         self._public_flags = user._public_flags
         self._avatar_decoration_data = user._avatar_decoration_data
+        self._primary_guild = user._primary_guild
 
         return self
 
@@ -241,6 +224,8 @@ class BaseUser(_UserTag):
             'accent_color': self._accent_color,
             'global_name': self.global_name,
             'bot': self.bot,
+            'avatar_decoration_data': self._avatar_decoration_data,
+            'primary_guild': self._primary_guild,
         }
         return payload
 
@@ -401,6 +386,13 @@ class BaseUser(_UserTag):
         if self.global_name:
             return self.global_name
         return self.name
+
+    @property
+    def primary_guild(self) -> PrimaryGuild:
+        """:class:`PrimaryGuild`: Returns the user's primary guild."""
+        if self._primary_guild is None:
+            return PrimaryGuild._default(self._state)
+        return PrimaryGuild(data=self._primary_guild, state=self._state)
 
     def mentioned_in(self, message: Message) -> bool:
         """Checks if the user is mentioned in the specified message.

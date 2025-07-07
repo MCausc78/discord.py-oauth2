@@ -94,6 +94,7 @@ if TYPE_CHECKING:
         lobby,
         member,
         message,
+        oauth2,
         settings,
         subscription,
         template,
@@ -872,6 +873,9 @@ class HTTPClient:
 
     async def startup(self) -> None:
         # Necessary to get aiohttp to stop complaining about session creation
+        if self.__session is not MISSING:
+            return
+
         if self.connector is MISSING:
             self.connector = aiohttp.TCPConnector(limit=0)
 
@@ -904,6 +908,40 @@ class HTTPClient:
 
     def get_fingerprint(self) -> Response[Dict[Literal['fingerprint'], str]]:
         return self.request(Route('GET', '/auth/fingerprint'))
+
+    def get_current_authorization_information(
+        self,
+    ) -> Response[oauth2.GetCurrentAuthorizationInformationResponseBody]:
+        return self.request(Route('GET', '/oauth2/@me'))
+
+    def get_openid_connect_keys(self) -> Response[List[Any]]:
+        return self.request(Route('GET', '/oauth2/keys'))
+
+    def get_openid_user_information(self) -> Response[oauth2.GetOpenIDUserInformationResponseBody]:
+        return self.request(Route('GET', '/oauth2/userinfo'))
+
+    def get_oauth2_device_code(
+        self, payload: oauth2.GetOAuth2DeviceCodeRequestBody
+    ) -> Response[oauth2.GetOAuth2DeviceCodeResponseBody]:
+        return self.request(Route('POST', '/oauth2/authorize/device'), data=aiohttp.FormData(payload))
+
+    def get_oauth2_token(self, payload: oauth2.GetOAuth2TokenRequestBody) -> Response[oauth2.OAuth2AccessToken]:
+        return self.request(Route('POST', '/oauth2/token'), data=aiohttp.FormData(payload))
+
+    def revoke_oauth2_token(self, payload: oauth2.RevokeOAuth2TokenRequestBody) -> Response[None]:
+        return self.request(Route('POST', '/oauth2/token/revoke'), data=aiohttp.FormData(payload))
+
+    def get_provisional_account_token(
+        self,
+        payload: oauth2.GetProvisionalAccountTokenRequestBody,
+    ) -> Response[oauth2.OAuth2AccessToken]:
+        return self.request(Route('POST', '/partner-sdk/token'), json=payload)
+
+    def unmerge_provisional_account(
+        self,
+        payload: oauth2.UnmergeProvisionalAccountRequestBody,
+    ) -> Response[None]:
+        return self.request(Route('POST', '/partner-sdk/provisional-accounts/unmerge'), json=payload)
 
     # Self user
 
@@ -1449,41 +1487,6 @@ class HTTPClient:
                 subscription_id=subscription_id,
             )
         )
-
-    # Authentication
-    def unmerge_provisional_account(
-        self,
-        *,
-        client_id: Snowflake,
-        client_secret: Optional[str] = None,
-        external_auth_token: str,
-        external_auth_type: str,
-    ) -> Response[None]:
-        payload = {
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'external_auth_token': external_auth_token,
-            'external_auth_type': external_auth_type,
-        }
-
-        return self.request(Route('POST', '/partner-sdk/provisional-accounts/unmerge'), json=payload)
-
-    def create_provisional_account(
-        self,
-        *,
-        client_id: Snowflake,
-        client_secret: Optional[str] = None,
-        external_auth_token: str,
-        external_auth_type: str,
-    ) -> Response[Any]:
-        payload = {
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'external_auth_token': external_auth_token,
-            'external_auth_type': external_auth_type,
-        }
-
-        return self.request(Route('POST', '/partner-sdk/token'), json=payload)
 
     # POST https://gaming-sdk.com/api/v9/oauth2/token
     # No Authorization here

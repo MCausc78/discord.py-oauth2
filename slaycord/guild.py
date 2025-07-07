@@ -43,7 +43,14 @@ from typing import (
 from .asset import Asset
 from .channel import *
 from .channel import _guild_channel_factory
+from .commands import (
+    SlashCommand,
+    UserCommand,
+    MessageCommand,
+    _command_factory,
+)
 from .emoji import Emoji
+from .errors import MissingApplicationID
 from .enums import (
     try_enum,
     VerificationLevel,
@@ -92,6 +99,11 @@ if TYPE_CHECKING:
     from .abc import Snowflake
     from .channel import VoiceChannel, StageChannel, TextChannel, ForumChannel, CategoryChannel
     from .state import ConnectionState
+    from .types.commands import (
+        SlashCommand as SlashCommandPayload,
+        UserCommand as UserCommandPayload,
+        MessageCommand as MessageCommandPayload,
+    )
     from .types.guild import (
         Guild as GuildPayload,
         GuildPreview as GuildPreviewPayload,
@@ -330,6 +342,66 @@ class UserGuild(Hashable):
             return None
         return Asset._from_guild_image(self._state, self.id, self._banner, path='banners')
 
+    async def fetch_command(self, id: int, /) -> List[Union[SlashCommand, UserCommand, MessageCommand]]:
+        """|coro|
+
+        Fetches an application command from the application.
+
+        Parameters
+        ----------
+        id: :class:`int`
+            The ID of the command to fetch.
+
+        Raises
+        ------
+        HTTPExcetion
+            Fetching the command failed.
+        MissingApplicationID
+            The application ID could not be found.
+        NotFound
+            The application command was not found. This could also be because the command is a global command.
+
+        Returns
+        -------
+        Union[:class:`SlashCommand`, :class:`UserCommand`, :class:`MessageCommand`, :class:`UnknownCommand`]
+            The retrieved command.
+        """
+        state = self._state
+
+        application_id = state.application_id
+        if application_id is None:
+            raise MissingApplicationID
+
+        data = await state.http.get_guild_application_command(application_id, self.id, id)
+        return _command_factory(data, state)  # type: ignore
+
+    async def fetch_commands(self) -> List[Union[SlashCommand, UserCommand, MessageCommand]]:
+        """|coro|
+
+        Fetches the application's current commands.
+
+        Raises
+        ------
+        HTTPExcetion
+            Fetching the commands failed.
+        MissingApplicationID
+            The application ID could not be found.
+
+        Returns
+        -------
+        List[Union[:class:`SlashCommand`, :class:`UserCommand`, :class:`MessageCommand`, :class:`UnknownCommand`]]
+            The application's commands.
+        """
+        state = self._state
+
+        application_id = state.application_id
+
+        if application_id is None:
+            raise MissingApplicationID
+
+        data = await state.http.get_guild_application_commands(application_id, self.id)
+        return [_command_factory(d, state) for d in data]  # type: ignore
+
     async def fetch_me(self) -> Member:
         """|coro|
 
@@ -413,6 +485,163 @@ class UserGuild(Hashable):
             self_deaf=self_deaf,
             self_video=self_video,
         )
+
+    def get_partial_slash_command(self, id: int, /, *, application_id: Optional[int] = None) -> SlashCommand:
+        """Retrieve a very partial slash command that can be used to edit or delete the guild command.
+
+        Parameters
+        ----------
+        id: :class:`int`
+            The ID of the command.
+        application_id: Optional[:class:`int`]
+            The ID of the application the command belongs to. This generally should be automatically filled in.
+
+        Raises
+        ------
+        MissingApplicationID
+            The ID of the application was not found.
+
+        Returns
+        -------
+        :class:`SlashCommand`
+            The partial slash command.
+
+            .. warn::
+
+                Most of attributes will be fake, except for :attr:`~SlashCommand.id`,
+                :attr:`~SlashCommand.application_id`, and :attr:`~SlashCommand.guild_id`.
+        """
+        state = self._state
+
+        if application_id is None:
+            application_id = state.application_id
+
+        if application_id is None:
+            raise MissingApplicationID
+
+        fake_payload: SlashCommandPayload = {
+            'type': 1,
+            'id': id,
+            'application_id': application_id,
+            'version': 0,
+            'name': '',
+            'name_localized': None,
+            'name_localizations': {},
+            'description': '',
+            'description_localized': None,
+            'description_localizations': {},
+            'guild_id': self.id,
+            'dm_permission': True,
+            'contexts': [0, 1, 2],
+            'integration_types': [0],
+            'nsfw': False,
+            'options': [],
+        }
+        return SlashCommand(data=fake_payload, state=state)
+
+    def get_partial_user_command(self, id: int, /, *, application_id: Optional[int] = None) -> UserCommand:
+        """Retrieve a very partial user command that can be used to edit or delete the guild command.
+
+        Parameters
+        ----------
+        id: :class:`int`
+            The ID of the command.
+        application_id: Optional[:class:`int`]
+            The ID of the application the command belongs to. This generally should be automatically filled in.
+
+        Raises
+        ------
+        MissingApplicationID
+            The ID of the application was not found.
+
+        Returns
+        -------
+        :class:`UserCommand`
+            The partial user command.
+
+            .. warn::
+
+                Most of attributes will be fake, except for :attr:`~UserCommand.id`,
+                :attr:`~UserCommand.application_id`, and :attr:`~UserCommand.guild_id`.
+        """
+        state = self._state
+
+        if application_id is None:
+            application_id = state.application_id
+
+        if application_id is None:
+            raise MissingApplicationID
+
+        fake_payload: UserCommandPayload = {
+            'type': 2,
+            'id': id,
+            'application_id': application_id,
+            'version': 0,
+            'name': '',
+            'name_localized': None,
+            'name_localizations': {},
+            'description': '',
+            'description_localized': None,
+            'description_localizations': {},
+            'guild_id': self.id,
+            'dm_permission': True,
+            'contexts': [0, 1, 2],
+            'integration_types': [0],
+            'nsfw': False,
+        }
+        return UserCommand(data=fake_payload, state=state)
+
+    def get_partial_message_command(self, id: int, /, *, application_id: Optional[int] = None) -> MessageCommand:
+        """Retrieve a very partial message command that can be used to edit or delete the guild command.
+
+        Parameters
+        ----------
+        id: :class:`int`
+            The ID of the command.
+        application_id: Optional[:class:`int`]
+            The ID of the application the command belongs to. This generally should be automatically filled in.
+
+        Raises
+        ------
+        MissingApplicationID
+            The ID of the application was not found.
+
+        Returns
+        -------
+        :class:`MessageCommand`
+            The partial message command.
+
+            .. warn::
+
+                Most of attributes will be fake, except for :attr:`~MessageCommand.id`,
+                :attr:`~MessageCommand.application_id`, and :attr:`~MessageCommand.guild_id`.
+        """
+        state = self._state
+
+        if application_id is None:
+            application_id = state.application_id
+
+        if application_id is None:
+            raise MissingApplicationID
+
+        fake_payload: MessageCommandPayload = {
+            'type': 3,
+            'id': id,
+            'application_id': application_id,
+            'version': 0,
+            'name': '',
+            'name_localized': None,
+            'name_localizations': {},
+            'description': '',
+            'description_localized': None,
+            'description_localizations': {},
+            'guild_id': self.id,
+            'dm_permission': True,
+            'contexts': [0, 1, 2],
+            'integration_types': [0],
+            'nsfw': False,
+        }
+        return MessageCommand(data=fake_payload, state=state)
 
 
 class Guild(UserGuild):

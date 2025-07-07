@@ -21,24 +21,24 @@ Key Features
 - Optimised in both speed and memory.
 - Implements a rich set of OAuth2 APIs. For a non-exhaustive list:
   - Connections
-  - Relationships
-  - Headless Sessions
   - Game Invites
-  - Voice
-    - Calls
-    - Stream API (This does not include actual UDP protocol implementation)
+  - Game Relationships
   - Gateway
     - Sessions
-  - Game Relationships
+  - Headless Sessions
   - Lobbies
-  - User Settings
-  - Transferring calls from Desktop/Mobile to PlayStation
   - RPC
     - Billing
     - Event Subscriptions
     - Voice Settings
     - Activity Invites
     - Store (Entitlements, SKUs)
+  - Relationships
+  - Transferring calls from Desktop/Mobile to PlayStation
+  - User Settings
+  - Voice
+    - Calls
+    - Stream API (This does not include actual UDP protocol implementation)
 
 Installing
 ----------
@@ -97,7 +97,7 @@ To install the development version, do the following:
 
 
 Optional Packages
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 * `PyNaCl <https://pypi.org/project/PyNaCl/>`__ (for voice support)
 
@@ -107,7 +107,7 @@ Please note that when installing voice support on Linux, you must install the fo
 * python-dev (e.g. ``python3.8-dev`` for Python 3.8)
 
 Quick Example
---------------
+-------------
 
 .. code:: py
 
@@ -131,7 +131,7 @@ Quick Example
     client.run('token')
 
 Bot Example
-~~~~~~~~~~~~~
+~~~~~~~~~~~
 
 .. code:: py
 
@@ -151,7 +151,7 @@ Bot Example
 You can find more examples in the examples directory.
 
 Links
-------
+-----
 
 - `Documentation <https://discordpy-oauth2.readthedocs.io/en/latest/index.html>`_
 - `Official Discord Server <https://discord.gg/r3sSKJJ>`_

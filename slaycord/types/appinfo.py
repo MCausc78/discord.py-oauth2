@@ -86,6 +86,7 @@ class GatewayApplication(TypedDict):
     id: Snowflake
     name: str
     flags: int
+    parent_id: NotRequired[Snowflake]
 
 
 class ListAppEmojis(TypedDict):

@@ -480,6 +480,12 @@ class DiscordWebSocket:
                 # | PRIORITIZED_READY_PAYLOAD(5)
                 # | AUTO_CALL_CONNECT(12)
                 # | AUTO_LOBBY_CONNECT(16)
+                # | PRIVATE_CHANNEL_OBFUSCATION(15) (obfuscates channel objects you do not have access to)
+                # | STATE_UPDATE(17) (? idk what it actually does, but its added in same commit that handles STATE_UPDATE & READY->failed_states?: unknown[])
+                # | VOICE_STATE_UPDATE_BATCH(18)
+                # TODO: VOICE_STATE_UPDATE_BATCH is not used by SDK yet, instead of dispatching multiple VOICE_STATE_UPDATE events,
+                # it debounces them and dispatches single VOICE_STATE_UPDATE_BATCH event with ``{'voice_states': List[VoiceState]}`` payload.
+                # 'capabilities': 331824,
                 'capabilities': 69680,
                 'properties': properties,
                 # 'compress': True,

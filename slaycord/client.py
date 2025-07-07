@@ -61,6 +61,7 @@ from .entitlements import Entitlement
 from .enums import ActivityType, ChannelType, ClientType, PaymentSourceType, RelationshipType, Status
 from .errors import *
 from .flags import ApplicationFlags, Intents
+from .game_relationship import GameRelationship
 from .gateway import *
 from .guild import UserGuild, Guild
 from .harvest import Harvest
@@ -69,6 +70,7 @@ from .invite import Invite
 from .lobby import Lobby
 from .mentions import AllowedMentions
 from .object import Object
+from .relationship import Relationship
 from .soundboard import SoundboardSound
 from .sku import SKU
 from .stage_instance import StageInstance
@@ -79,6 +81,7 @@ from .template import Template
 from .user import _UserTag, User, ClientUser
 from .utils import (
     MISSING,
+    _to_json,
     SequenceProxy,
     resolve_invite,
     resolve_template,
@@ -99,7 +102,6 @@ if TYPE_CHECKING:
     from .channel import DMChannel, GroupChannel, EphemeralDMChannel
     from .ext.commands import Bot, Context, CommandError
     from .game_invite import GameInvite
-    from .game_relationship import GameRelationship
     from .guild import GuildChannel
     from .integrations import Integration
     from .member import Member, VoiceState
@@ -122,7 +124,6 @@ if TYPE_CHECKING:
         RawPollVoteActionEvent,
     )
     from .reaction import Reaction
-    from .relationship import Relationship
     from .role import Role
     from .settings import UserSettings, AudioSettingsManager
     from .scheduled_event import ScheduledEvent
@@ -2744,7 +2745,7 @@ class Client(Dispatcher):
         self,
         recipient: Snowflake,
         *,
-        launch_parameters: str,  # max 8192 characters
+        launch_parameters: Union[str, Dict[str, Any]],  # max 8192 characters
         game_name: str,  # 2-128 characters
         game_icon_url: str,  # max 2048 characters
         fallback_url: Optional[str] = MISSING,
@@ -2760,7 +2761,7 @@ class Client(Dispatcher):
         ----------
         recipient: :class:`User`
             The user to create game invite for.
-        launch_parameters: :class:`str`
+        launch_parameters: Union[:class:`str`, :class:`dict`]
             The parameters for launching game. Typically this is a JSON string containing two optional and nullable string keys:
 
             - ``titleId``: The ID of the game invite title.
@@ -2786,6 +2787,9 @@ class Client(Dispatcher):
         :class:`int`
             The ID of the game invite.
         """
+        if isinstance(launch_parameters, dict):
+            launch_parameters = _to_json(launch_parameters)
+
         data = await self.http.create_game_invite(
             recipient.id,
             launch_parameters=launch_parameters,
@@ -3217,13 +3221,13 @@ class Client(Dispatcher):
 
         .. code-block:: python
 
-            # Passing a user object:
+            # Passing an user object:
             await client.send_game_friend_request(user)
 
-            # Passing a username
+            # Passing an username
             await client.send_game_friend_request('gatewaydisc.rdgg')
 
-            # Passing a ID
+            # Passing an ID
             await client.send_game_friend_request(1073325901825187841)
 
 

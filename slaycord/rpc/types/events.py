@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Optional, TypedDict
+from typing import Any, List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
-
+from ...types.activity import Activity
+from ...types.message import MessageActivityType
 from ...types.snowflake import Snowflake
 from .user import User
 
@@ -46,23 +47,137 @@ class CurrentGuildMemberUpdateEventRequest(TypedDict):
 # GUILD_CREATE
 # CHANNEL_CREATE
 # RELATIONSHIP_UPDATE
-# VOICE_CHANNEL_SELECT
+
+
+class VoiceChannelSelectEventRequest(TypedDict):
+    pass
+
+
+class VoiceChannelSelectEvent(TypedDict):
+    channel_id: Optional[Snowflake]
+    guild_id: Optional[Snowflake]
+
+
 # VOICE_STATE_CREATE
 # VOICE_STATE_DELETE
 # VOICE_STATE_UPDATE
 # VOICE_SETTINGS_UPDATE
 # VOICE_SETTINGS_UPDATE_2
-# VOICE_CONNECTION_STATUS
-# SPEAKING_START
-# SPEAKING_STOP
-# GAME_JOIN
-# GAME_SPECTATE
-# ACTIVITY_JOIN
-# ACTIVITY_JOIN_REQUEST
-# ACTIVITY_SPECTATE
-# ACTIVITY_INVITE
-# ACTIVITY_PIP_MODE_UPDATE
-# ACTIVITY_LAYOUT_MODE_UPDATE
+
+
+class VoiceConnectionStatusEventRequest(TypedDict):
+    pass
+
+
+class VoiceConnectionStatusEventPing(TypedDict):
+    time: int  # in ms
+    value: int  # latency in ms
+
+
+class VoiceConnectionStatusEvent(TypedDict):
+    # {
+    #   "state":"VOICE_CONNECTED",
+    #   "hostname":"rotterdam11336.slaycord.media",
+    #   "pings":[{"time":1750679009463,"value":44},
+    #            {"time":1750679014461,"value":43},
+    #            {"time":1750679019462,"value":43},
+    #            {"time":1750679024463,"value":43}
+    #   ],
+    #   "average_ping":43.25,
+    #   "last_ping":43}'
+    state: Literal[
+        'DISCONNECTED',
+        'AWAITING_ENDPOINT',
+        'AUTHENTICATING',
+        'CONNECTING',
+        'RTC_DISCONNECTED',
+        'RTC_CONNECTING',
+        'RTC_CONNECTED',
+        'NO_ROUTE',
+        'ICE_CHECKING',
+        'DTLS_CONNECTING',
+    ]
+    hostname: str  # ''
+    pings: List[VoiceConnectionStatusEventPing]  # []
+    average_ping: int  # 0 if disconnected, in ms
+    last_ping: NotRequired[int]  # undefined if disconnected, in ms
+
+
+class SpeakingStartEventRequest(TypedDict):
+    channel_id: Optional[Snowflake]
+
+
+class SpeakingStartEvent(TypedDict):
+    channel_id: Snowflake
+    user_id: Snowflake
+
+
+class SpeakingStopEventRequest(TypedDict):
+    channel_id: Optional[Snowflake]
+
+
+class GameJoinEventRequest(TypedDict):
+    pass
+
+
+class GameJoinEvent(TypedDict):
+    secret: str
+
+
+# GAME_SPECTATE (deprecated and appears to never fire based on client code)
+
+
+class ActivityJoinEventRequest(TypedDict):
+    pass
+
+
+class ActivityJoinEvent(TypedDict):
+    secret: str
+
+
+class ActivityJoinRequestEventRequest(TypedDict):
+    pass
+
+
+class ActivityJoinRequestEvent(TypedDict):
+    user: User
+    activity: Activity
+    type: MessageActivityType
+    channel_id: Snowflake
+    message_id: Snowflake
+
+
+# ACTIVITY_SPECTATE (deprecated and appears to never fire based on client code)
+
+
+class ActivityInviteRequestEventRequest(TypedDict):
+    pass
+
+
+class ActivityInviteRequestEvent(TypedDict):
+    user: User
+    activity: Activity
+    type: MessageActivityType
+    channel_id: Snowflake
+    message_id: Snowflake
+
+
+class ActivityPipModeUpdateEventRequest(TypedDict):
+    pass
+
+
+class ActivityPipModeUpdateEvent(TypedDict):
+    is_pip_mode: bool  # layout_mode != FOCUSED
+
+
+class ActivityLayoutModeUpdateEventRequest(TypedDict):
+    pass
+
+
+class ActivityLayoutModeUpdateEvent(TypedDict):
+    layout_mode: Literal[0, 1, 2]  # {FOCUSED: 0, PIP: 1, GRID: 2}
+
+
 # THERMAL_STATE_UPDATE
 # ORIENTATION_UPDATE
 # ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE
@@ -70,7 +185,16 @@ class CurrentGuildMemberUpdateEventRequest(TypedDict):
 # MESSAGE_CREATE
 # MESSAGE_UPDATE
 # MESSAGE_DELETE
-# OVERLAY
+
+
+class OverlayEventRequest(TypedDict):
+    pass
+
+
+class OverlayEvent(TypedDict):
+    pass
+
+
 # OVERLAY_UPDATE
 # ENTITLEMENT_CREATE
 # ENTITLEMENT_DELETE

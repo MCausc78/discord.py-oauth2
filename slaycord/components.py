@@ -606,7 +606,7 @@ class SelectDefaultValue:
     Parameters
     ----------
     id: :class:`int`
-        The id of a role, user, or channel.
+        The ID of a role, user, or channel.
     type: :class:`SelectDefaultValueType`
         The type of value that ``id`` represents.
     """
@@ -851,9 +851,11 @@ class UnfurledMediaItem(AssetMixin):
         The media item's placeholder.
     loading_state: Optional[:class:`MediaItemLoadingState`]
         The loading state of this media item.
+    content_scan_version: Optiona[:class:`int`]
+        The version of the content scan filter.
     attachment_id: Optional[:class:`int`]
         The ID of the attachment this media item points to,
-        only available if the url points to a local file
+        only available if the URL points to a local file
         uploaded within the component message.
     """
 
@@ -949,7 +951,7 @@ class MediaGalleryItem:
 
     .. versionadded:: 3.0
 
-    Parameters
+    Attributes
     ----------
     media: Union[:class:`str`, :class:`UnfurledMediaItem`]
         The media item data. This can be a string representing a local
