@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any, List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
-from ...types.activity import Activity
 from ...types.message import MessageActivityType
+from ...types.presences import ReceivableActivity
 from ...types.snowflake import Snowflake
 from .user import User
 
@@ -141,7 +141,7 @@ class ActivityJoinRequestEventRequest(TypedDict):
 
 class ActivityJoinRequestEvent(TypedDict):
     user: User
-    activity: Activity
+    activity: ReceivableActivity
     type: MessageActivityType
     channel_id: Snowflake
     message_id: Snowflake
@@ -156,7 +156,7 @@ class ActivityInviteRequestEventRequest(TypedDict):
 
 class ActivityInviteRequestEvent(TypedDict):
     user: User
-    activity: Activity
+    activity: ReceivableActivity
     type: MessageActivityType
     channel_id: Snowflake
     message_id: Snowflake

@@ -27,7 +27,6 @@ from __future__ import annotations
 from typing import Dict, List, Literal, Optional, TypedDict, Tuple, Union
 from typing_extensions import NotRequired, Required
 
-from .activity import StatusType, PartialPresenceUpdate, Activity
 from .appinfo import GatewayApplication, PartialApplication
 from .audit_log import AuditLogEntry
 from .automod import AutoModerationAction, AutoModerationRuleTriggerType
@@ -43,6 +42,7 @@ from .invite import InviteTargetType
 from .lobby import LobbyMember, LobbyVoiceState, Lobby
 from .member import MemberWithUser
 from .message import MessageActivity, MessageApplication, Message, LobbyMessage, ReactionType
+from .presences import Session, Presence
 from .role import Role
 from .scheduled_event import GuildScheduledEvent
 from .settings import GatewayUserSettings, AudioContext, AudioSettings
@@ -80,11 +80,6 @@ class GatewayBot(Gateway):
     session_start_limit: SessionStartLimit
 
 
-class CreateHeadlessSessionResponse(TypedDict):
-    activities: List[Activity]
-    token: str
-
-
 class GatewayFeatureFlags(TypedDict):
     disabled_gateway_events: List[str]
     disabled_functions: List[str]
@@ -120,25 +115,9 @@ class SupplementalGuild(TypedDict):
     voice_states: NotRequired[List[GuildVoiceState]]
 
 
-class ClientInfo(TypedDict):
-    version: int
-    os: Literal['windows', 'osx', 'linux', 'android', 'ios', 'playstation', 'xbox', 'other', 'unknown']
-    client: Literal['web', 'desktop', 'mobile', 'embedded', 'unknown']
-
-
-class Session(TypedDict):
-    session_id: str
-    active: NotRequired[bool]
-    client_info: ClientInfo
-    status: StatusType
-    # Not truly NotRequired, just for sanity
-    activities: NotRequired[List[Activity]]
-    hidden_activities: NotRequired[List[Activity]]
-
-
 class MergedPresences(TypedDict):
-    friends: List[PartialPresenceUpdate]
-    guilds: List[List[PartialPresenceUpdate]]
+    friends: List[Presence]
+    guilds: List[List[Presence]]
 
 
 class ReadySupplementalEvent(TypedDict):
@@ -208,9 +187,7 @@ class MessageReactionRemoveEmojiEvent(TypedDict):
 
 
 InteractionCreateEvent = Interaction
-
-
-PresenceUpdateEvent = PartialPresenceUpdate
+PresenceUpdateEvent = Presence
 
 
 UserUpdateEvent = User

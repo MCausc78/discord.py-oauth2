@@ -25,10 +25,10 @@ DEALINGS IN THE SOFTWARE.
 from typing import List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
-from .activity import PartialPresenceUpdate
 from .channel import GuildChannel, StageInstance
 from .emoji import Emoji
 from .member import Member
+from .presences import Presence
 from .role import Role
 from .scheduled_event import GuildScheduledEvent
 from .snowflake import Snowflake
@@ -151,7 +151,7 @@ class Guild(_BaseGuildPreview):
     voice_states: NotRequired[List[GuildVoiceState]]
     members: NotRequired[List[Member]]
     channels: NotRequired[List[GuildChannel]]
-    presences: NotRequired[List[PartialPresenceUpdate]]
+    presences: NotRequired[List[Presence]]
     threads: NotRequired[List[Thread]]
     max_presences: NotRequired[Optional[int]]
     max_members: NotRequired[int]
