@@ -3,13 +3,16 @@ from __future__ import annotations
 import inspect
 from typing import Any, Callable, Dict, TYPE_CHECKING
 
+from ..state import BaseConnectionState
+
 if TYPE_CHECKING:
+    from ..http import HTTPClient
     from .types.events import (
         ReadyEvent as ReadyEventPayload,
     )
 
-# TODO: BaseConnectionState
-class RPCConnectionState:
+
+class RPCConnectionState(BaseConnectionState):
     __slots__ = (
         'dispatch',
         'parsers',
@@ -19,8 +22,8 @@ class RPCConnectionState:
         'environment',
     )
 
-    def __init__(self, *, dispatch: Callable[..., None]) -> None:
-        self.dispatch = dispatch
+    def __init__(self, *, dispatch: Callable[..., None], http: HTTPClient) -> None:
+        super().__init__(dispatch=dispatch, http=http)
         self.parsers: Dict[str, Callable[[Any], None]]
         self.parsers = parsers = {}
         for attr, func in inspect.getmembers(self):

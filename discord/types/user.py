@@ -33,11 +33,11 @@ class AvatarDecorationData(TypedDict):
     sku_id: Snowflake
 
 
-class PrimaryUserGuild(TypedDict):
+class PrimaryGuild(TypedDict, total=False):
     tag: Optional[str]
     badge: Optional[str]
     identity_guild_id: Optional[Snowflake]
-    identity_enabled: bool
+    identity_enabled: Optional[bool]
 
 
 class PartialUser(TypedDict):
@@ -47,6 +47,7 @@ class PartialUser(TypedDict):
     avatar: Optional[str]
     global_name: Optional[str]
     avatar_decoration_data: NotRequired[Optional[AvatarDecorationData]]
+    primary_guild: NotRequired[Optional[PrimaryGuild]]
 
 
 PremiumType = Literal[0, 1, 2, 3]

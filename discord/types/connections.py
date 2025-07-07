@@ -101,5 +101,5 @@ class ConnectRequestProperties(TypedDict):
     handoff_type: ConsoleHandoffType
 
 
-class ConnectionRequestData(TypedDict):
-    analytics_properties: ConnectionRequestData
+class ConnectionRequest(TypedDict):
+    analytics_properties: ConnectRequestProperties

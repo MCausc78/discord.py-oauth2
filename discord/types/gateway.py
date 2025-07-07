@@ -32,7 +32,7 @@ from .appinfo import GatewayApplication, PartialApplication
 from .audit_log import AuditLogEntry
 from .automod import AutoModerationAction, AutoModerationRuleTriggerType
 from .channel import ChannelType, DMChannel, GroupDMChannel, StageInstance, VoiceChannelEffect
-from .connections import ConnectionRequestData
+from .connections import ConnectionRequest
 from .emoji import Emoji, PartialEmoji
 from .entitlements import Entitlement
 from .game_invite import GameInvite
@@ -91,24 +91,28 @@ class GatewayFeatureFlags(TypedDict):
 
 
 class ReadyEvent(TypedDict):
-    v: int
-    user_settings: GatewayUserSettings
+    _trace: List[str]
     users: List[User]
+    user_settings: GatewayUserSettings
     user: User
-    session_id: str
     sessions: List[Session]
+    session_id: str
     scopes: List[str]
     resume_gateway_url: str
     relationships: NotRequired[List[Relationship]]
     private_channels: NotRequired[List[Union[DMChannel, GroupDMChannel]]]
+    # presences: NotRequired[List[Presence]]
+    # merged_presences
+    merged_members: NotRequired[List[List[MemberWithUser]]]
     guilds: List[Guild]
     game_relationships: List[GameRelationship]
     feature_flags: GatewayFeatureFlags
-    connection_request_data: NotRequired[ConnectionRequestData]
+    connection_request_data: NotRequired[ConnectionRequest]
     # {"analytics_properties": {"handoff_type": "CREATE_NEW_CALL"}}
     av_sf_protocol_floor: int
     application: GatewayApplication
     analytics_token: str
+    lobbies: NotRequired[List[Lobby]]
 
 
 class SupplementalGuild(TypedDict):
@@ -118,8 +122,8 @@ class SupplementalGuild(TypedDict):
 
 class ClientInfo(TypedDict):
     version: int
-    os: Literal['windows', 'osx', 'linux', 'android', 'ios', 'playstation', 'unknown']
-    client: Literal['web', 'desktop', 'mobile', 'unknown']
+    os: Literal['windows', 'osx', 'linux', 'android', 'ios', 'playstation', 'xbox', 'other', 'unknown']
+    client: Literal['web', 'desktop', 'mobile', 'embedded', 'unknown']
 
 
 class Session(TypedDict):
@@ -127,7 +131,7 @@ class Session(TypedDict):
     active: NotRequired[bool]
     client_info: ClientInfo
     status: StatusType
-    # Not truly not required, just for sanity
+    # Not truly NotRequired, just for sanity
     activities: NotRequired[List[Activity]]
     hidden_activities: NotRequired[List[Activity]]
 

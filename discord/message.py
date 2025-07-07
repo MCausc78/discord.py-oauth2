@@ -41,6 +41,7 @@ from typing import (
     TYPE_CHECKING,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 
@@ -115,6 +116,7 @@ if TYPE_CHECKING:
     from .user import User
 
     EmojiInputType = Union[Emoji, PartialEmoji, str]
+    M = TypeVar('M', bound='Message')
 
 __all__ = (
     'Attachment',
@@ -958,7 +960,7 @@ class MessageInteractionMetadata(Hashable):
         return self.user.id == self._integration_owners.get(1)
 
 
-def flatten_handlers(cls: Type[Message]) -> Type[Message]:
+def flatten_handlers(cls: Type[M]) -> Type[M]:
     prefix = len('_handle_')
     handlers = [
         (key[prefix:], value)

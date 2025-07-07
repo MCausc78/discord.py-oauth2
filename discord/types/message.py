@@ -107,6 +107,9 @@ class MessageApplication(TypedDict):
     bot: NotRequired[User]
     cover_image: NotRequired[str]
 
+    # Related to child tokens
+    parent_id: NotRequired[Snowflake]
+
 
 MessageReferenceType = Literal[0, 1]
 

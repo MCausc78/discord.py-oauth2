@@ -100,10 +100,10 @@ ApplicationCommandOption = Union[
 class BaseApplicationCommandOption(TypedDict):
     name: str
     name_localized: NotRequired[Optional[str]]
-    name_locaizations: NotRequired[Optional[Dict[str, str]]]
+    name_localizations: NotRequired[Optional[Dict[str, str]]]
     description: str
     description_localized: NotRequired[Optional[str]]
-    description_locaizations: NotRequired[Optional[Dict[str, str]]]
+    description_localizations: NotRequired[Optional[Dict[str, str]]]
     required: NotRequired[bool]
 
 
@@ -221,9 +221,9 @@ class GuildApplicationCommandPermissions(TypedDict):
 # Sendable
 class SendableBaseApplicationCommandOption(TypedDict):
     name: str  # 1-32 characters
-    name_locaizations: NotRequired[Optional[Dict[str, str]]]  # max 34 keys, each value is 1-32 characters
+    name_localizations: NotRequired[Optional[Dict[str, str]]]  # max 34 keys, each value is 1-32 characters
     description: str  # 1-100 characters
-    description_locaizations: NotRequired[Optional[Dict[str, str]]]  # max 34 keys, each value is 1-100 characters
+    description_localizations: NotRequired[Optional[Dict[str, str]]]  # max 34 keys, each value is 1-100 characters
     required: NotRequired[Optional[bool]]
 
 
@@ -321,17 +321,17 @@ class SendableApplicationCommandAttachmentOption(SendableBaseApplicationCommandO
 
 
 SendableApplicationCommandOption = Union[
-    'ApplicationCommandSubcommandOption',
-    'ApplicationCommandSubcommandGroupOption',
-    'ApplicationCommandStringOption',
-    'ApplicationCommandIntegerOption',
-    'ApplicationCommandBooleanOption',
-    'ApplicationCommandUserOption',
-    'ApplicationCommandChannelOption',
-    'ApplicationCommandRoleOption',
-    'ApplicationCommandMentionableOption',
-    'ApplicationCommandNumberOption',
-    'ApplicationCommandAttachmentOption',
+    'SendableApplicationCommandSubcommandOption',
+    'SendableApplicationCommandSubcommandGroupOption',
+    'SendableApplicationCommandStringOption',
+    'SendableApplicationCommandIntegerOption',
+    'SendableApplicationCommandBooleanOption',
+    'SendableApplicationCommandUserOption',
+    'SendableApplicationCommandChannelOption',
+    'SendableApplicationCommandRoleOption',
+    'SendableApplicationCommandMentionableOption',
+    'SendableApplicationCommandNumberOption',
+    'SendableApplicationCommandAttachmentOption',
 ]
 
 

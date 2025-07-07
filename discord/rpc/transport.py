@@ -148,7 +148,20 @@ class IPCTransport:
 
         return True
 
-    async def send_command(self, *, command: str, args: Any, event: Optional[str] = None) -> Any:
+    async def send_command(self, command: str, args: Any, *, event: Optional[str] = None) -> Any:
+        """|coro|
+
+        Sends a IPC command and waits for result.
+
+        Parameters
+        ----------
+        command: :class:`str`
+            The command, like ``SET_ACTIVITY``.
+        args: Any
+            The arguments for the command.
+        event: Optional[:class:`str`]
+            The event to subscribe to. Required if command is ``SUBSCRIBE`` or ``UNSUBSCRIBE``.
+        """
         future = asyncio.Future()
         nonce = str(self._nonce_sequence)
         self._nonce_sequence += 1

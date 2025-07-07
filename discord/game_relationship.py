@@ -147,9 +147,12 @@ class GameRelationship(Hashable):
             u.global_name,
             u._public_flags,
             u._avatar_decoration_data['sku_id'] if u._avatar_decoration_data is not None else None,
+            u._primary_guild,
         )
 
         decoration_payload = user.get('avatar_decoration_data')
+        primary_guild_payload = user.get('primary_guild')
+
         # These keys seem to always be available
         modified = (
             user['username'],
@@ -158,16 +161,26 @@ class GameRelationship(Hashable):
             user.get('global_name'),
             user.get('public_flags', 0),
             decoration_payload['sku_id'] if decoration_payload is not None else None,
+            primary_guild_payload,
         )
         if original != modified:
             to_return = User._copy(self.user)
-            u.name, u.discriminator, u._avatar, u.global_name, u._public_flags, u._avatar_decoration_data = (
+            (
+                u.name,
+                u.discriminator,
+                u._avatar,
+                u.global_name,
+                u._public_flags,
+                u._avatar_decoration_data,
+                u._primary_guild,
+            ) = (
                 user['username'],
                 user['discriminator'],
                 user['avatar'],
                 user.get('global_name'),
                 user.get('public_flags', 0),
                 decoration_payload,
+                primary_guild_payload,
             )
             # Signal to dispatch on_user_update
             return to_return, u

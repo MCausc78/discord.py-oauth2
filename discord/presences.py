@@ -45,6 +45,7 @@ if TYPE_CHECKING:
 __all__ = (
     'RawPresenceUpdateEvent',
     'ClientStatus',
+    'Presences',
 )
 
 
@@ -173,3 +174,7 @@ class RawPresenceUpdateEvent(_RawReprMixin):
         self.pair: Optional[
             Union[Tuple[Member, Member], Tuple[Relationship, Relationship], Tuple[GameRelationship, GameRelationship]]
         ] = None
+
+
+class Presences:
+    pass

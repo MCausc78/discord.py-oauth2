@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from .partial_emoji import PartialEmoji
     from .state import ConnectionState
     from .threads import Thread
-    from .types.command import GuildApplicationCommandPermissions
+    from .types.commands import GuildApplicationCommandPermissions
     from .types.gateway import (
         MessageDeleteEvent,
         MessageDeleteBulkEvent as BulkMessageDeleteEvent,

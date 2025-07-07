@@ -21,6 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -41,8 +42,7 @@ from .voice_client import VoiceClient
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from . import abc
-    from .abc import T as ConnectReturn
+    from .abc import T as ConnectReturn, VocalChannel, Snowflake, PrivateChannel
     from .channel import DMChannel, GroupChannel
     from .client import Client
     from .member import VoiceState
@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from .types.gateway import CallCreateEvent, CallUpdateEvent
     from .user import BaseUser, User
 
-    _PrivateChannel = Union[abc.DMChannel, abc.GroupChannel]
+    _PrivateChannel = Union[DMChannel, GroupChannel]
 
 __all__ = (
     'CallMessage',
@@ -109,12 +109,12 @@ class CallMessage:
 
     @property
     def initiator(self) -> User:
-        """:class:`.abc.User`: Returns the user that started the call."""
+        """:class:`~discord.User`: Returns the user that started the call."""
         return self.message.author  # type: ignore # Cannot be a Member in private messages
 
     @property
     def channel(self) -> _PrivateChannel:
-        """:class:`.abc.PrivateChannel`: The private channel associated with this message."""
+        """:class:`~discord.abc.PrivateChannel`: The private channel associated with this message."""
         return self.message.channel  # type: ignore # Can only be a private channel here
 
     @property
@@ -181,7 +181,7 @@ class PrivateCall:
         data: Union[CallCreateEvent, CallUpdateEvent],
         state: ConnectionState,
         message: Optional[Message],
-        channel: abc.PrivateChannel,
+        channel: PrivateChannel,
     ) -> None:
         self._state = state
         self._cs_message = message
@@ -315,7 +315,7 @@ class PrivateCall:
         *,
         timeout: float = 60.0,
         reconnect: bool = True,
-        cls: Callable[[Client, abc.VocalChannel], ConnectReturn] = VoiceClient,
+        cls: Callable[[Client, VocalChannel], ConnectReturn] = VoiceClient,
     ) -> ConnectReturn:
         """|coro|
 
@@ -358,7 +358,7 @@ class PrivateCall:
         *,
         timeout: float = 60.0,
         reconnect: bool = True,
-        cls: Callable[[Client, abc.VocalChannel], ConnectReturn] = VoiceClient,
+        cls: Callable[[Client, VocalChannel], ConnectReturn] = VoiceClient,
     ) -> ConnectReturn:
         """|coro|
 
@@ -421,7 +421,7 @@ class PrivateCall:
         """
         return await self.disconnect(force=force)
 
-    def voice_state_for(self, user: abc.Snowflake) -> Optional[VoiceState]:
+    def voice_state_for(self, user: Snowflake) -> Optional[VoiceState]:
         """Retrieves the :class:`VoiceState` for a specified :class:`User`.
 
         If the :class:`User` has no voice state then this function returns
@@ -467,7 +467,7 @@ class GroupCall(PrivateCall):
         return *channel.recipients, channel.me
 
     @_running_only
-    async def ring(self, *recipients: abc.Snowflake) -> None:
+    async def ring(self, *recipients: Snowflake) -> None:
         r"""|coro|
 
         Rings the specified recipients.
@@ -487,7 +487,7 @@ class GroupCall(PrivateCall):
         await self._state.http.ring(self.channel.id, *{r.id for r in recipients})
 
     @_running_only
-    async def stop_ringing(self, *recipients: abc.Snowflake) -> None:
+    async def stop_ringing(self, *recipients: Snowflake) -> None:
         r"""|coro|
 
         Stops ringing the specified recipients.
