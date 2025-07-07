@@ -43,7 +43,6 @@ from typing import (
     Optional,
     Sequence,
     TYPE_CHECKING,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -80,13 +79,11 @@ if TYPE_CHECKING:
     from .poll import Poll
 
     from .types import (
-        activity,
         billing,
         channel,
         commands,
         connections,
         entitlements,
-        gateway,
         game_invite,
         guild,
         harvest,
@@ -95,6 +92,7 @@ if TYPE_CHECKING:
         member,
         message,
         oauth2,
+        presences,
         settings,
         subscription,
         template,
@@ -1691,11 +1689,11 @@ class HTTPClient:
 
     def create_headless_session(
         self,
-        activities: List[activity.Activity],
+        activities: List[presences.SendableActivity],
         *,
         token: Optional[str] = None,
-    ) -> Response[gateway.CreateHeadlessSessionResponse]:
-        payload: Dict[str, Any] = {
+    ) -> Response[presences.CreateHeadlessSessionResponseBody]:
+        payload: presences.CreateHeadlessSessionRequestBody = {
             'activities': activities,
         }
         if token is not None:
@@ -1717,13 +1715,14 @@ class HTTPClient:
         *,
         channel_id: Optional[Snowflake] = None,
         message_id: Optional[Snowflake] = None,
-    ) -> Response[Dict[Literal['secret'], str]]:
+    ) -> Response[presences.GetActivitySecretResponseBody]:
         # Usable in OAuth2 context, unsure what scopes it requires however (perhaps activities.read?)
         params = {}
         if channel_id is not None:
             params['channel_id'] = channel_id
         if message_id is not None:
             params['message_id'] = message_id
+
         route = Route(
             'GET',
             '/users/{user_id}/sessions/{session_id}/activities/{application_id}/{activity_action_type}',
@@ -1777,11 +1776,3 @@ class HTTPClient:
             raise GatewayNotFound() from exc
 
         return data['url']
-
-    async def get_bot_gateway(self) -> Tuple[int, str, gateway.SessionStartLimit]:
-        try:
-            data = await self.request(Route('GET', '/gateway/bot'))
-        except HTTPException as exc:
-            raise GatewayNotFound() from exc
-
-        return data['shards'], data['url'], data['session_start_limit']

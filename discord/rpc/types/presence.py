@@ -24,9 +24,17 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, Tuple, TypedDict
+from typing import List, Literal, Optional, TypedDict
+from typing_extensions import NotRequired
 
-from ...types.activity import StatusType, Activity as APIActivity
+from ...types.presences import (
+    StatusType,
+    ReceivableActivity as APIActivity,
+    ActivityTimestamps,
+    ActivityAssets,
+    ActivityParty as APIActivityParty,
+    ActivitySecrets,
+)
 
 
 class RelationshipPresence(TypedDict):
@@ -34,28 +42,8 @@ class RelationshipPresence(TypedDict):
     activity: Optional[APIActivity]  # Activity that is associated with authorized application
 
 
-class ActivityTimestamps(TypedDict, total=False):
-    start: int
-    end: int
-
-
-class ActivityAssets(TypedDict, total=False):
-    large_image: str  # 1-256 characters
-    large_text: str  # 2-128 characters
-    small_image: str  # 1-256 characters
-    small_text: str  # 2-128 characters
-
-
-class ActivityParty(TypedDict, total=False):
-    id: str  # 2-128 characters
-    size: Tuple[int, int]  # Both elements must be positive
-    privacy: Literal[0, 1]  # PRIVATE | PUBLIC
-
-
-class ActivitySecrets(TypedDict, total=False):
-    match: str  # 2-128 characters
-    join: str  # 2-128
-    spectate: str  # 2-128 characters
+class ActivityParty(APIActivityParty):
+    privacy: NotRequired[Literal[0, 1]]  # PRIVATE | PUBLIC
 
 
 class ActivityButton(TypedDict):

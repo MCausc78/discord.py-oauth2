@@ -713,21 +713,24 @@ class DiscordWebSocket:
         since: int = 0,
         afk: bool = False,
     ) -> None:
+        activities_data = []
         if activities is not None:
             if not all(isinstance(activity, (BaseActivity, Spotify)) for activity in activities):
                 raise TypeError('activity must derive from BaseActivity')
-            activities_data = [activity.to_dict() for activity in activities]
-        else:
-            activities_data = []
+
+            for activity in activities:
+                activity_data = activity.to_dict()
+                if activity_data is not None:
+                    activities_data.append(activity_data)
 
         payload = {
-            'op': self.PRESENCE,
             'd': {
-                'status': str(status or 'unknown'),
                 'activities': activities_data,
                 'afk': afk,
-                'since': since,
+                'since': str(since),
+                'status': str(status or 'unknown'),
             },
+            'op': self.PRESENCE,
         }
 
         _log.debug('Sending %s to change presence.', payload['d'])

@@ -39,7 +39,10 @@ if TYPE_CHECKING:
     from .member import Member
     from .relationship import Relationship
     from .state import ConnectionState
-    from .types.activity import ClientStatus as ClientStatusPayload, PartialPresenceUpdate
+    from .types.presences import (
+        Presence as PresencePayload,
+        ClientStatus as ClientStatusPayload,
+    )
 
 
 __all__ = (
@@ -152,23 +155,30 @@ class RawPresenceUpdateEvent(_RawReprMixin):
     activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
         The activities the user is currently doing. Due to a Discord API limitation, a user's Spotify activity may not appear
         if they are listening to a song with a title longer than ``128`` characters. See :issue:`1738` for more information.
+    hidden_activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
+        The hidden activities the user is currently doing. Due to a Discord API limitation, a user's Spotify activity may not appear
+        if they are listening to a song with a title longer than ``128`` characters. See :issue:`1738` for more information.
     pair: Optional[Union[Tuple[:class:`Member`, :class:`Member`], Tuple[:class:`Relationship`, :class:`Relationship`], Tuple[:class:`GameRelationship`, :class:`GameRelationship`]]
         The ``(old, new)`` pair representing old and new presence.
     """
 
     __slots__ = (
         'user_id',
-        'guild_id',
-        'guild',
         'client_status',
         'activities',
+        'hidden_activities',
+        'guild_id',
+        'guild',
         'pair',
     )
 
-    def __init__(self, *, data: PartialPresenceUpdate, state: ConnectionState) -> None:
+    def __init__(self, *, data: PresencePayload, state: ConnectionState) -> None:
         self.user_id: int = int(data['user']['id'])
         self.client_status: ClientStatus = ClientStatus(status=data['status'], data=data['client_status'])
-        self.activities: Tuple[ActivityTypes, ...] = tuple(create_activity(d, state) for d in data['activities'])
+        self.activities: Tuple[ActivityTypes, ...] = tuple(create_activity(d, state) for d in data.get('activities', ()))
+        self.hidden_activities: Tuple[ActivityTypes, ...] = tuple(
+            create_activity(d, state) for d in data.get('hidden_activities', ())
+        )
         self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
         self.guild: Optional[Guild] = state._get_guild(self.guild_id)
         self.pair: Optional[

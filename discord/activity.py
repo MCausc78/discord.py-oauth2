@@ -96,8 +96,9 @@ if TYPE_CHECKING:
 
     from .message import MessageApplication, Message
     from .state import ConnectionState
-    from .types.activity import (
-        Activity as ActivityPayload,
+    from .types.presences import (
+        SendableActivity as SendableActivityPayload,
+        ReceivableActivity as ReceivableActivityPayload,
         ActivityTimestamps,
         ActivityParty,
         ActivityAssets,
@@ -127,7 +128,7 @@ class BaseActivity:
 
     Note that although these types are considered user-settable by the library,
     Discord typically ignores certain combinations of activity depending on
-    what is currently set. This behaviour may change in the future so there are
+    what is currently set. This behavior may change in the future so there are
     no guarantees on whether Discord will actually let you set these types.
 
     .. versionadded:: 1.3
@@ -140,14 +141,14 @@ class BaseActivity:
 
     @property
     def created_at(self) -> Optional[datetime.datetime]:
-        """Optional[:class:`datetime.datetime`]: When the user started doing this activity in UTC.
+        """Optional[:class:`~datetime.datetime`]: When the user started doing this activity in UTC.
 
         .. versionadded:: 1.3
         """
         if self._created_at is not None:
             return datetime.datetime.fromtimestamp(self._created_at / 1000, tz=datetime.timezone.utc)
 
-    def to_dict(self) -> ActivityPayload:
+    def to_dict(self) -> SendableActivityPayload:
         raise NotImplementedError
 
 
@@ -234,17 +235,35 @@ class Activity(BaseActivity):
         super().__init__(**kwargs)
         self.state: Optional[str] = kwargs.pop('state', None)
         self.details: Optional[str] = kwargs.pop('details', None)
-        self.timestamps: ActivityTimestamps = kwargs.pop('timestamps', {})
+
+        try:
+            self.timestamps: ActivityTimestamps = kwargs.pop('timestamps')
+        except KeyError:
+            self.timestamps = {}
+
         self.platform: Optional[str] = kwargs.pop('platform', None)
-        self.assets: ActivityAssets = kwargs.pop('assets', {})
-        self.party: ActivityParty = kwargs.pop('party', {})
+
+        try:
+            self.assets: ActivityAssets = kwargs.pop('assets')
+        except KeyError:
+            self.assets = {}
+
+        try:
+            self.party: ActivityParty = kwargs.pop('party')
+        except KeyError:
+            self.party = {}
+
         self.application_id: Optional[int] = _get_as_snowflake(kwargs, 'application_id')
         self.name: Optional[str] = kwargs.pop('name', None)
         self.url: Optional[str] = kwargs.pop('url', None)
         self.flags: int = kwargs.pop('flags', 0)
         self.sync_id: Optional[str] = kwargs.pop('sync_id', None)
         self.session_id: Optional[str] = kwargs.pop('session_id', None)
-        self.buttons: List[str] = kwargs.pop('buttons', [])
+
+        try:
+            self.buttons: List[str] = kwargs.pop('buttons')
+        except KeyError:
+            self.buttons = []
 
         activity_type = kwargs.pop('type', -1)
         self.type: ActivityType = (
@@ -268,7 +287,7 @@ class Activity(BaseActivity):
         inner = ' '.join('%s=%r' % t for t in attrs)
         return f'<Activity {inner}>'
 
-    def to_dict(self) -> ActivityPayload:
+    def to_dict(self) -> SendableActivityPayload:
         ret: Dict[str, Any] = {}
         for attr in self.__slots__:
             value = getattr(self, attr, None)
@@ -279,9 +298,11 @@ class Activity(BaseActivity):
                 continue
 
             ret[attr] = value
+
         ret['type'] = int(self.type)
         if self.emoji:
             ret['emoji'] = self.emoji.to_dict()
+
         return ret  # type: ignore
 
     @property
@@ -482,7 +503,7 @@ class Game(BaseActivity):
     def __repr__(self) -> str:
         return f'<Game name={self.name!r}>'
 
-    def to_dict(self) -> ActivityPayload:
+    def to_dict(self) -> SendableActivityPayload:
         timestamps: ActivityTimestamps = {}
         if self._start:
             timestamps['start'] = self._start
@@ -606,7 +627,7 @@ class Streaming(BaseActivity):
         else:
             return name[7:] if name[:7] == 'twitch:' else None
 
-    def to_dict(self) -> ActivityPayload:
+    def to_dict(self) -> SendableActivityPayload:
         ret: Dict[str, Any] = {
             'type': ActivityType.streaming.value,
             'name': str(self.name),
@@ -695,18 +716,25 @@ class Spotify:
         """
         return self.color
 
-    def to_dict(self) -> ActivityPayload:
+    def to_dict(self) -> SendableActivityPayload:
         return {
-            'flags': 48,  # SYNC | PLAY
             'name': 'Spotify',
             'assets': self._assets,
-            'party': self._party,
-            'sync_id': self._sync_id,
-            'session_id': self._session_id,
-            'timestamps': self._timestamps,
             'details': self._details,
             'state': self._state,
-        }  # type: ignore
+            'timestamps': self._timestamps,  # always sent as {start: f, end: f + c}
+            'party': self._party,  # always sent as {id: n}
+            # if !is_local, then insert these fields:
+            'sync_id': self._sync_id,
+            'flags': 48,  # PLAY | SYNC
+            # 'metadata': {
+            #   'context_uri': NotRequired[str],
+            #   'album_id': str,
+            #   'artist_ids': List[str],
+            #   'type': ???,
+            #   'button_urls': [],
+            # },
+        }
 
     @property
     def name(self) -> str:
@@ -917,15 +945,19 @@ class CustomActivity(BaseActivity):
 
         return payload  # type: ignore
 
-    def to_dict(self) -> ActivityPayload:
-        o = {
-            'type': ActivityType.custom.value,
-            'state': self.name,
-            'name': 'Custom Status',
-        }
+    def to_dict(self) -> SendableActivityPayload:
+        if not self.name:
+            return None  # type: ignore
 
-        if self.emoji:
-            o['emoji'] = self.emoji.to_dict()
+        o = {
+            'flags': 0,
+            'name': 'Custom Status',
+            'state': self.name,  # :(
+            'type': ActivityType.custom.value,
+        }
+        # For some reason, SDK doesn't send emoji here, so we won't send it too :(
+        # if self.emoji:
+        #    o['emoji'] = self.emoji.to_dict()
         return o  # type: ignore
 
     def __eq__(self, other: object) -> bool:
@@ -1330,7 +1362,7 @@ ActivityTypes = Union[Activity, Game, CustomActivity, Streaming, Spotify]
 
 
 @overload
-def create_activity(data: ActivityPayload, state: ConnectionState) -> ActivityTypes:
+def create_activity(data: ReceivableActivityPayload, state: ConnectionState) -> ActivityTypes:
     ...
 
 
@@ -1339,7 +1371,7 @@ def create_activity(data: None, state: ConnectionState) -> None:
     ...
 
 
-def create_activity(data: Optional[ActivityPayload], state: ConnectionState) -> Optional[ActivityTypes]:
+def create_activity(data: Optional[ReceivableActivityPayload], state: ConnectionState) -> Optional[ActivityTypes]:
     if not data:
         return None
 
