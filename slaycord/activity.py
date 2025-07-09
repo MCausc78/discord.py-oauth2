@@ -33,7 +33,7 @@ from .color import Color
 from .enums import (
     try_enum,
     ActivityPartyPrivacy,
-    ActivityPlatformType,
+    ActivityPlatform,
     ActivityType,
     ClientType,
     OperatingSystem,
@@ -393,14 +393,14 @@ class Activity(BaseActivity):
         A stream URL that the activity could be doing.
     session_id: Optional[:class:`str`]
         The ID of the Gateway session the activity is attached to.
-    platform: Optional[:class:`ActivityPlatformType`]
+    platform: Optional[:class:`ActivityPlatform`]
         The user's current platform.
 
         .. versionadded:: 2.4
 
         .. versionchanged:: 3.0
 
-            The type was changed from :class:`str` to :class:`ActivityPlatformType`.
+            The type was changed from :class:`str` to :class:`ActivityPlatform`.
     start_timestamp: Optional[:class:`int`]
         Corresponds to when the user started doing the
         activity in milliseconds since Unix epoch.
@@ -479,9 +479,6 @@ class Activity(BaseActivity):
         timestamps = kwargs.get('timestamps')
         emoji = kwargs.get('emoji')
 
-        if isinstance(supported_platforms, ActivityPlatforms):
-            supported_platforms = supported_platforms.value
-
         self.id: str = kwargs.get('id', '')
         self.name: Optional[str] = kwargs.get('name')
         self.type: ActivityType = (
@@ -489,10 +486,20 @@ class Activity(BaseActivity):
         )
         self.url: Optional[str] = kwargs.get('url')
         self.session_id: Optional[str] = kwargs.get('session_id')
-        self.platform: Optional[ActivityPlatformType] = (
-            None if platform is None else try_enum(ActivityPlatformType, platform)
-        )
-        self._supported_platforms: Optional[int] = supported_platforms
+
+        if platform is None:
+            self.platform: Optional[ActivityPlatform] = None
+        elif isinstance(platform, ActivityPlatform):
+            self.platform = platform
+        else:
+            self.platform = try_enum(ActivityPlatform, platform)
+
+        if supported_platforms is None:
+            self._supported_platforms: Optional[int] = None
+        elif isinstance(supported_platforms, ActivityPlatforms):
+            self._supported_platforms = supported_platforms.value
+        else:
+            self._supported_platforms = supported_platforms
 
         if timestamps:
             self.start_timestamp: Optional[int] = timestamps.get('start')
@@ -611,6 +618,8 @@ class Game(BaseActivity):
 
     This is typically displayed via **Playing** on the official Discord client.
 
+    The parameters are mostly same as attributes, with additional ones detailed below.
+
     .. container:: operations
 
         .. describe:: x == y
@@ -631,16 +640,8 @@ class Game(BaseActivity):
 
     Parameters
     ----------
-    name: :class:`str`
-        The game's name.
-    application_id: Optional[:class:`int`]
-        The game's application ID.
-    details: Optional[:class:`str`]
-        The game's details.
-    flags: :class:`int`
-        The activity's flags.
-    state: Optional[:class:`str`]
-        The game's state.
+    supported_platforms: Optional[:class:`ActivityPlatforms`]
+        The platforms the game is supported on.
 
     Attributes
     ----------
@@ -648,14 +649,14 @@ class Game(BaseActivity):
         The game's name.
     session_id: Optional[:class:`str`]
         The ID of the Gateway session the activity is attached to.
-    platform: Optional[:class:`ActivityPlatformType`]
+    platform: Optional[:class:`ActivityPlatform`]
         Where the user is playing from (ie. PS5, Xbox).
 
         .. versionadded:: 2.4
 
         .. versionchanged:: 3.0
 
-            The type was changed from :class:`str` to :class:`ActivityPlatformType`.
+            The type was changed from :class:`str` to :class:`ActivityPlatform`.
     application_id: Optional[:class:`int`]
         The game's application ID.
     parent_application_id: Optional[:class:`int`]
@@ -664,28 +665,36 @@ class Game(BaseActivity):
         The game's details.
     state: Optional[:class:`str`]
         The game's state.
-    assets: :class:`dict`
-        A dictionary representing the images and their hover text of a game.
+    button_labels: List[:class:`str`]
+        A list of strings representing the labels of custom buttons shown in a rich presence.
+
+        .. versionadded:: 2.0
+
+        .. versionchanged:: 3.0
+
+            The attribute was renamed from ``buttons`` to ``button_labels``.
+    party: Optional[:class:`ActivityParty`]
+        The party of the activity.
+    assets: Optional[:class:`ActivityAssets`]
+        The images and their hover text of an activity.
+    secrets: Optional[:class:`ActivitySecrets`]
+        The secrets for joining/spectating a game.
+    metadata: Dict[:class:`str`, Any]
+        A dictionary representing the activity metadata.
+
         It contains the following optional keys:
 
-        - ``large_image``: A string representing the ID for the large image asset.
-        - ``large_text``: A string representing the text when hovering over the large image asset.
-        - ``small_image``: A string representing the ID for the small image asset.
-        - ``small_text``: A string representing the text when hovering over the small image asset.
+        - ``button_urls``: A list representing URLs correpresenting to the custom buttons shown in Rich Presence.
+        - ``artist_ids``: A list representing the Spotify IDs of artists.
+        - ``album_id``: A string representing the ID of album of the song being played.
+        - ``context_uri``: A string representing the Spotify URI of the current player context.
+        - ``type``: A string representing the type of Spotify being played, generally ``track`` or ``episode``.
 
-        .. versionadded:: 2.4
-    party: Optional[:class:`dict`]
-        A dictionary representing the party in game.
-        It contains the following required keys:
+        See more details on :userdoccers:`Discord Userdoccers <resources/presence#activity-metadata-object>`.
 
-        - ``id``: A string representing the ID for the party.
-        - ``size``: A tuple of two integers, ``current_size`` and ``max_size``, representing current and max sizes of party.
-    secrets: :class:`dict`
-        A dictionary representing the secrets for joining/spectating a game.
-        It contains the following optional keys:
+        .. danger::
 
-        - ``join``: A string representing the secret for joining a game.
-        - ``spectate``: A string representing the secret for spectating a game.
+            Contents inside this attribute are NOT sanitized and can have technically anything. Treat data carefully."
     """
 
     __slots__ = (
@@ -707,17 +716,29 @@ class Game(BaseActivity):
         'metadata',
     )
 
-    def __init__(self, name: str, **extra: Any) -> None:
+    def __init__(self, details: Optional[str] = None, **extra: Any) -> None:
         super().__init__(**extra)
 
         platform = extra.get('platform')
         supported_platforms = extra.get('supported_platforms')
         timestamps = extra.get('timestamps')
 
-        self.name: str = name
+        self.name: str = extra.get('name', '')
         self.session_id: Optional[str] = extra.get('session_id')
-        self.platform: Optional[str] = extra.get('platform')
-        self._supported_platforms: Optional[int] = extra.get('supported_platforms')
+
+        if platform is None:
+            self.platform: Optional[ActivityPlatform] = None
+        elif isinstance(platform, ActivityPlatform):
+            self.platform = platform
+        else:
+            self.platform = try_enum(ActivityPlatform, platform)
+
+        if supported_platforms is None:
+            self._supported_platforms: Optional[int] = None
+        elif isinstance(supported_platforms, ActivityPlatforms):
+            self._supported_platforms = supported_platforms.value
+        else:
+            self._supported_platforms = supported_platforms
 
         if timestamps:
             self.start_timestamp: int = timestamps.get('start', 0)
@@ -728,7 +749,7 @@ class Game(BaseActivity):
 
         self.application_id: Optional[int] = _get_as_snowflake(extra, 'application_id')
         self.parent_application_id: Optional[int] = _get_as_snowflake(extra, 'parent_application_id')
-        self.details: Optional[str] = extra.get('details')
+        self.details: Optional[str] = details
         self.state: Optional[str] = extra.get('state')
         self._flags: int = extra.get('flags', 0)
 
@@ -745,6 +766,12 @@ class Game(BaseActivity):
             self.metadata: Dict[str, Any] = extra['metadata']
         except KeyError:
             self.metadata = {}
+
+    @property
+    def supported_platforms(self) -> Optional[ActivityPlatforms]:
+        """Optional[:class:`ActivityPlatforms`]: The platforms the game is supported on."""
+        if self._supported_platforms is not None:
+            return ActivityPlatforms._from_value(self._supported_platforms)
 
     @property
     def flags(self) -> ActivityFlags:
@@ -779,6 +806,33 @@ class Game(BaseActivity):
     def __repr__(self) -> str:
         return f'<Game name={self.name!r}>'
 
+    def add_button(self, label: str, *, url: str) -> Self:
+        """Adds a button.
+
+        Parameters
+        ----------
+        label: :class:`str`
+            The label of the button.
+        url: :class:`str`
+            The URL of the button.
+
+        Returns
+        -------
+        :class:`Game`
+            The current instance, for chaining.
+        """
+
+        self.button_labels.append(label)
+
+        try:
+            button_urls = self.metadata['button_urls']
+        except KeyError:
+            self.metadata['button_urls'] = [url]
+        else:
+            button_urls.append(url)
+
+        return self
+
     def to_dict(
         self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
     ) -> Optional[SendableActivityPayload]:
@@ -791,6 +845,13 @@ class Game(BaseActivity):
                 application_id = state.application_id
             else:
                 application_id = self.application_id
+
+        if session_id is MISSING:
+            session = state.current_session
+            if session:
+                session_id = session.id
+            else:
+                session_id = None
 
         timestamps: ActivityTimestamps = {}
 
@@ -827,6 +888,9 @@ class Game(BaseActivity):
             party = self.party.to_dict()
             if party:
                 payload['party'] = party
+
+        if self.platform:
+            payload['platform'] = self.platform.value
 
         if session_id is not None:
             payload['session_id'] = session_id
@@ -1543,6 +1607,8 @@ class HeadlessSession:
 class ActivityInvite:
     """Represents an activity invite.
 
+    .. versionadded:: 3.0
+
     Attributes
     ----------
     channel_id: Optional[:class:`int`]
@@ -1745,8 +1811,18 @@ def create_activity(
         cls = Activity
 
     transformed_kwargs: Optional[Dict[str, Any]] = None
+
+    raw_supported_platforms = data.get('supported_platforms')
     raw_party = data.get('party')
     raw_assets = data.get('assets')
+
+    if raw_supported_platforms is not None:
+        supported_platforms = ActivityPlatforms.from_string_array(raw_supported_platforms).value
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'supported_platforms': supported_platforms}
+        else:
+            transformed_kwargs['supported_platforms'] = supported_platforms
 
     if raw_party is not None:
         party = ActivityParty.from_dict(raw_party)
