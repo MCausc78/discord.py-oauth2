@@ -101,7 +101,7 @@ class GuildProfile(Hashable):
     features: List[:class:`str`]
         A list of features that the guild has. The features that a guild can have are
         subject to arbitrary change by Discord. A list of guild features can be found
-        in :ddocs:`the Discord documentation <resources/guild#guild-object-guild-features>`.
+        in :userdoccers:`Discord Userdoccers <resources/guild#guild-features>`.
     visibility: :class:`GuildVisibility`
         The visibility level of the guild.
     premium_subscription_count: :class:`int`
@@ -192,7 +192,7 @@ class GuildProfile(Hashable):
     @property
     def badge(self) -> Optional[Asset]:
         """:class:`Asset`: Returns the guild's badge, if available."""
-        return Asset._from_clan_badge(self._state, self.id, self._badge)
+        return Asset._from_primary_guild(self._state, self.id, self._badge)
 
     @property
     def discovery_splash(self) -> Optional[Asset]:
