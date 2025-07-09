@@ -182,9 +182,8 @@ class Embed:
         url: Optional[Any] = None,
         description: Optional[Any] = None,
         timestamp: Optional[datetime.datetime] = None,
-    ):
-
-        self.color = color if color is not None else colour
+    ) -> None:
+        self.color = colour if color is None else color
         self.title: Optional[str] = title
         self.type: EmbedType = type
         self.url: Optional[str] = url
@@ -208,7 +207,7 @@ class Embed:
         """Converts a :class:`dict` to a :class:`Embed` provided it is in the
         format that Discord expects it to be in.
 
-        You can find out about this format in the :ddocs:`official Discord documentation <resources/message#embed-object>`.
+        You can find out about this format in the :userdoccers:`Discord Userdoccers <resources/message#embed-object>`.
 
         Parameters
         ----------

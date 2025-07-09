@@ -96,9 +96,9 @@ if TYPE_CHECKING:
     from .voice_client import VoiceProtocol
 
     from .types import gateway as gw
-    from .types.activity import (
-        PartialPresenceUpdate as PartialPresenceUpdatePayload,
-        Activity as ActivityPayload,
+    from .types.presences import (
+        Presence as PresencePayload,
+        SendableActivity as SendableActivityPayload,
     )
     from .types.automod import AutoModerationRule, AutoModerationActionExecution
     from .types.channel import (
@@ -217,7 +217,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         # else: cache_flags._verify_intents(intents)
 
         self.member_cache_flags: MemberCacheFlags = cache_flags
-        self._activities: List[ActivityPayload] = activities
+        self._activities: List[SendableActivityPayload] = activities
         self._status: Optional[str] = status
         self._intents: Optional[Intents] = intents
 
@@ -768,7 +768,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         ):
             guild_data = cast('gw.SupplementalGuild', untyped_guild_data)
             guild_members_data = cast('List[MemberWithUserPayload]', untyped_guild_members_data)
-            guild_presences_data = cast('List[PartialPresenceUpdatePayload]', untyped_guild_presences_data)
+            guild_presences_data = cast('List[PresencePayload]', untyped_guild_presences_data)
 
             guild_id = int(guild_data['id'])
             guild = self._get_guild(guild_id)
@@ -800,7 +800,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
                 event.client_status = ClientStatus(
                     status=guild_presence_data['status'], data=guild_presence_data['client_status']
                 )
-                event.activities = tuple(create_activity(d, self) for d in guild_presence_data['activities'])
+                event.activities = tuple(create_activity(d, self) for d in guild_presence_data.get('activities', ()))
                 event.guild_id = guild_id
                 event.guild = guild
 
@@ -845,7 +845,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             event.client_status = ClientStatus(
                 status=friend_presence_data['status'], data=friend_presence_data['client_status']
             )
-            event.activities = tuple(create_activity(d, self) for d in friend_presence_data['activities'])
+            event.activities = tuple(create_activity(d, self) for d in friend_presence_data.get('activities', ()))
             event.guild_id = None
             event.guild = None
 
@@ -1076,7 +1076,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
                 except KeyError:
                     user_data = data['user']
                     if len(user_data) > 1:
-                        user = self.store_user(user_data)
+                        user = self.store_user(user_data)  # type: ignore
                     else:
                         user = self.get_user(raw.user_id) or Object(id=raw.user_id)
 
