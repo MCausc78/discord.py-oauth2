@@ -393,14 +393,14 @@ class Activity(BaseActivity):
         A stream URL that the activity could be doing.
     session_id: Optional[:class:`str`]
         The ID of the Gateway session the activity is attached to.
-    platform: Optional[:class:`ActivityPlatformType`]
+    platform: Optional[:class:`ActivityPlatform`]
         The user's current platform.
 
         .. versionadded:: 2.4
 
         .. versionchanged:: 3.0
 
-            The type was changed from :class:`str` to :class:`ActivityPlatformType`.
+            The type was changed from :class:`str` to :class:`ActivityPlatform`.
     start_timestamp: Optional[:class:`int`]
         Corresponds to when the user started doing the
         activity in milliseconds since Unix epoch.
@@ -649,14 +649,14 @@ class Game(BaseActivity):
         The game's name.
     session_id: Optional[:class:`str`]
         The ID of the Gateway session the activity is attached to.
-    platform: Optional[:class:`ActivityPlatformType`]
+    platform: Optional[:class:`ActivityPlatform`]
         Where the user is playing from (ie. PS5, Xbox).
 
         .. versionadded:: 2.4
 
         .. versionchanged:: 3.0
 
-            The type was changed from :class:`str` to :class:`ActivityPlatformType`.
+            The type was changed from :class:`str` to :class:`ActivityPlatform`.
     application_id: Optional[:class:`int`]
         The game's application ID.
     parent_application_id: Optional[:class:`int`]
