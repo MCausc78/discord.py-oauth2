@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 __all__ = (
     'Enum',
-    'ActivityPlatformType',
+    'ActivityPlatform',
     'ActivityType',
     'AppCommandHandler',
     'AppCommandPermissionType',
@@ -241,7 +241,7 @@ class ActivityPartyPrivacy(Enum):
     public = 1
 
 
-class ActivityPlatformType(Enum):
+class ActivityPlatform(Enum):
     desktop = 'desktop'
     xbox = 'xbox'
     samsung = 'samsung'
