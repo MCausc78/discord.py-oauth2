@@ -25,71 +25,43 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from copy import copy
-import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, overload
 
 from .asset import Asset
 from .color import Color
-from .enums import try_enum, ActivityType, ClientType, OperatingSystem, Status
+from .enums import (
+    try_enum,
+    ActivityPartyPrivacy,
+    ActivityPlatformType,
+    ActivityType,
+    ClientType,
+    OperatingSystem,
+    Status,
+)
+from .flags import (
+    ActivityFlags,
+    ActivityPlatforms,
+)
 from .partial_emoji import PartialEmoji
 from .utils import MISSING, _get_as_snowflake, cached_slot_property, find, parse_time
 
 __all__ = (
     'BaseActivity',
+    '_activity_asset_url',
+    'ActivityAssets',
+    'ActivityButton',
+    'ActivityParty',
+    'ActivitySecrets',
     'Activity',
-    'Streaming',
     'Game',
+    'Streaming',
     'Spotify',
     'CustomActivity',
+    'Session',
     'HeadlessSession',
     'ActivityInvite',
 )
-
-"""If curious, this is the current schema for an activity.
-
-It's fairly long so I will document it here:
-
-All keys are optional.
-
-state: str (max: 128),
-details: str (max: 128)
-timestamps: dict
-    start: int (min: 1)
-    end: int (min: 1)
-assets: dict
-    large_image: str (max: 32)
-    large_text: str (max: 128)
-    small_image: str (max: 32)
-    small_text: str (max: 128)
-party: dict
-    id: str (max: 128),
-    size: List[int] (max-length: 2)
-        elem: int (min: 1)
-secrets: dict
-    match: str (max: 128)
-    join: str (max: 128)
-    spectate: str (max: 128)
-instance: bool
-application_id: str
-name: str (max: 128)
-url: str
-type: int
-sync_id: str
-session_id: str
-flags: int
-buttons: list[str (max: 32)]
-
-There are also activity flags which are mostly uninteresting for the library atm.
-
-t.ActivityFlags = {
-    INSTANCE: 1,
-    JOIN: 2,
-    SPECTATE: 4,
-    JOIN_REQUEST: 8,
-    SYNC: 16,
-    PLAY: 32
-}
-"""
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -100,9 +72,9 @@ if TYPE_CHECKING:
         SendableActivity as SendableActivityPayload,
         ReceivableActivity as ReceivableActivityPayload,
         ActivityTimestamps,
-        ActivityParty,
-        ActivityAssets,
-        ActivitySecrets,
+        ActivityParty as ActivityPartyPayload,
+        ActivityAssets as ActivityAssetsPayload,
+        ActivitySecrets as ActivitySecretsPayload,
     )
     from .types.gateway import (
         Session as SessionPayload,
@@ -117,7 +89,7 @@ if TYPE_CHECKING:
 
 class BaseActivity:
     """The base activity that all user-settable activities inherit from.
-    A user-settable activity is one that can be used in :meth:`Client.change_presence`.
+    An user-settable activity is one that can be used in :meth:`Client.change_presence`.
 
     The following types currently count as user-settable:
 
@@ -140,16 +112,261 @@ class BaseActivity:
         self._created_at: Optional[float] = kwargs.pop('created_at', None)
 
     @property
-    def created_at(self) -> Optional[datetime.datetime]:
+    def created_at(self) -> Optional[datetime]:
         """Optional[:class:`~datetime.datetime`]: When the user started doing this activity in UTC.
 
         .. versionadded:: 1.3
         """
         if self._created_at is not None:
-            return datetime.datetime.fromtimestamp(self._created_at / 1000, tz=datetime.timezone.utc)
+            return datetime.fromtimestamp(self._created_at / 1000, tz=timezone.utc)
 
-    def to_dict(self) -> SendableActivityPayload:
+    def to_dict(
+        self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
+    ) -> Optional[SendableActivityPayload]:
         raise NotImplementedError
+
+
+def _activity_asset_url(image: Optional[str] = None, *, application_id: Optional[int] = None) -> Optional[str]:
+    if image is None:
+        return None
+    elif image.startswith('mp:'):
+        return f'https://media.discordapp.net/{image[3:]}'
+    elif application_id is not None:
+        return Asset.BASE + f'/app-assets/{application_id}/{image}.png'
+
+
+class ActivityAssets:
+    """Represents assets within in :class:`Game` activity.
+
+    .. versionadded:: 3.0
+
+    Attributes
+    ----------
+    large_image: Optional[:class:`str`]
+        An arbitrary string representing the large activity asset image.
+
+        You can find out about format of this string in the :userdoccers:`Discord Userdoccers <resources/presence#activity-asset-image>`.
+    large_image_text: Optional[:class:`str`]
+        The large image asset hover text of this activity, if applicable.
+    small_image: Optional[:class:`str`]
+        An arbitrary string representing the small activity asset image.
+
+        You can find out about format of this string in the :userdoccers:`Discord Userdoccers <resources/presence#activity-asset-image>`.
+    small_image_text: Optional[:class:`str`]
+        The small image asset hover text of this activity, if applicable.
+    """
+
+    __slots__ = (
+        '_application_id',
+        'large_image',
+        'large_image_text',
+        'small_image',
+        'small_image_text',
+    )
+
+    def __init__(
+        self,
+        *,
+        large_image: Optional[str] = None,
+        large_image_text: Optional[str] = None,
+        small_image: Optional[str] = None,
+        small_image_text: Optional[str] = None,
+    ) -> None:
+        self._application_id: Optional[int] = None
+        self.large_image: Optional[str] = large_image
+        self.large_image_text: Optional[str] = large_image_text
+        self.small_image: Optional[str] = small_image
+        self.small_image_text: Optional[str] = small_image_text
+
+    @classmethod
+    def from_dict(cls, data: ActivityAssetsPayload, application_id: Optional[int] = None) -> Self:
+        self = cls(
+            large_image=data.get('large_image'),
+            large_image_text=data.get('large_text'),
+            small_image=data.get('small_image'),
+            small_image_text=data.get('small_text'),
+        )
+        self._application_id = application_id
+        return self
+
+    def to_dict(self) -> ActivityAssetsPayload:
+        payload: ActivityAssetsPayload = {}
+
+        if self.large_image is not None:
+            payload['large_image'] = self.large_image
+
+        if self.large_image_text is not None:
+            payload['large_text'] = self.large_image_text
+
+        if self.small_image is not None:
+            payload['small_image'] = self.small_image
+
+        if self.small_image_text is not None:
+            payload['small_text'] = self.small_image_text
+
+        return payload
+
+    @property
+    def large_image_url(self) -> Optional[str]:
+        """Optional[:class:`str`]: Returns an URL pointing to the large image asset of this activity, if applicable."""
+        return _activity_asset_url(self.large_image, application_id=self._application_id)
+
+    @property
+    def small_image_url(self) -> Optional[str]:
+        """Optional[:class:`str`]: Returns an URL pointing to the small image asset of this activity, if applicable."""
+        return _activity_asset_url(self.small_image, application_id=self._application_id)
+
+
+class ActivityButton:
+    """A button in :class:`Game` activity.
+
+    .. versionadded:: 3.0
+
+    Attributes
+    ----------
+    label: :class:`str`
+        The button's label.
+    url: :class:`str`
+        The button's URL.
+    """
+
+    __slots__ = (
+        'label',
+        'url',
+    )
+
+    def __init__(self, *, label: str, url: str) -> None:
+        self.label: str = label
+        self.url: str = url
+
+
+class ActivityParty:
+    """Represents an activity party.
+
+    .. versionadded:: 3.0
+
+    Attributes
+    ----------
+    id: Optional[:class:`str`]
+        The party's ID.
+    current_size: Optional[:class:`int`]
+        The party's current size.
+    max_size: Optional[:class:`int`]
+        The party's max size.
+    privacy: Optional[:class:`ActivityPartyPrivacy`]
+        The party's privacy level.
+    """
+
+    __slots__ = (
+        'id',
+        'current_size',
+        'max_size',
+        'privacy',
+    )
+
+    def __init__(
+        self,
+        *,
+        id: Optional[str] = None,
+        current_size: Optional[int] = None,
+        max_size: Optional[int] = None,
+        privacy: Optional[ActivityPartyPrivacy] = None,
+    ) -> None:
+        self.id: Optional[str] = id
+        self.current_size: Optional[int] = current_size
+        self.max_size: Optional[int] = max_size
+        self.privacy: Optional[ActivityPartyPrivacy] = privacy
+
+    @classmethod
+    def from_dict(cls, data: ActivityPartyPayload) -> Self:
+        current_size = None
+        max_size = None
+
+        raw_size = data.get('size')
+        if raw_size:
+            current_size, max_size, *_ = raw_size
+
+        raw_privacy = data.get('privacy')
+        if raw_privacy is None:
+            privacy = None
+        else:
+            privacy = try_enum(ActivityPartyPrivacy, raw_privacy)
+
+        return cls(
+            id=data.get('id'),
+            current_size=current_size,
+            max_size=max_size,
+            privacy=privacy,
+        )
+
+    def to_dict(self) -> ActivityPartyPayload:
+        payload: ActivityPartyPayload = {}
+
+        if self.id is not None:
+            payload['id'] = self.id
+
+        if self.current_size is not None and self.max_size is not None:
+            payload['size'] = (self.current_size, self.max_size)
+
+        if self.privacy is not None:
+            payload['privacy'] = self.privacy.value
+
+        return payload
+
+
+class ActivitySecrets:
+    """Represents secrets of a Discord :class:`Game`.
+
+    .. versionadded:: 3.0
+
+    Attributes
+    -----------
+    join: Optional[:class:`str`]
+        The secret for joining a party. Can be only up to 128 characters.
+    spectate: Optional[:class:`str`]
+        The secret for spectating a game. Can be only up to 128 characters.
+
+        .. deprecated:: 3.0
+
+            Spectating has been removed from official clients and no longer supported.
+    match: Optional[:class:`str`]
+        The secret for a specific instanced match. Can be only up to 128 characters.
+
+        .. deprecated:: 3.0
+    """
+
+    __slots__ = (
+        'join',
+        'spectate',
+        'match',
+    )
+
+    def __init__(self, join: Optional[str], *, spectate: Optional[str] = None, match: Optional[str] = None) -> None:
+        self.join: Optional[str] = join
+        self.spectate: Optional[str] = spectate
+        self.match: Optional[str] = match
+
+    @classmethod
+    def from_dict(cls, data: ActivitySecretsPayload) -> Self:
+        return cls(
+            join=data.get('join'),
+            spectate=data.get('spectate'),
+            match=data.get('match'),
+        )
+
+    def to_dict(self) -> ActivitySecretsPayload:
+        payload: ActivitySecretsPayload = {}
+
+        if self.join is not None:
+            payload['join'] = self.join
+
+        if self.spectate is not None:
+            payload['spectate'] = self.spectate
+
+        if self.match is not None:
+            payload['match'] = self.match
+
+        return payload
 
 
 class Activity(BaseActivity):
@@ -158,7 +375,7 @@ class Activity(BaseActivity):
     This could be an activity such as streaming, playing, listening
     or watching.
 
-    For memory optimisation purposes, some activities are offered in slimmed
+    For memory optimization purposes, some activities are offered in slimmed
     down versions:
 
     - :class:`Game`
@@ -166,128 +383,161 @@ class Activity(BaseActivity):
 
     Attributes
     ----------
-    application_id: Optional[:class:`int`]
-        The application ID of the game.
+    id: :class:`str`
+        The activity's ID. Only unique per user.
     name: Optional[:class:`str`]
         The name of the activity.
-    url: Optional[:class:`str`]
-        A stream URL that the activity could be doing.
     type: :class:`ActivityType`
         The type of activity currently being done.
-    state: Optional[:class:`str`]
-        The user's current state. For example, "In Game".
-    details: Optional[:class:`str`]
-        The detail of the user's current activity.
-    platform: Optional[:class:`str`]
+    url: Optional[:class:`str`]
+        A stream URL that the activity could be doing.
+    session_id: Optional[:class:`str`]
+        The ID of the Gateway session the activity is attached to.
+    platform: Optional[:class:`ActivityPlatformType`]
         The user's current platform.
 
         .. versionadded:: 2.4
-    timestamps: :class:`dict`
-        A dictionary of timestamps. It contains the following optional keys:
 
-        - ``start``: Corresponds to when the user started doing the
-          activity in milliseconds since Unix epoch.
-        - ``end``: Corresponds to when the user will finish doing the
-          activity in milliseconds since Unix epoch.
+        .. versionchanged:: 3.0
 
-    assets: :class:`dict`
-        A dictionary representing the images and their hover text of an activity.
-        It contains the following optional keys:
-
-        - ``large_image``: A string representing the ID for the large image asset.
-        - ``large_text``: A string representing the text when hovering over the large image asset.
-        - ``small_image``: A string representing the ID for the small image asset.
-        - ``small_text``: A string representing the text when hovering over the small image asset.
-
-    party: :class:`dict`
-        A dictionary representing the activity party. It contains the following optional keys:
-
-        - ``id``: A string representing the party ID.
-        - ``size``: A list of up to two integer elements denoting (current_size, maximum_size).
-    buttons: List[:class:`str`]
+            The type was changed from :class:`str` to :class:`ActivityPlatformType`.
+    start_timestamp: Optional[:class:`int`]
+        Corresponds to when the user started doing the
+        activity in milliseconds since Unix epoch.
+    end_timestamp: Optional[:class:`int`]:
+        Corresponds to when the user will finish doing the
+        activity in milliseconds since Unix epoch.
+    application_id: Optional[:class:`int`]
+        The application ID of the game.
+    details: Optional[:class:`str`]
+        The detail of the user's current activity.
+    state: Optional[:class:`str`]
+        The user's current state. For example, "In Game".
+    sync_id: Optional[:class:`str`]
+        The ID of the synced activity (for example, a Spotify song ID).
+    button_labels: List[:class:`str`]
         A list of strings representing the labels of custom buttons shown in a rich presence.
 
         .. versionadded:: 2.0
 
+        .. versionchanged:: 3.0
+
+            The attribute was renamed from ``buttons`` to ``button_labels``.
     emoji: Optional[:class:`PartialEmoji`]
         The emoji that belongs to this activity.
+    party: Optional[:class:`ActivityParty`]
+        The party of the activity.
+    assets: Optional[:class:`ActivityAssets`]
+        The images and their hover text of an activity.
+    metadata: Dict[:class:`str`, Any]
+        A dictionary representing the activity metadata.
+
+
+        It contains the following optional keys:
+
+        - ``button_urls``: A list representing URLs correpresenting to the custom buttons shown in Rich Presence.
+        - ``artist_ids``: A list representing the Spotify IDs of artists.
+        - ``album_id``: A string representing the ID of album of the song being played.
+        - ``context_uri``: A string representing the Spotify URI of the current player context.
+        - ``type``: A string representing the type of Spotify being played, generally ``track`` or ``episode``.
+
+        See more details on :userdoccers:`Discord Userdoccers <resources/presence#activity-metadata-object>`.
+
+        .. danger::
+
+            Contents inside this attribute are NOT sanitized and can have technically anything. Treat data carefully.
     """
 
     __slots__ = (
-        'state',
-        'details',
-        'timestamps',
-        'platform',
-        'assets',
-        'party',
-        'flags',
-        'sync_id',
-        'session_id',
-        'type',
+        'id',
         'name',
+        'type',
         'url',
+        'session_id',
+        'platform',
+        '_supported_platforms',
+        'start_timestamp',
+        'end_timestamp',
         'application_id',
+        'details',
+        'state',
+        'sync_id',
+        '_flags',
+        'button_labels',
         'emoji',
-        'buttons',
+        'party',
+        'assets',
+        'metadata',
     )
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.state: Optional[str] = kwargs.pop('state', None)
-        self.details: Optional[str] = kwargs.pop('details', None)
 
-        try:
-            self.timestamps: ActivityTimestamps = kwargs.pop('timestamps')
-        except KeyError:
-            self.timestamps = {}
+        activity_type = kwargs.get('type', -1)
+        platform = kwargs.get('platform')
+        supported_platforms = kwargs.get('supported_platforms')
+        timestamps = kwargs.get('timestamps')
+        emoji = kwargs.get('emoji')
 
-        self.platform: Optional[str] = kwargs.pop('platform', None)
+        if isinstance(supported_platforms, ActivityPlatforms):
+            supported_platforms = supported_platforms.value
 
-        try:
-            self.assets: ActivityAssets = kwargs.pop('assets')
-        except KeyError:
-            self.assets = {}
-
-        try:
-            self.party: ActivityParty = kwargs.pop('party')
-        except KeyError:
-            self.party = {}
-
-        self.application_id: Optional[int] = _get_as_snowflake(kwargs, 'application_id')
-        self.name: Optional[str] = kwargs.pop('name', None)
-        self.url: Optional[str] = kwargs.pop('url', None)
-        self.flags: int = kwargs.pop('flags', 0)
-        self.sync_id: Optional[str] = kwargs.pop('sync_id', None)
-        self.session_id: Optional[str] = kwargs.pop('session_id', None)
-
-        try:
-            self.buttons: List[str] = kwargs.pop('buttons')
-        except KeyError:
-            self.buttons = []
-
-        activity_type = kwargs.pop('type', -1)
+        self.id: str = kwargs.get('id', '')
+        self.name: Optional[str] = kwargs.get('name')
         self.type: ActivityType = (
             activity_type if isinstance(activity_type, ActivityType) else try_enum(ActivityType, activity_type)
         )
+        self.url: Optional[str] = kwargs.get('url')
+        self.session_id: Optional[str] = kwargs.get('session_id')
+        self.platform: Optional[ActivityPlatformType] = (
+            None if platform is None else try_enum(ActivityPlatformType, platform)
+        )
+        self._supported_platforms: Optional[int] = supported_platforms
 
-        emoji = kwargs.pop('emoji', None)
-        self.emoji: Optional[PartialEmoji] = PartialEmoji.from_dict(emoji) if emoji is not None else None
+        if timestamps:
+            self.start_timestamp: Optional[int] = timestamps.get('start')
+            self.end_timestamp: Optional[int] = timestamps.get('end')
+        else:
+            self.start_timestamp = None
+            self.end_timestamp = None
+
+        self.application_id: Optional[int] = _get_as_snowflake(kwargs, 'application_id')
+        self.details: Optional[str] = kwargs.get('details')
+        self.state: Optional[str] = kwargs.get('state')
+        self.sync_id: Optional[str] = kwargs.get('sync_id')
+        self._flags: int = kwargs.get('flags', 0)
+
+        try:
+            self.button_labels: List[str] = kwargs['buttons']
+        except KeyError:
+            self.button_labels = []
+
+        self.emoji: Optional[PartialEmoji] = None if emoji is None else PartialEmoji.from_dict(emoji)
+        self.party: Optional[ActivityParty] = kwargs.get('party')
+        self.assets: Optional[ActivityAssets] = kwargs.get('assets')
+
+        try:
+            self.metadata: Dict[str, Any] = kwargs['metadata']
+        except KeyError:
+            self.metadata = {}
 
     def __repr__(self) -> str:
         attrs = (
-            ('type', self.type),
             ('name', self.name),
+            ('type', self.type),
             ('url', self.url),
-            ('platform', self.platform),
-            ('details', self.details),
-            ('application_id', self.application_id),
             ('session_id', self.session_id),
+            ('platform', self.platform),
+            ('application_id', self.application_id),
+            ('details', self.details),
             ('emoji', self.emoji),
         )
         inner = ' '.join('%s=%r' % t for t in attrs)
         return f'<Activity {inner}>'
 
-    def to_dict(self) -> SendableActivityPayload:
+    def to_dict(
+        self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
+    ) -> Optional[SendableActivityPayload]:
         ret: Dict[str, Any] = {}
         for attr in self.__slots__:
             value = getattr(self, attr, None)
@@ -296,6 +546,12 @@ class Activity(BaseActivity):
 
             if isinstance(value, dict) and len(value) == 0:
                 continue
+
+            if attr.startswith('_'):
+                attr = attr[1:]
+
+            if hasattr(value, 'to_dict'):
+                value = value.to_dict()  # type: ignore
 
             ret[attr] = value
 
@@ -306,60 +562,48 @@ class Activity(BaseActivity):
         return ret  # type: ignore
 
     @property
-    def start(self) -> Optional[datetime.datetime]:
-        """Optional[:class:`datetime.datetime`]: When the user started doing this activity in UTC, if applicable."""
-        try:
-            timestamp = self.timestamps['start'] / 1000  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            return None
-        else:
-            return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+    def start(self) -> Optional[datetime]:
+        """Optional[:class:`~datetime.datetime`]: When the user started doing this activity in UTC, if applicable."""
+        if self.start_timestamp:
+            timestamp = self.start_timestamp / 1000
+            return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        return None
 
     @property
-    def end(self) -> Optional[datetime.datetime]:
-        """Optional[:class:`datetime.datetime`]: When the user will stop doing this activity in UTC, if applicable."""
-        try:
-            timestamp = self.timestamps['end'] / 1000  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            return None
-        else:
-            return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+    def end(self) -> Optional[datetime]:
+        """Optional[:class:`~datetime.datetime`]: When the user will stop doing this activity in UTC, if applicable."""
+        if self.end_timestamp:
+            timestamp = self.end_timestamp
+            return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        return None
 
     @property
     def large_image_url(self) -> Optional[str]:
         """Optional[:class:`str`]: Returns a URL pointing to the large image asset of this activity, if applicable."""
-        try:
-            large_image = self.assets['large_image']  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            return None
-        else:
-            return self._image_url(large_image)
+        if self.assets:
+            return self.assets.large_image_url
+        return None
 
     @property
     def small_image_url(self) -> Optional[str]:
         """Optional[:class:`str`]: Returns a URL pointing to the small image asset of this activity, if applicable."""
-        try:
-            small_image = self.assets['small_image']  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            return None
-        else:
-            return self._image_url(small_image)
-
-    def _image_url(self, image: str) -> Optional[str]:
-        if image.startswith('mp:'):
-            return f'https://media.discordapp.net/{image[3:]}'
-        elif self.application_id is not None:
-            return Asset.BASE + f'/app-assets/{self.application_id}/{image}.png'
+        if self.assets:
+            return self.assets.small_image_url
+        return None
 
     @property
     def large_image_text(self) -> Optional[str]:
         """Optional[:class:`str`]: Returns the large image asset hover text of this activity, if applicable."""
-        return self.assets.get('large_text', None)
+        if self.assets:
+            return self.assets.large_image_text
+        return None
 
     @property
     def small_image_text(self) -> Optional[str]:
         """Optional[:class:`str`]: Returns the small image asset hover text of this activity, if applicable."""
-        return self.assets.get('small_text', None)
+        if self.assets:
+            return self.assets.small_image_text
+        return None
 
 
 class Game(BaseActivity):
@@ -402,18 +646,24 @@ class Game(BaseActivity):
     ----------
     name: :class:`str`
         The game's name.
-    application_id: Optional[:class:`int`]
-        The game's application ID.
-    details: Optional[:class:`str`]
-        The game's details.
-    flags: :class:`int`
-        The activity's flags.
-    state: Optional[:class:`str`]
-        The game's state.
-    platform: Optional[:class:`str`]
+    session_id: Optional[:class:`str`]
+        The ID of the Gateway session the activity is attached to.
+    platform: Optional[:class:`ActivityPlatformType`]
         Where the user is playing from (ie. PS5, Xbox).
 
         .. versionadded:: 2.4
+
+        .. versionchanged:: 3.0
+
+            The type was changed from :class:`str` to :class:`ActivityPlatformType`.
+    application_id: Optional[:class:`int`]
+        The game's application ID.
+    parent_application_id: Optional[:class:`int`]
+        The game's parent application ID.
+    details: Optional[:class:`str`]
+        The game's details.
+    state: Optional[:class:`str`]
+        The game's state.
     assets: :class:`dict`
         A dictionary representing the images and their hover text of a game.
         It contains the following optional keys:
@@ -440,40 +690,66 @@ class Game(BaseActivity):
 
     __slots__ = (
         'name',
-        'application_id',
-        'details',
-        'flags',
-        'state',
-        '_end',
-        '_start',
-        'platform',
-        'assets',
-        'party',
-        'secrets',
         'session_id',
+        'platform',
+        '_supported_platforms',
+        'start_timestamp',
+        'end_timestamp',
+        'application_id',
+        'parent_application_id',
+        'details',
+        'state',
+        '_flags',
+        'button_labels',
+        'party',
+        'assets',
+        'secrets',
+        'metadata',
     )
 
     def __init__(self, name: str, **extra: Any) -> None:
         super().__init__(**extra)
+
+        platform = extra.get('platform')
+        supported_platforms = extra.get('supported_platforms')
+        timestamps = extra.get('timestamps')
+
         self.name: str = name
-        self.application_id: Optional[int] = _get_as_snowflake(extra, 'application_id')
-        self.details: Optional[str] = extra.get('details')
-        self.flags: int = extra.get('flags', 0)
-        self.party: Optional[ActivityParty] = extra.get('party')
-        self.secrets: Optional[ActivitySecrets] = extra.get('secrets')
-        self.state: Optional[str] = extra.get('state')
-        self.platform: Optional[str] = extra.get('platform')
-        self.assets: ActivityAssets = extra.get('assets') or {}
         self.session_id: Optional[str] = extra.get('session_id')
+        self.platform: Optional[str] = extra.get('platform')
+        self._supported_platforms: Optional[int] = extra.get('supported_platforms')
+
+        if timestamps:
+            self.start_timestamp: int = timestamps.get('start', 0)
+            self.end_timestamp: int = timestamps.get('end', 0)
+        else:
+            self.start_timestamp = 0
+            self.end_timestamp = 0
+
+        self.application_id: Optional[int] = _get_as_snowflake(extra, 'application_id')
+        self.parent_application_id: Optional[int] = _get_as_snowflake(extra, 'parent_application_id')
+        self.details: Optional[str] = extra.get('details')
+        self.state: Optional[str] = extra.get('state')
+        self._flags: int = extra.get('flags', 0)
 
         try:
-            timestamps: ActivityTimestamps = extra['timestamps']
+            self.button_labels: List[str] = extra['buttons']
         except KeyError:
-            self._start = 0
-            self._end = 0
-        else:
-            self._start: int = int(timestamps.get('start', 0))
-            self._end: int = int(timestamps.get('end', 0))
+            self.button_labels = []
+
+        self.party: Optional[ActivityParty] = extra.get('party')
+        self.assets: Optional[ActivityAssets] = extra.get('assets')
+        self.secrets: Optional[ActivitySecrets] = extra.get('secrets')
+
+        try:
+            self.metadata: Dict[str, Any] = extra['metadata']
+        except KeyError:
+            self.metadata = {}
+
+    @property
+    def flags(self) -> ActivityFlags:
+        """:class:`ActivityFlags`: The activity's flags."""
+        return ActivityFlags._from_value(self._flags)
 
     @property
     def type(self) -> ActivityType:
@@ -484,17 +760,17 @@ class Game(BaseActivity):
         return ActivityType.playing
 
     @property
-    def start(self) -> Optional[datetime.datetime]:
-        """Optional[:class:`datetime.datetime`]: When the user started playing this game in UTC, if applicable."""
-        if self._start:
-            return datetime.datetime.fromtimestamp(self._start / 1000, tz=datetime.timezone.utc)
+    def start(self) -> Optional[datetime]:
+        """Optional[:class:`~datetime.datetime`]: When the user started playing this game in UTC, if applicable."""
+        if self.start_timestamp:
+            return datetime.fromtimestamp(self.start_timestamp / 1000, tz=timezone.utc)
         return None
 
     @property
-    def end(self) -> Optional[datetime.datetime]:
-        """Optional[:class:`datetime.datetime`]: When the user will stop playing this game in UTC, if applicable."""
-        if self._end:
-            return datetime.datetime.fromtimestamp(self._end / 1000, tz=datetime.timezone.utc)
+    def end(self) -> Optional[datetime]:
+        """Optional[:class:`~datetime.datetime`]: When the user will stop playing this game in UTC, if applicable."""
+        if self.end_timestamp:
+            return datetime.fromtimestamp(self.end_timestamp / 1000, tz=timezone.utc)
         return None
 
     def __str__(self) -> str:
@@ -503,33 +779,65 @@ class Game(BaseActivity):
     def __repr__(self) -> str:
         return f'<Game name={self.name!r}>'
 
-    def to_dict(self) -> SendableActivityPayload:
+    def to_dict(
+        self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
+    ) -> Optional[SendableActivityPayload]:
+        # {"d":{"activities":[{
+        #   "application_id":1169421761859833997,"flags":0,"name":"Hackplug",
+        #   "session_id":"e7a6641eb5889041e7618e6b76111620","type":0}],"afk":false,"since":"0","status":"idle"},"op":3}
+
+        if application_id is MISSING:
+            if self.application_id is None:
+                application_id = state.application_id
+            else:
+                application_id = self.application_id
+
         timestamps: ActivityTimestamps = {}
-        if self._start:
-            timestamps['start'] = self._start
 
-        if self._end:
-            timestamps['end'] = self._end
+        if self.start_timestamp:
+            timestamps['start'] = self.start_timestamp
+        if self.end_timestamp:
+            timestamps['end'] = self.end_timestamp
 
-        payload = {
-            'type': ActivityType.playing.value,
-            'name': str(self.name),
-            'timestamps': timestamps or None,
-            'platform': str(self.platform) if self.platform else None,
-            'assets': self.assets or None,
+        payload: Dict[str, Any] = {
+            'application_id': application_id,
         }
-        if self.application_id is not None:
-            payload['application_id'] = self.application_id
+        if self.assets:
+            payload['assets'] = self.assets
+
+        if self.button_labels:
+            payload['buttons'] = self.button_labels
+
+        # if self.buttons:
+        #     payload['buttons'] = [button.label for button in self.buttons]
+        #     metadata = {'button_urls': [button.url for button in self.buttons]}
+
         if self.details is not None:
             payload['details'] = self.details
-        if self.flags:
-            payload['flags'] = self.flags
-        if self.party is not None:
-            payload['party'] = self.party
-        if self.secrets is not None:
-            payload['secrets'] = self.secrets
+
+        payload['flags'] = self._flags
+        if self.metadata:
+            payload['metadata'] = self.metadata
+
+        payload['name'] = self.name or state.application_name or ''
+        if self.parent_application_id:
+            payload['parent_application_id'] = self.parent_application_id
+
+        if self.party:
+            party = self.party.to_dict()
+            if party:
+                payload['party'] = party
+
+        if session_id is not None:
+            payload['session_id'] = session_id
+
         if self.state is not None:
             payload['state'] = self.state
+
+        if self._supported_platforms is not None:
+            payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()
+
+        payload['type'] = self.type.value
         return payload  # type: ignore
 
     def __eq__(self, other: object) -> bool:
@@ -575,7 +883,7 @@ class Streaming(BaseActivity):
     name: Optional[:class:`str`]
         The stream's name.
     details: Optional[:class:`str`]
-        An alias for :attr:`name`
+        An alias for :attr:`name`.
     game: Optional[:class:`str`]
         The game being streamed.
 
@@ -583,20 +891,40 @@ class Streaming(BaseActivity):
 
     url: :class:`str`
         The stream's URL.
-    assets: :class:`dict`
-        A dictionary comprising of similar keys than those in :attr:`Activity.assets`.
+    assets: :class:`ActivityAssets`
     """
 
-    __slots__ = ('platform', 'name', 'game', 'url', 'details', 'assets')
+    # assets is used to be documented as "A dictionary comprising of similar keys than those in :attr:`Activity.assets`."
+
+    __slots__ = (
+        'platform',
+        'name',
+        'game',
+        'url',
+        'details',
+        'state',
+        'assets',
+    )
 
     def __init__(self, *, name: Optional[str], url: str, **extra: Any) -> None:
         super().__init__(**extra)
         self.platform: Optional[str] = name
-        self.name: Optional[str] = extra.pop('details', name)
-        self.game: Optional[str] = extra.pop('state', None)
+        self.name: Optional[str] = extra.get('details', name)
+        self.game: Optional[str] = extra.get('state', None)
         self.url: str = url
-        self.details: Optional[str] = extra.pop('details', self.name)  # compatibility
-        self.assets: ActivityAssets = extra.pop('assets') or {}
+        self.details: Optional[str] = extra.get('details', self.name)  # compatibility
+        self.state: Optional[str] = extra.get('state')
+
+        raw_assets = extra.get('assets')
+        self.assets: ActivityAssets
+
+        if raw_assets:
+            if isinstance(raw_assets, ActivityAssets):
+                self.assets = raw_assets
+            else:
+                self.assets = ActivityAssets.from_dict(raw_assets, None)
+        else:
+            self.assets = ActivityAssets()
 
     @property
     def type(self) -> ActivityType:
@@ -614,29 +942,35 @@ class Streaming(BaseActivity):
 
     @property
     def twitch_name(self) -> Optional[str]:
-        """Optional[:class:`str`]: If provided, the twitch name of the user streaming.
+        """Optional[:class:`str`]: If provided, the Twitch name of the user streaming.
 
         This corresponds to the ``large_image`` key of the :attr:`Streaming.assets`
         dictionary if it starts with ``twitch:``. Typically set by the Discord client.
         """
 
-        try:
-            name = self.assets['large_image']  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            return None
-        else:
-            return name[7:] if name[:7] == 'twitch:' else None
+        name = self.assets.large_image
+        if name and name[:7] == 'twitch:':
+            return name[7:]
 
-    def to_dict(self) -> SendableActivityPayload:
-        ret: Dict[str, Any] = {
+        return None
+
+    def to_dict(
+        self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
+    ) -> Optional[SendableActivityPayload]:
+        # Reconstructed from async _checkTwitch(e){
+
+        payload: Dict[str, Any] = {
             'type': ActivityType.streaming.value,
-            'name': str(self.name),
             'url': str(self.url),
-            'assets': self.assets,
+            'name': str(self.name),
+            'assets': self.assets.to_dict(),
         }
         if self.details:
-            ret['details'] = self.details
-        return ret  # type: ignore
+            payload['details'] = self.details
+        if self.state:
+            payload['state'] = self.state
+
+        return payload  # type: ignore
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Streaming) and other.name == self.name and other.url == self.url
@@ -648,6 +982,7 @@ class Streaming(BaseActivity):
         return hash(self.name)
 
 
+# TODO: Spotify class really needs a refactor too...
 class Spotify:
     """Represents a Spotify listening activity from Discord. This is a special case of
     :class:`Activity` that makes it easier to work with the Spotify integration.
@@ -674,14 +1009,14 @@ class Spotify:
     __slots__ = ('_state', '_details', '_timestamps', '_assets', '_party', '_sync_id', '_session_id', '_created_at')
 
     def __init__(self, **data: Any) -> None:
-        self._state: str = data.pop('state', '')
-        self._details: str = data.pop('details', '')
-        self._timestamps: ActivityTimestamps = data.pop('timestamps') or {}
-        self._assets: ActivityAssets = data.pop('assets') or {}
-        self._party: ActivityParty = data.pop('party') or {}
-        self._sync_id: str = data.pop('sync_id', '')
-        self._session_id: Optional[str] = data.pop('session_id', None)
-        self._created_at: Optional[float] = data.pop('created_at', None)
+        self._state: str = data.get('state', '')
+        self._details: str = data.get('details', '')
+        self._timestamps: ActivityTimestamps = data.get('timestamps') or {}
+        self._assets: ActivityAssetsPayload = data.get('assets') or {}
+        self._party: ActivityPartyPayload = data.get('party') or {}
+        self._sync_id: str = data.get('sync_id', '')
+        self._session_id: Optional[str] = data.get('session_id', None)
+        self._created_at: Optional[float] = data.get('created_at', None)
 
     @property
     def type(self) -> ActivityType:
@@ -692,19 +1027,19 @@ class Spotify:
         return ActivityType.listening
 
     @property
-    def created_at(self) -> Optional[datetime.datetime]:
-        """Optional[:class:`datetime.datetime`]: When the user started listening in UTC.
+    def created_at(self) -> Optional[datetime]:
+        """Optional[:class:`~datetime.datetime`]: When the user started listening in UTC.
 
         .. versionadded:: 1.3
         """
         if self._created_at is not None:
-            return datetime.datetime.fromtimestamp(self._created_at / 1000, tz=datetime.timezone.utc)
+            return datetime.fromtimestamp(self._created_at / 1000, tz=timezone.utc)
 
     @property
     def color(self) -> Color:
-        """:class:`Color`: Returns the Spotify integration color, as a :class:`Colour`.
+        """:class:`Color`: Returns the Spotify integration color, as a :class:`Color`.
 
-        There is an alias for this named :attr:`color`.
+        There is an alias for this named :attr:`colour`.
         """
         return Color(0x1DB954)
 
@@ -716,7 +1051,9 @@ class Spotify:
         """
         return self.color
 
-    def to_dict(self) -> SendableActivityPayload:
+    def to_dict(
+        self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
+    ) -> Optional[SendableActivityPayload]:
         return {
             'name': 'Spotify',
             'assets': self._assets,
@@ -808,20 +1145,20 @@ class Spotify:
         return f'https://open.spotify.com/track/{self.track_id}'
 
     @property
-    def start(self) -> datetime.datetime:
-        """:class:`datetime.datetime`: When the user started playing this song in UTC."""
+    def start(self) -> datetime:
+        """:class:`~datetime.datetime`: When the user started playing this song in UTC."""
         # the start key will be present here
-        return datetime.datetime.fromtimestamp(self._timestamps['start'] / 1000, tz=datetime.timezone.utc)  # type: ignore
+        return datetime.fromtimestamp(self._timestamps['start'] / 1000, tz=timezone.utc)  # type: ignore
 
     @property
-    def end(self) -> datetime.datetime:
-        """:class:`datetime.datetime`: When the user will stop playing this song in UTC."""
+    def end(self) -> datetime:
+        """:class:`~datetime.datetime`: When the user will stop playing this song in UTC."""
         # the end key will be present here
-        return datetime.datetime.fromtimestamp(self._timestamps['end'] / 1000, tz=datetime.timezone.utc)  # type: ignore
+        return datetime.fromtimestamp(self._timestamps['end'] / 1000, tz=timezone.utc)  # type: ignore
 
     @property
-    def duration(self) -> datetime.timedelta:
-        """:class:`datetime.timedelta`: The duration of the song being played."""
+    def duration(self) -> timedelta:
+        """:class:`~datetime.timedelta`: The duration of the song being played."""
         return self.end - self.start
 
     @property
@@ -871,14 +1208,14 @@ class CustomActivity(BaseActivity):
         *,
         emoji: Optional[Union[PartialEmoji, Dict[str, Any], str]] = None,
         state: Optional[str] = None,
-        expires_at: Optional[datetime.datetime] = None,
+        expires_at: Optional[datetime] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         if name == 'Custom Status':
             name = state
         self.name: Optional[str] = name
-        self.expires_at: Optional[datetime.datetime] = expires_at
+        self.expires_at: Optional[datetime] = expires_at
 
         self.emoji: Optional[PartialEmoji]
         if emoji is None:
@@ -945,9 +1282,11 @@ class CustomActivity(BaseActivity):
 
         return payload  # type: ignore
 
-    def to_dict(self) -> SendableActivityPayload:
+    def to_dict(
+        self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
+    ) -> Optional[SendableActivityPayload]:
         if not self.name:
-            return None  # type: ignore
+            return None
 
         o = {
             'flags': 0,
@@ -1155,7 +1494,9 @@ class HeadlessSession:
         """
         await self._state.http.delete_headless_session(self.token)
 
-    async def edit(self, *, activities: List[ActivityTypes] = MISSING) -> HeadlessSession:
+    async def edit(
+        self, *, activities: List[ActivityTypes] = MISSING, application_id: Optional[int] = MISSING
+    ) -> HeadlessSession:
         """|coro|
 
         Edits the headless session.
@@ -1182,8 +1523,14 @@ class HeadlessSession:
             return copy(self)
 
         state = self._state
+        activities_data = []
+        for a in activities:
+            activity_data = a.to_dict(application_id=application_id, session_id=None, state=state)
+            if activity_data is not None:
+                activities_data.append(activity_data)
+
         data = await state.http.create_headless_session(
-            activities=[a.to_dict() for a in activities],
+            activities=activities_data,
             token=self.token,
         )
         return HeadlessSession(
@@ -1298,7 +1645,9 @@ class ActivityInvite:
             state=state,
         )
 
-    async def accept_activity_invite(self, *, session_id: Optional[str] = None) -> str:
+    async def accept_activity_invite(
+        self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
+    ) -> str:
         """|coro|
 
         Accepts an activity invite.
@@ -1362,7 +1711,9 @@ ActivityTypes = Union[Activity, Game, CustomActivity, Streaming, Spotify]
 
 
 @overload
-def create_activity(data: ReceivableActivityPayload, state: ConnectionState) -> ActivityTypes:
+def create_activity(
+    data: Union[ReceivableActivityPayload, SendableActivityPayload], state: ConnectionState
+) -> ActivityTypes:
     ...
 
 
@@ -1371,33 +1722,55 @@ def create_activity(data: None, state: ConnectionState) -> None:
     ...
 
 
-def create_activity(data: Optional[ReceivableActivityPayload], state: ConnectionState) -> Optional[ActivityTypes]:
+def create_activity(
+    data: Optional[Union[ReceivableActivityPayload, SendableActivityPayload]], state: ConnectionState
+) -> Optional[ActivityTypes]:
     if not data:
         return None
 
     game_type = try_enum(ActivityType, data.get('type', -1))
-    if game_type is ActivityType.playing:
-        if 'application_id' in data or 'session_id' in data:
-            return Activity(**data)
-        return Game(**data)
-    elif game_type is ActivityType.custom:
-        try:
-            name = data.pop('name')
-        except KeyError:
-            ret = Activity(**data)
-        else:
-            # we removed the name key from data already
-            ret = CustomActivity(name=name, **data)  # type: ignore
-    elif game_type is ActivityType.streaming:
-        if 'url' in data:
-            # the url won't be None here
-            return Streaming(**data)  # type: ignore
-        return Activity(**data)
+    if game_type is ActivityType.playing and 'application_id' not in data and 'session_id' not in data:
+        cls = Game
+    elif game_type is ActivityType.custom and 'name' in data:
+        ret = CustomActivity(**data)  # type: ignore
+        if isinstance(ret.emoji, PartialEmoji):
+            ret.emoji._state = state
+        return ret
+    elif game_type is ActivityType.streaming and 'url' in data:
+        # The URL won't be None here
+        return Streaming(**data)  # type: ignore
     elif game_type is ActivityType.listening and 'sync_id' in data and 'session_id' in data:
         return Spotify(**data)
     else:
-        ret = Activity(**data)
+        cls = Activity
 
-    if isinstance(ret.emoji, PartialEmoji):
-        ret.emoji._state = state
+    transformed_kwargs: Optional[Dict[str, Any]] = None
+    raw_party = data.get('party')
+    raw_assets = data.get('assets')
+
+    if raw_party is not None:
+        party = ActivityParty.from_dict(raw_party)
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'party': party}
+        else:
+            transformed_kwargs['party'] = party
+
+    if raw_assets is not None:
+        assets = ActivityAssets.from_dict(raw_assets)
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'assets': assets}
+        else:
+            transformed_kwargs['assets'] = assets
+
+    if transformed_kwargs:
+        transformed_kwargs = {**data, **transformed_kwargs}
+        ret = cls(**transformed_kwargs)
+    else:
+        ret = cls(**data)  # type: ignore
+
+    if hasattr(ret, 'emoji') and isinstance(ret.emoji, PartialEmoji):  # type: ignore
+        ret.emoji._state = state  # type: ignore
+
     return ret

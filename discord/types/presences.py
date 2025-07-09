@@ -141,6 +141,10 @@ class ActivityAssets(TypedDict, total=False):
 class ActivityParty(TypedDict, total=False):
     id: str  # 2-128 characters
     size: Tuple[int, int]  # Both elements must be positive
+    privacy: ActivityPartyPrivacy
+
+
+ActivityPartyPrivacy = Literal[0, 1]
 
 
 class ActivitySecrets(TypedDict, total=False):

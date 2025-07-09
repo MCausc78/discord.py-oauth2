@@ -47,9 +47,13 @@ from .enums import UserFlags
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from .types.presences import ActivityPlatformType as ActivityPlatformTypePayload
+
 
 __all__ = (
     'AppCommandContext',
+    'ActivityFlags',
+    'ActivityPlatforms',
     'AppInstallationType',
     'ApplicationFlags',
     'AttachmentFlags',
@@ -242,8 +246,242 @@ class ArrayFlags(BaseFlags):
 
 
 @fill_with_flags()
+class ActivityFlags(BaseFlags):
+    r"""Wraps up the Discord activity flags.
+
+    .. versionadded:: 3.0
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two ActivityFlags flags are equal.
+
+        .. describe:: x != y
+
+            Checks if two ActivityFlags flags are not equal.
+
+        .. describe:: x | y, x |= y
+
+            Returns an ActivityFlags instance with all enabled flags from
+            both x and y.
+
+        .. describe:: x & y, x &= y
+
+            Returns an ActivityFlags instance with only flags enabled on
+            both x and y.
+
+        .. describe:: x ^ y, x ^= y
+
+            Returns an ActivityFlags instance with only flags enabled on
+            only one of x or y, not on both.
+
+        .. describe:: ~x
+
+            Returns an ActivityFlags instance with all flags inverted from x.
+
+        .. describe:: hash(x)
+
+            Return the flag's hash.
+        .. describe:: iter(x)
+
+            Returns an iterator of ``(name, value)`` pairs. This allows it
+            to be, for example, constructed as a dict or a list of pairs.
+            Note that aliases are not shown.
+
+        .. describe:: bool(b)
+
+            Returns whether any flag is set to ``True``.
+
+    Attributes
+    ----------
+    value: :class:`int`
+        The raw value. You should query flags via the properties
+        rather than using this raw value.
+    """
+
+    @flag_value
+    def instance(self) -> int:
+        """:class:`bool`: Returns ``True`` if the activity is an instanced game session (a match that will end)."""
+        return 1 << 0
+
+    @flag_value
+    def join(self) -> int:
+        """:class:`bool`: Returns ``True`` if the activity can be joined by other users."""
+        return 1 << 1
+
+    @flag_value
+    def spectate(self) -> int:
+        """:class:`bool`: Returns ``True`` if the activity can be spectated by other users (deprecated)."""
+        return 1 << 2
+
+    @flag_value
+    def sync(self) -> int:
+        """:class:`bool`: Returns ``True`` if the activity can be synced."""
+        return 1 << 4
+
+    @flag_value
+    def play(self) -> int:
+        """:class:`bool`: Returns ``True`` if the activity can be played."""
+        return 1 << 5
+
+    @flag_value
+    def party_privacy_friends(self) -> int:
+        """:class:`bool`: Returns ``True`` if the activity's party can be joined by friends."""
+        return 1 << 6
+
+    @flag_value
+    def party_privacy_voice_channel(self) -> int:
+        """:class:`bool`: Returns ``True`` if the activity's party can be joined by users in the same voice channel."""
+        return 1 << 7
+
+    @flag_value
+    def embedded(self) -> int:
+        """:class:`bool`: Returns ``True`` if the activity is embedded within the Discord client."""
+        return 1 << 8
+
+
+@fill_with_flags()
+class ActivityPlatforms(BaseFlags):
+    r"""Represents a list of platforms supported by Discord activity.
+
+    .. versionadded:: 3.0
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two ActivityPlatforms flags are equal.
+
+        .. describe:: x != y
+
+            Checks if two ActivityPlatforms flags are not equal.
+
+        .. describe:: x | y, x |= y
+
+            Returns an ActivityPlatforms instance with all enabled flags from
+            both x and y.
+
+        .. describe:: x & y, x &= y
+
+            Returns an ActivityPlatforms instance with only flags enabled on
+            both x and y.
+
+        .. describe:: x ^ y, x ^= y
+
+            Returns an ActivityPlatforms instance with only flags enabled on
+            only one of x or y, not on both.
+
+        .. describe:: ~x
+
+            Returns an ActivityPlatforms instance with all flags inverted from x.
+
+        .. describe:: hash(x)
+
+            Return the flag's hash.
+        .. describe:: iter(x)
+
+            Returns an iterator of ``(name, value)`` pairs. This allows it
+            to be, for example, constructed as a dict or a list of pairs.
+            Note that aliases are not shown.
+
+        .. describe:: bool(b)
+
+            Returns whether any flag is set to ``True``.
+
+    Attributes
+    ----------
+    value: :class:`int`
+        The raw value. You should query flags via the properties
+        rather than using this raw value.
+    """
+
+    @flag_value
+    def desktop(self) -> int:
+        """:class:`bool`: Returns ``True`` if activity is supported on desktop platforms."""
+        return 1 << 0
+
+    @flag_value
+    def xbox(self) -> int:
+        """:class:`bool`: Returns ``True`` if activity is supported on Xbox."""
+        return 1 << 1
+
+    @flag_value
+    def samsung(self) -> int:
+        """:class:`bool`: Returns ``True`` if activity is supported on Samsung devices."""
+        return 1 << 2
+
+    @flag_value
+    def ios(self) -> int:
+        """:class:`bool`: Returns ``True`` if activity is supported on iOS."""
+        return 1 << 3
+
+    @flag_value
+    def android(self) -> int:
+        """:class:`bool`: Returns ``True`` if activity is supported on Android."""
+        return 1 << 4
+
+    @flag_value
+    def embedded(self) -> int:
+        """:class:`bool`: Returns ``True`` if activity is supported on embedded platforms."""
+        return 1 << 5
+
+    @flag_value
+    def ps4(self) -> int:
+        """:class:`bool`: Returns ``True`` if activity is supported on PS4."""
+        return 1 << 6
+
+    @flag_value
+    def ps5(self) -> int:
+        """:class:`bool`: Returns ``True`` if activity is supported on PS5."""
+        return 1 << 7
+
+    @classmethod
+    def from_string_array(cls, payload: List[ActivityPlatformTypePayload]) -> Self:
+        return cls(
+            desktop='desktop' in payload,
+            xbox='xbox' in payload,
+            samsung='samsung' in payload,
+            ios='ios' in payload,
+            android='android' in payload,
+            embedded='embedded' in payload,
+            ps4='ps4' in payload,
+            ps5='ps5' in payload,
+        )
+
+    def to_string_array(self) -> List[ActivityPlatformTypePayload]:
+        payload: List[ActivityPlatformTypePayload] = []
+
+        if self.desktop:
+            payload.append('desktop')
+
+        if self.xbox:
+            payload.append('xbox')
+
+        if self.samsung:
+            payload.append('samsung')
+
+        if self.ios:
+            payload.append('ios')
+
+        if self.android:
+            payload.append('android')
+
+        if self.embedded:
+            payload.append('embedded')
+
+        if self.ps4:
+            payload.append('ps4')
+
+        if self.ps5:
+            payload.append('ps5')
+
+        return payload
+
+
+@fill_with_flags()
 class AppCommandContext(ArrayFlags):
-    r"""Wraps up the Discord :class:`~discord.app_commands.Command` execution context.
+    r"""Wraps up the Discord :class:`~discord.BaseCommand` execution context.
 
     .. versionadded:: 2.4
 

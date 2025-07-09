@@ -47,6 +47,7 @@ from .utils import (
     _ActiveDecompressionContext,
     _from_json,
     _to_json,
+    MISSING,
 )
 
 _log = logging.getLogger(__name__)
@@ -712,14 +713,17 @@ class DiscordWebSocket:
         status: Optional[Status] = None,
         since: int = 0,
         afk: bool = False,
+        application_id: Optional[int] = MISSING,
+        session_id: Optional[str] = MISSING,
     ) -> None:
         activities_data = []
-        if activities is not None:
+        if activities:
             if not all(isinstance(activity, (BaseActivity, Spotify)) for activity in activities):
-                raise TypeError('activity must derive from BaseActivity')
+                raise TypeError('Activities must derive from BaseActivity')
 
+            state = self._connection
             for activity in activities:
-                activity_data = activity.to_dict()
+                activity_data = activity.to_dict(application_id=application_id, session_id=session_id, state=state)
                 if activity_data is not None:
                     activities_data.append(activity_data)
 

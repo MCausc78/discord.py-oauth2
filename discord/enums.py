@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
 __all__ = (
     'Enum',
+    'ActivityPlatformType',
     'ActivityType',
     'AppCommandHandler',
     'AppCommandPermissionType',
@@ -233,6 +234,22 @@ else:
                 return cls._enum_value_map_[value]
             except (KeyError, TypeError):
                 return value
+
+
+class ActivityPartyPrivacy(Enum):
+    private = 0
+    public = 1
+
+
+class ActivityPlatformType(Enum):
+    desktop = 'desktop'
+    xbox = 'xbox'
+    samsung = 'samsung'
+    ios = 'ios'
+    android = 'android'
+    embedded = 'embedded'
+    ps4 = 'ps4'
+    ps5 = 'ps5'
 
 
 class ActivityType(Enum):

@@ -999,7 +999,7 @@ class Client(Dispatcher):
 
     @property
     def initial_activity(self) -> Optional[ActivityTypes]:
-        """Optional[:class:`.BaseActivity`]: The primary activity set upon logging in.
+        """Optional[:class:`~discord.BaseActivity`]: The primary activity set upon logging in.
 
         .. note::
 
@@ -1013,13 +1013,14 @@ class Client(Dispatcher):
         if value is None:
             self._connection._activities = []
         elif isinstance(value, BaseActivity):
-            self._connection._activities = [value.to_dict()]
+            activity_data = value.to_dict(state=self._connection)
+            self._connection._activities = [] if activity_data is None else [activity_data]
         else:
             raise TypeError('activity must derive from BaseActivity')
 
     @property
     def initial_activities(self) -> List[ActivityTypes]:
-        """List[:class:`.BaseActivity`]: The activities set upon logging in."""
+        """List[:class:`~dicsord.BaseActivity`]: The activities set upon logging in."""
         state = self._connection
         return [create_activity(activity, state) for activity in state._activities]
 
@@ -1028,13 +1029,18 @@ class Client(Dispatcher):
         if not values:
             self._connection._activities = []
         elif all(isinstance(value, (BaseActivity, Spotify)) for value in values):
-            self._connection._activities = [value.to_dict() for value in values]
+            activities_data = []
+            for value in values:
+                activity_data = value.to_dict(state=self._connection)
+                if activity_data is not None:
+                    activities_data.append(activity_data)
+            self._connection._activities = activities_data
         else:
             raise TypeError('activity must derive from BaseActivity')
 
     @property
     def initial_status(self) -> Optional[Status]:
-        """Optional[:class:`.Status`]: The status set upon logging in."""
+        """Optional[:class:`~discord.Status`]: The status set upon logging in."""
         if self._connection._status in {state.value for state in Status}:
             return Status(self._connection._status)
 
@@ -2343,7 +2349,11 @@ class Client(Dispatcher):
 
     # Activities
     async def create_headless_session(
-        self, *, activities: List[ActivityTypes], token: Optional[str] = None
+        self,
+        *,
+        activities: List[ActivityTypes],
+        application_id: Optional[int] = MISSING,
+        token: Optional[str] = None,
     ) -> HeadlessSession:
         """|coro|
 
@@ -2368,8 +2378,14 @@ class Client(Dispatcher):
         """
 
         state = self._connection
+        activities_data = []
+        for a in activities:
+            activity_data = a.to_dict(application_id=application_id, state=state)
+            if activity_data is not None:
+                activities_data.append(activity_data)
+
         data = await state.http.create_headless_session(
-            activities=[a.to_dict() for a in activities],
+            activities=activities_data,
             token=token,
         )
         return HeadlessSession(
@@ -3260,7 +3276,7 @@ class Client(Dispatcher):
     async def create_dm(self, user: Snowflake) -> Union[DMChannel, EphemeralDMChannel]:
         """|coro|
 
-        Creates a :class:`.DMChannel` with this user.
+        Creates a :class:`~discord.DMChannel` with this user.
 
         This should be rarely called, as this is done transparently for most
         people.
@@ -3274,7 +3290,7 @@ class Client(Dispatcher):
 
         Returns
         -------
-        Union[:class:`.DMChannel`, :class:`.EphemeralDMChannel`]
+        Union[:class:`~discord.DMChannel`, :class:`~discord.EphemeralDMChannel`]
             The channel that was created.
         """
         state = self._connection
