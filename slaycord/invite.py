@@ -31,6 +31,7 @@ from .asset import Asset
 from .enums import ChannelType, NSFWLevel, VerificationLevel, InviteTarget, InviteType, try_enum
 from .mixins import Hashable
 from .object import Object
+from .profile import GuildProfile
 from .scheduled_event import ScheduledEvent
 from .utils import _get_as_snowflake, parse_time, snowflake_time
 
@@ -306,6 +307,10 @@ class Invite(Hashable):
         The URL fragment used for the invite.
     guild: Optional[Union[:class:`Guild`, :class:`Object`, :class:`PartialInviteGuild`]]
         The guild the invite is for. Can be ``None`` if it's from a group direct message.
+    profile: Optional[:class:`GuildProfile`]
+        The profile for the guild this invite is for.
+
+        .. versionadded:: 3.0
     revoked: Optional[:class:`bool`]
         Indicates if the invite has been revoked.
     created_at: Optional[:class:`datetime.datetime`]
@@ -361,6 +366,7 @@ class Invite(Hashable):
         'max_age',
         'code',
         'guild',
+        'profile',
         'revoked',
         'created_at',
         'uses',
@@ -385,16 +391,20 @@ class Invite(Hashable):
     def __init__(
         self,
         *,
-        state: ConnectionState,
         data: InvitePayload,
         guild: Optional[Union[PartialInviteGuild, Guild]] = None,
         channel: Optional[Union[PartialInviteChannel, GuildChannel]] = None,
-    ):
+        state: ConnectionState,
+    ) -> None:
         self._state: ConnectionState = state
+
+        raw_profile = data.get('profile')
+
         self.type: InviteType = try_enum(InviteType, data.get('type', 0))
         self.max_age: Optional[int] = data.get('max_age')
         self.code: str = data['code']
         self.guild: Optional[InviteGuildType] = self._resolve_guild(data.get('guild'), guild)
+        self.profile: Optional[GuildProfile] = None if raw_profile is None else GuildProfile(data=raw_profile, state=state)
         self.revoked: Optional[bool] = data.get('revoked')
         self.created_at: Optional[datetime.datetime] = parse_time(data.get('created_at'))
         self.temporary: Optional[bool] = data.get('temporary')

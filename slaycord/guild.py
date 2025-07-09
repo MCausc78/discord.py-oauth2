@@ -65,7 +65,6 @@ from .invite import Invite
 from .member import Member, VoiceState
 from .mixins import Hashable
 from .object import Object
-from .presences import RawPresenceUpdateEvent
 from .role import Role
 from .scheduled_event import ScheduledEvent
 from .soundboard import SoundboardSound
@@ -916,6 +915,8 @@ class Guild(UserGuild):
         return cls(state=state, data=data)  # type: ignore
 
     def _from_data(self, guild: GuildPayload) -> None:
+        from .presences import RawPresenceUpdateEvent
+
         try:
             self._member_count = guild['member_count']  # pyright: ignore[reportTypedDictNotRequiredAccess]
         except KeyError:
@@ -1002,6 +1003,7 @@ class Guild(UserGuild):
 
         empty_tuple = ()
         for presence in guild.get('presences', ()):
+
             raw_presence = RawPresenceUpdateEvent(data=presence, state=self._state)
             member = self.get_member(raw_presence.user_id)
 

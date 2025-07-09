@@ -70,6 +70,7 @@ from .invite import Invite
 from .lobby import Lobby
 from .mentions import AllowedMentions
 from .object import Object
+from .presences import Presences
 from .relationship import Relationship
 from .soundboard import SoundboardSound
 from .sku import SKU
@@ -3300,3 +3301,39 @@ class Client(Dispatcher):
 
         data = await state.http.start_private_message(user.id)
         return state.add_dm_channel(data)
+
+    async def fetch_presences(self) -> Presences:
+        """|coro|
+
+        Retrieve presences for all your relationships.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving presences failed.
+        Forbidden
+            You are not allowed to retrieve presences.
+        """
+
+        state = self._connection
+        data = await state.http.get_presences()
+        return Presences(data=data, state=state)
+
+    async def fetch_presences_for_xbox(self) -> Presences:
+        """|coro|
+
+        Retrieve presences for all your relationships and people who are in voice channel.
+
+        The Bearer token must be associated with Xbox application (ID: 622174530214821906).
+
+        Raises
+        ------
+        HTTPException
+            Retrieving presences failed.
+        Forbidden
+            You are not allowed to retrieve presences.
+        """
+
+        state = self._connection
+        data = await state.http.get_presences_for_xbox()
+        return Presences(data=data, state=state)

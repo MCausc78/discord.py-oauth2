@@ -1769,6 +1769,12 @@ class HTTPClient:
             form=[{'name': 'file', 'value': file.fp}],
         )
 
+    def get_presences(self) -> Response[presences.Presences]:
+        return self.request(Route('GET', '/presences'))
+
+    def get_presences_for_xbox(self) -> Response[presences.XboxPresences]:
+        return self.request(Route('GET', '/consoles/xbox/presences'))
+
     async def get_gateway_url(self) -> str:
         try:
             data = await self.request(Route('GET', '/gateway'))

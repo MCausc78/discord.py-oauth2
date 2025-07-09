@@ -24,9 +24,11 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Tuple, Union
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 
 from .activity import create_activity
+from .appinfo import PartialAppInfo
+from .guild import Guild
 from .enums import try_enum, Status
 from .utils import MISSING, _RawReprMixin, _get_as_snowflake
 
@@ -35,14 +37,17 @@ if TYPE_CHECKING:
 
     from .activity import ActivityTypes
     from .game_relationship import GameRelationship
-    from .guild import Guild
     from .member import Member
     from .relationship import Relationship
     from .state import ConnectionState
+    from .types.channel import VoiceChannel as VoiceChannelPayload
     from .types.presences import (
         Presence as PresencePayload,
         ClientStatus as ClientStatusPayload,
+        Presences as PresencesPayload,
+        XboxPresences as XboxPresencesPayload,
     )
+    from .types.voice import GuildVoiceState as GuildVoiceStatePayload
 
 
 __all__ = (
@@ -187,4 +192,102 @@ class RawPresenceUpdateEvent(_RawReprMixin):
 
 
 class Presences:
-    pass
+    """Represents presences for all your relationships.
+
+    Attributes
+    ----------
+    guilds: List[:class:`Guild`]
+        The guilds. This is a massively partial object, and will have only :attr:`~Guild.id`,
+        :attr:`~Guild.name`, :attr:`~Guild.icon`, :attr:`~Guild.voice_channels` populated.
+
+        Voice channels of this guild are also partial, and only following attributes are populated with real values:
+
+        - :attr:`~VoiceChannel.id`
+        - :attr:`~VoiceChannel.name`
+
+        Voice states will have only :attr:`~VoiceState.self_stream`, :attr:`~VoiceState.channel` populated.
+    presences: List[:class:`RawPresenceUpdateEvent`]
+        The presences for all your relationships.
+    applications: List[:class:`PartialAppInfo`]
+        The applications found across all presences.
+    connected_account_ids: Dict[:class:`int`, List[:class:`str`]]
+        A mapping of user ID to their list of connected Xbox account IDs.
+
+        This is available only from :class:`Client.fetch_presences_for_xbox`.
+    """
+
+    __slots__ = (
+        '_state',
+        'guilds',
+        'presences',
+        'applications',
+        'connected_account_ids',
+    )
+
+    def __init__(self, *, data: Union[PresencesPayload, XboxPresencesPayload], state: ConnectionState) -> None:
+        self._state: ConnectionState = state
+
+        guilds: List[Guild] = []
+
+        for guild_data in data.get('guilds', ()):
+            # I wish I didn't had to do this,
+            # but it seems to be only way to provide
+            # sane interface across the entire library
+
+            guild_id = guild_data['guild_id']
+
+            transformed_channels: List[VoiceChannelPayload] = []
+            transformed_voice_states: List[GuildVoiceStatePayload] = []
+
+            for vc in guild_data.get('voice_channels', ()):
+                vc_id = vc['channel_id']
+
+                transformed_channel: VoiceChannelPayload = {
+                    'id': vc_id,
+                    'type': 2,
+                    'name': vc['channel_name'],
+                    'guild_id': guild_id,
+                    'position': 0,
+                    'permission_overwrites': [],
+                    'nsfw': False,
+                    'parent_id': None,
+                    'bitrate': 0,
+                    'user_limit': 0,
+                }
+                transformed_channels.append(transformed_channel)
+
+                streamer_ids = [int(vs['user_id']) for vs in vc.get('streams', ())]
+                for user_id in map(int, vc.get('users', ())):
+                    transformed_voice_state: GuildVoiceStatePayload = {
+                        'user_id': user_id,
+                        'session_id': '',
+                        'deaf': False,
+                        'mute': False,
+                        'self_deaf': False,
+                        'self_mute': False,
+                        'self_video': False,
+                        'suppress': False,
+                        'self_stream': user_id in streamer_ids,
+                        'channel_id': vc_id,
+                        'guild_id': guild_id,
+                    }
+                    transformed_voice_states.append(transformed_voice_state)
+
+            transformed_guild_data: Dict[str, Any] = {
+                'id': guild_id,
+                'name': guild_data['guild_name'],
+                'icon': guild_data.get('guild_icon'),
+                'channels': transformed_channels,
+                'voice_states': transformed_voice_states,
+            }
+            guild = Guild(data=transformed_guild_data, state=state)  # type: ignore
+            guilds.append(guild)
+
+        self.guilds: List[Guild] = guilds
+        self.presences: List[RawPresenceUpdateEvent] = [
+            RawPresenceUpdateEvent(data=d, state=state) for d in data.get('presences', ())
+        ]
+        self.applications: List[PartialAppInfo] = [PartialAppInfo(data=d, state=state) for d in data.get('applications', ())]
+        self.connected_account_ids: Dict[int, List[str]] = {
+            int(d['user_id']): d['provider_ids'] for d in data.get('connected_account_ids', ())
+        }

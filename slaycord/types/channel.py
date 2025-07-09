@@ -63,7 +63,6 @@ class _BaseGuildChannel(_BaseChannel):
     permission_overwrites: List[PermissionOverwrite]
     nsfw: bool
     parent_id: Optional[Snowflake]
-    linked_lobby: Optional[LinkedLobby]
 
 
 class PartialChannel(_BaseChannel):
@@ -78,6 +77,7 @@ class _BaseTextChannel(_BaseGuildChannel, total=False):
     rate_limit_per_user: int
     default_thread_rate_limit_per_user: int
     default_auto_archive_duration: ThreadArchiveDuration
+    linked_lobby: Optional[LinkedLobby]
 
 
 class VoiceChannelBackground(TypedDict):

@@ -104,12 +104,21 @@ class BaseActivity:
     no guarantees on whether Discord will actually let you set these types.
 
     .. versionadded:: 1.3
+
+    Attributes
+    ----------
+    id: :class:`str`
+        The activity's ID. Only unique per user.
     """
 
-    __slots__ = ('_created_at',)
+    __slots__ = (
+        'id',
+        '_created_at',
+    )
 
     def __init__(self, **kwargs: Any) -> None:
-        self._created_at: Optional[float] = kwargs.pop('created_at', None)
+        self.id: str = kwargs.get('id', '')
+        self._created_at: Optional[float] = kwargs.get('created_at')
 
     @property
     def created_at(self) -> Optional[datetime]:
@@ -383,8 +392,6 @@ class Activity(BaseActivity):
 
     Attributes
     ----------
-    id: :class:`str`
-        The activity's ID. Only unique per user.
     name: Optional[:class:`str`]
         The name of the activity.
     type: :class:`ActivityType`
