@@ -915,7 +915,7 @@ class Guild(UserGuild):
         return cls(state=state, data=data)  # type: ignore
 
     def _from_data(self, guild: GuildPayload) -> None:
-        from .presences import RawPresenceUpdateEvent
+        from .presences import Presence
 
         try:
             self._member_count = guild['member_count']  # pyright: ignore[reportTypedDictNotRequiredAccess]
@@ -1003,8 +1003,7 @@ class Guild(UserGuild):
 
         empty_tuple = ()
         for presence in guild.get('presences', ()):
-
-            raw_presence = RawPresenceUpdateEvent(data=presence, state=self._state)
+            raw_presence = Presence(data=presence, state=self._state)
             member = self.get_member(raw_presence.user_id)
 
             if member is not None:

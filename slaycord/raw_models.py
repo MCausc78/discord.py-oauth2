@@ -29,7 +29,7 @@ from typing import List, Literal, Optional, Set, TYPE_CHECKING, Union
 
 from .color import Color
 from .enums import ChannelType, try_enum, ReactionType
-from .presences import RawPresenceUpdateEvent
+from .presences import Presence
 from .utils import (
     MISSING,
     _RawReprMixin,
@@ -653,7 +653,7 @@ class SupplementalGuild:
 
             You must have ``guilds.members.read`` OAuth2 scope for this to be populated.
 
-    presences: List[:class:`RawPresenceUpdateEvent`]
+    presences: List[:class:`Presence`]
         The presences for guild members.
     voice_states: List[:class:`VoiceState`]
         The guild's voice states.
@@ -679,13 +679,13 @@ class SupplementalGuild:
         *,
         id: int,
         members: List[Member],
-        presences: List[RawPresenceUpdateEvent],
+        presences: List[Presence],
         voice_states: List[VoiceState],
         underlying: Guild,
     ) -> None:
         self.id: int = id
         self.members: List[Member] = members
-        self.presences: List[RawPresenceUpdateEvent] = presences
+        self.presences: List[Presence] = presences
         self.voice_states: List[VoiceState] = voice_states
         self.underlying: Guild = underlying
 
@@ -699,7 +699,7 @@ class RawReadyEvent(_RawReprMixin):
     ----------
     disclose: List[:class:`str`]
         The upcoming changes that the client should disclose to the user.
-    friend_presences: List[:class:`RawPresenceUpdateEvent`]
+    friend_presences: List[:class:`Presence`]
         The presences for your friends.
     game_invites: List[:class:`GameInvite`]
         The game invites.
@@ -720,13 +720,13 @@ class RawReadyEvent(_RawReprMixin):
         *,
         state: ConnectionState,
         disclose: List[str],
-        friend_presences: List[RawPresenceUpdateEvent],
+        friend_presences: List[Presence],
         game_invites: List[GameInvite],
         guilds: List[SupplementalGuild],
     ) -> None:
         self._state: ConnectionState = state
         self.disclose: List[str] = disclose
-        self.friend_presences: List[RawPresenceUpdateEvent] = friend_presences
+        self.friend_presences: List[Presence] = friend_presences
         self.game_invites: List[GameInvite] = game_invites
         self.guilds: List[SupplementalGuild] = guilds
 

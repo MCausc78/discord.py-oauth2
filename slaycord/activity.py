@@ -32,6 +32,7 @@ from .asset import Asset
 from .color import Color
 from .enums import (
     try_enum,
+    ActivityActionType,
     ActivityPartyPrivacy,
     ActivityPlatform,
     ActivityType,
@@ -1773,7 +1774,7 @@ class ActivityInvite:
             author_id,
             session_id,
             application.id,
-            1,
+            ActivityActionType.join.value,
             channel_id=self.channel_id or 0,
             message_id=self.message_id or 0,
         )

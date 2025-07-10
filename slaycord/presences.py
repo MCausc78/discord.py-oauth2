@@ -28,7 +28,6 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 
 from .activity import create_activity
 from .appinfo import PartialAppInfo
-from .guild import Guild
 from .enums import try_enum, Status
 from .utils import MISSING, _RawReprMixin, _get_as_snowflake
 
@@ -37,6 +36,7 @@ if TYPE_CHECKING:
 
     from .activity import ActivityTypes
     from .game_relationship import GameRelationship
+    from .guild import Guild
     from .member import Member
     from .relationship import Relationship
     from .state import ConnectionState
@@ -48,11 +48,11 @@ if TYPE_CHECKING:
         XboxPresences as XboxPresencesPayload,
     )
     from .types.voice import GuildVoiceState as GuildVoiceStatePayload
-
+    from .user import User
 
 __all__ = (
-    'RawPresenceUpdateEvent',
     'ClientStatus',
+    'Presence',
     'Presences',
 )
 
@@ -142,15 +142,21 @@ class ClientStatus:
         return self.mobile is not None
 
 
-class RawPresenceUpdateEvent(_RawReprMixin):
+class Presence(_RawReprMixin):
     """Represents the payload for a :func:`on_raw_presence_update` event.
 
     .. versionadded:: 2.5
+
+    .. versionchanged:: 3.0
+
+        ``RawPresenceUpdateEvent`` was renamed to ``Presence``.
 
     Attributes
     ----------
     user_id: :class:`int`
         The ID of the user that triggered the presence update.
+    user: Optional[:class:`User`]
+        The user that triggered the presence update, if available.
     guild_id: Optional[:class:`int`]
         The guild ID for the users presence update. Could be ``None``.
     guild: Optional[:class:`Guild`]
@@ -169,6 +175,7 @@ class RawPresenceUpdateEvent(_RawReprMixin):
 
     __slots__ = (
         'user_id',
+        'user',
         'client_status',
         'activities',
         'hidden_activities',
@@ -177,8 +184,11 @@ class RawPresenceUpdateEvent(_RawReprMixin):
         'pair',
     )
 
-    def __init__(self, *, data: PresencePayload, state: ConnectionState) -> None:
-        self.user_id: int = int(data['user']['id'])
+    def __init__(self, *, data: PresencePayload, state: ConnectionState, full_user: bool = False) -> None:
+        user_data = data['user']
+
+        self.user_id: int = int(user_data['id'])
+        self.user: Optional[User] = state.store_user(user_data) if full_user else None  # type: ignore
         self.client_status: ClientStatus = ClientStatus(status=data['status'], data=data['client_status'])
         self.activities: Tuple[ActivityTypes, ...] = tuple(create_activity(d, state) for d in data.get('activities', ()))
         self.hidden_activities: Tuple[ActivityTypes, ...] = tuple(
@@ -206,7 +216,7 @@ class Presences:
         - :attr:`~VoiceChannel.name`
 
         Voice states will have only :attr:`~VoiceState.self_stream`, :attr:`~VoiceState.channel` populated.
-    presences: List[:class:`RawPresenceUpdateEvent`]
+    presences: List[:class:`Presence`]
         The presences for all your relationships.
     applications: List[:class:`PartialAppInfo`]
         The applications found across all presences.
@@ -226,6 +236,8 @@ class Presences:
 
     def __init__(self, *, data: Union[PresencesPayload, XboxPresencesPayload], state: ConnectionState) -> None:
         self._state: ConnectionState = state
+
+        from .guild import Guild
 
         guilds: List[Guild] = []
 
@@ -284,9 +296,7 @@ class Presences:
             guilds.append(guild)
 
         self.guilds: List[Guild] = guilds
-        self.presences: List[RawPresenceUpdateEvent] = [
-            RawPresenceUpdateEvent(data=d, state=state) for d in data.get('presences', ())
-        ]
+        self.presences: List[Presence] = [Presence(data=d, state=state, full_user=True) for d in data.get('presences', ())]
         self.applications: List[PartialAppInfo] = [PartialAppInfo(data=d, state=state) for d in data.get('applications', ())]
         self.connected_account_ids: Dict[int, List[str]] = {
             int(d['user_id']): d['provider_ids'] for d in data.get('connected_account_ids', ())

@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .activity import ActivityTypes
-    from .presences import RawPresenceUpdateEvent
+    from .presences import Presence
     from .state import ConnectionState
     from .types.user import User as UserPayload, GameRelationship as GameRelationshipPayload
 
@@ -127,7 +127,7 @@ class GameRelationship(Hashable):
         self.since: datetime = parse_time(data['since'])
         self.dm_access_type: int = data.get('dm_access_type', 0)  # I've seen it always 0
 
-    def _presence_update(self, raw: RawPresenceUpdateEvent, user: UserPayload) -> Optional[Tuple[User, User]]:
+    def _presence_update(self, raw: Presence, user: UserPayload) -> Optional[Tuple[User, User]]:
         self.activities = raw.activities
         self.client_status = raw.client_status
 
