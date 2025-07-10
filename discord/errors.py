@@ -114,15 +114,21 @@ class HTTPException(DiscordException):
         The status code of the HTTP request.
     code: :class:`int`
         The Discord specific error code for the failure.
+    error_code: :class:`str`
+        The OAuth2-specific error codes. Could be an empty string.
     """
 
     def __init__(self, response: _ResponseType, message: Optional[Union[str, Dict[str, Any]]]):
         self.response: _ResponseType = response
         self.status: int = response.status  # type: ignore # This attribute is filled by the library even if using requests
+
         self.code: int
+        self.error_code: str
         self.text: str
+
         if isinstance(message, dict):
             self.code = message.get('code', 0)
+            self.error_code = message.get('error', '')
             base = message.get('message', '')
             errors = message.get('errors')
             self._errors: Optional[Dict[str, Any]] = errors

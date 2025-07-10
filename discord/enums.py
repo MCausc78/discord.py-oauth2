@@ -63,6 +63,7 @@ __all__ = (
     'EventStatus',
     'ExpireBehavior',
     'ExpireBehaviour',
+    'ExternalAuthenticationProviderType',
     'ForumLayoutType',
     'ForumOrderType',
     'GiftStyle',
@@ -722,6 +723,14 @@ class ExpireBehavior(Enum):
 
 
 ExpireBehaviour = ExpireBehavior
+
+
+class ExternalAuthenticationProviderType(Enum):
+    oidc = 'OIDC'
+    eos_access_token = 'EPIC_ONLINE_SERVICES_ACCESS_TOKEN'
+    eos_id_token = 'EPIC_ONLINE_SERVICES_ID_TOKEN'
+    steam_session_ticket = 'STEAM_SESSION_TICKET'
+    unity_id_token = 'UNITY_SERVICES_ID_TOKEN'
 
 
 class ForumLayoutType(Enum):

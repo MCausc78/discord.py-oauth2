@@ -886,14 +886,14 @@ class HTTPClient:
         self._global_over = asyncio.Event()
         self._global_over.set()
 
-    async def static_login(self, token: str) -> user.User:
+    async def static_login(self, token: str) -> oauth2.GetCurrentAuthorizationInformationResponseBody:
         await self.startup()
 
         old_token = self.token
         self.token = token
 
         try:
-            data = await self.get_me()
+            data = await self.get_current_authorization_information()
         except HTTPException as exc:
             self.token = old_token
             if exc.status == 401:

@@ -58,7 +58,15 @@ from .impersonate import Impersonate, DefaultImpersonate
 from .connections import Connection
 from .emoji import Emoji
 from .entitlements import Entitlement
-from .enums import ActivityType, ChannelType, ClientType, PaymentSourceType, RelationshipType, Status
+from .enums import (
+    ActivityType,
+    ChannelType,
+    ClientType,
+    ExternalAuthenticationProviderType,
+    PaymentSourceType,
+    RelationshipType,
+    Status,
+)
 from .errors import *
 from .flags import ApplicationFlags, Intents
 from .game_relationship import GameRelationship
@@ -69,6 +77,7 @@ from .http import HTTPClient
 from .invite import Invite
 from .lobby import Lobby
 from .mentions import AllowedMentions
+from .oauth2 import AccessToken, OAuth2Authorization, OAuth2DeviceFlow
 from .object import Object
 from .presences import Presences
 from .relationship import Relationship
@@ -131,6 +140,10 @@ if TYPE_CHECKING:
     from .subscription import Subscription
     from .threads import ThreadMember
     from .types.guild import Guild as GuildPayload
+    from .types.oauth2 import (
+        GetOAuth2DeviceCodeRequestBody as GetOAuth2DeviceCodeRequestBodyPayload,
+        GetOAuth2TokenRequestBody as GetOAuth2TokenRequestBodyPayload,
+    )
     from .voice_client import VoiceProtocol
 
 
@@ -689,18 +702,25 @@ class Client(Dispatcher):
         """
         pass
 
-    # login state management
+    # Login state management
 
-    async def login(self, token: str) -> None:
+    @overload
+    async def login(self, token: None) -> None:
+        ...
+
+    @overload
+    async def login(self, token: str) -> OAuth2Authorization:
+        ...
+
+    async def login(self, token: Optional[str] = None) -> Optional[OAuth2Authorization]:
         """|coro|
 
         Logs in the client with the specified credentials and
         calls the :meth:`setup_hook`.
 
-
         Parameters
         ----------
-        token: :class:`str`
+        token: Optional[:class:`str`]
             The authentication token. Do not prefix this token with
             anything as the library will do it for you.
 
@@ -712,7 +732,20 @@ class Client(Dispatcher):
             An unknown HTTP related error occurred,
             usually when it isn't 200 or the known incorrect credentials
             passing status code.
+
+        Returns
+        -------
+        :class:`OAuth2Authorization`
+            The OAuth2 authorization.
         """
+
+        if token is None:
+            if self.loop is _loop:
+                await self._async_setup_hook()
+
+            await self.http.startup()
+            await self.setup_hook()
+            return None
 
         _log.info('Logging in using static token')
 
@@ -721,11 +754,16 @@ class Client(Dispatcher):
 
         if not isinstance(token, str):
             raise TypeError(f'Expected token to be a str, received {token.__class__.__name__} instead')
-        token = token.strip()
 
+        token = token.strip()
         data = await self.http.static_login(token)
-        self._connection.user = ClientUser(state=self._connection, data=data)
+
+        response = OAuth2Authorization(data=data, state=self._connection)
+        user = response.user
+        if user:
+            self._connection.user = user
         await self.setup_hook()
+        return response
 
     async def connect(self, *, reconnect: bool = True, nonce: Optional[str] = None) -> None:
         """|coro|
@@ -764,10 +802,6 @@ class Client(Dispatcher):
             'initial': True,
             'nonce': nonce,
         }
-        if self.resume is not None:
-            seq, session_id = self.resume
-            ws_params.update(sequence=seq, resume=True, session=session_id)
-
         while not self.is_closed():
             try:
                 coro = DiscordWebSocket.from_client(self, gateway=gateway, **ws_params)
@@ -992,7 +1026,207 @@ class Client(Dispatcher):
             # and `self.start` closes all sockets and the HTTPClient instance.
             return
 
-    # properties
+    async def start_device_flow(
+        self, client_id: int, *, client_secret: Optional[str] = None, scopes: Optional[List[str]] = None
+    ) -> OAuth2DeviceFlow:
+        """|coro|
+
+        Starts a OAuth2 device flow.
+
+        Parameters
+        ----------
+        client_id: :class:`str`
+            The ID of the application.
+        client_secret: Optional[:class:`str`]
+            The client secret of the application.
+            Required if the application does not have :attr:`~ApplicationFlags.public_oauth2_client` flag.
+        scopes: Optional[List[:class:`str`]]
+            A list of scopes to request.
+
+        Raises
+        ------
+        HTTPException
+            Starting the OAuth2 device flow failed.
+
+        Returns
+        -------
+        :class:`~discord.OAuth2DeviceFlow`
+            The flow.
+        """
+
+        payload: GetOAuth2DeviceCodeRequestBodyPayload = {
+            'client_id': client_id,
+        }
+        if client_secret:
+            payload['client_secret'] = client_secret
+        if scopes:
+            payload['scope'] = ' '.join(scopes)
+
+        state = self._connection
+        data = await state.http.get_oauth2_device_code(payload)
+
+        return OAuth2DeviceFlow(data=data, client_id=client_id, client_secret=client_secret, state=state)
+
+    async def exchange_code(
+        self,
+        client_id: int,
+        *,
+        client_secret: Optional[str] = None,
+        code: Optional[str] = None,
+        code_verifier: Optional[str] = None,
+        redirect_uri: Optional[str] = None,
+        scopes: Optional[List[str]] = None,
+        external_auth_token: Optional[str] = None,
+        external_auth_type: Optional[ExternalAuthenticationProviderType] = None,
+    ) -> AccessToken:
+        """|coro|
+
+        Exchanges a code.
+
+        Parameters
+        ----------
+        client_id: :class:`str`
+            The ID of the application.
+        client_secret: Optional[:class:`str`]
+            The client secret of the application.
+            Required if the application does not have :attr:`~ApplicationFlags.public_oauth2_client` flag.
+        code: Optional[:class:`str`]
+            The code to exchange.
+        code_verifier: Optional[:class:`str`]
+            The code verifier for the PKCE extension to the code grant.
+        redirect_uri: Optional[:class:`str`]
+            The URL to redirect to after authorization, which must match one of the registered redirect URIs for the application.
+        scopes: Optional[List[:class:`str`]]
+            A list of scopes to request.
+        external_auth_token: Optional[:class:`str`]
+            The external authentication token.
+            If this is provided, then ``external_auth_type`` must be provided as well.
+        external_auth_type: Optional[:class:`ExternalAuthenticationProviderType`]
+            The external authentication provider type.
+            If this is provided, then ``external_auth_token`` must be provided as well.
+
+        Raises
+        ------
+        HTTPException
+            Exchanging the code failed.
+
+        Returns
+        -------
+        :class:`~discord.AccessToken`
+            The access token.
+        """
+        payload: GetOAuth2TokenRequestBodyPayload = {
+            'grant_type': 'authorization_code',
+            'client_id': client_id,
+        }
+        if client_secret:
+            payload['client_secret'] = client_secret
+        if code:
+            payload['code'] = code
+        if code_verifier:
+            payload['code_verifier'] = code_verifier
+        if redirect_uri:
+            payload['redirect_uri'] = redirect_uri
+        if scopes:
+            payload['scope'] = ' '.join(scopes)
+        if external_auth_token:
+            payload['external_auth_token'] = external_auth_token
+        if external_auth_type:
+            payload['external_auth_type'] = external_auth_type.value
+
+        state = self._connection
+        data = await state.http.get_oauth2_token(payload)
+
+        return AccessToken(data=data, state=state)
+
+    async def refresh_access_token(
+        self,
+        refresh_token: str,
+        *,
+        client_id: int,
+        client_secret: Optional[str] = None,
+    ) -> AccessToken:
+        """|coro|
+
+        Refreshes an access token.
+
+        Parameters
+        ----------
+        refresh_token: :class:`str`
+            The refresh token.
+        client_id: :class:`str`
+            The ID of the application.
+        client_secret: Optional[:class:`str`]
+            The client secret of the application.
+            Required if the application does not have :attr:`~ApplicationFlags.public_oauth2_client` flag.
+
+        Raises
+        ------
+        HTTPException
+            Refreshing the access token failed.
+
+        Returns
+        -------
+        :class:`~discord.AccessToken`
+            The access token.
+        """
+        payload: GetOAuth2TokenRequestBodyPayload = {
+            'grant_type': 'refresh_token',
+            'client_id': client_id,
+            'refresh_token': refresh_token,
+        }
+        if client_secret:
+            payload['client_secret'] = client_secret
+
+        state = self._connection
+        data = await state.http.get_oauth2_token(payload)
+
+        return AccessToken(data=data, state=state)
+
+    async def fetch_application_access_token(
+        self,
+        client_id: int,
+        client_secret: str,
+        *,
+        scopes: Optional[List[str]] = None,
+    ) -> AccessToken:
+        """|coro|
+
+        Retrieve access token for a team user, or user who owns the requesting application.
+
+        Parameters
+        ----------
+        client_id: :class:`str`
+            The ID of the application.
+        client_secret: :class:`str`
+            The client secret of the application.
+        scopes: Optional[List[:class:`str`]]
+            A list of scopes to request.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving the access token failed.
+
+        Returns
+        -------
+        :class:`~discord.AccessToken`
+            The access token.
+        """
+        payload: GetOAuth2TokenRequestBodyPayload = {
+            'grant_type': 'client_credentials',
+            'client_id': client_id,
+            'client_secret': client_secret,
+        }
+        if scopes:
+            payload['scope'] = ' '.join(scopes)
+
+        state = self._connection
+        data = await state.http.get_oauth2_token(payload)
+
+        return AccessToken(data=data, state=state)
+
+    # Properties
 
     def is_closed(self) -> bool:
         """:class:`bool`: Indicates if the websocket connection is closed."""

@@ -56,7 +56,7 @@ class GetOpenIDUserInformationResponseBody(TypedDict):
     sub: Snowflake
     email: Optional[str]
     email_verified: bool
-    preferred_username: SyntaxWarning
+    preferred_username: str
     nickname: Optional[str]
     picture: str
     locale: str

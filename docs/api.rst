@@ -896,7 +896,7 @@ Members
     .. versionadded:: 2.5
 
     :param payload: The raw presence update event model.
-    :type payload: :class:`RawPresenceUpdateEvent`
+    :type payload: :class:`Presence`
         
 
 Messages
