@@ -62,7 +62,7 @@ if TYPE_CHECKING:
     from .game_relationship import GameRelationship
     from .guild import UserGuild, Guild
     from .message import Message
-    from .presences import RawPresenceUpdateEvent
+    from .presences import Presence
     from .relationship import Relationship
     from .role import Role
     from .state import ConnectionState
@@ -467,7 +467,7 @@ class Member(discord.abc.Messageable, _UserTag):
         self._flags = data.get('flags', 0)
         self._avatar_decoration_data = data.get('avatar_decoration_data')
 
-    def _presence_update(self, raw: RawPresenceUpdateEvent, user: UserPayload) -> Optional[Tuple[User, User]]:
+    def _presence_update(self, raw: Presence, user: UserPayload) -> Optional[Tuple[User, User]]:
         self.activities = raw.activities
         self.client_status = raw.client_status
 

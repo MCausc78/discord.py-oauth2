@@ -5340,12 +5340,12 @@ RawPollVoteActionEvent
 .. autoclass:: RawPollVoteActionEvent()
     :members:
 
-RawPresenceUpdateEvent
+Presence
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. attributetable:: RawPresenceUpdateEvent
+.. attributetable:: Presence
 
-.. autoclass:: RawPresenceUpdateEvent()
+.. autoclass:: Presence()
     :members:
 
 PartialWebhookGuild

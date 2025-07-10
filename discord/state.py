@@ -70,7 +70,7 @@ from .mentions import AllowedMentions
 from .message import Message, LobbyMessage
 from .object import Object
 from .partial_emoji import PartialEmoji
-from .presences import ClientStatus, RawPresenceUpdateEvent
+from .presences import ClientStatus, Presence
 from .raw_models import *
 from .relationship import Relationship
 from .role import Role
@@ -787,7 +787,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
             guild_presences = []
             for guild_presence_data in guild_presences_data:
-                event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
+                event = Presence.__new__(Presence)
                 if 'user' in guild_presence_data:
                     user_data = guild_presence_data['user']
                     user_id = int(user_data['id'])
@@ -840,7 +840,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             else:
                 user_data = {'id': friend_presence_data['user_id']}
 
-            event = RawPresenceUpdateEvent.__new__(RawPresenceUpdateEvent)
+            event = Presence.__new__(Presence)
             event.user_id = int(user_data['id'])
             event.client_status = ClientStatus(
                 status=friend_presence_data['status'], data=friend_presence_data['client_status']
@@ -1061,7 +1061,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             _log.debug('Detected possibly fake PRESENCE_UPDATE. Discarding.')
             return
 
-        raw = RawPresenceUpdateEvent(data=data, state=self)
+        raw = Presence(data=data, state=self)
 
         if raw.guild_id is None:
             old: Union[Relationship, GameRelationship]
@@ -1084,11 +1084,11 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
                     old = Relationship._copy(relationship, ClientStatus(), ())
                 else:
                     old = copy(relationship)
-                    user_update = relationship._presence_update(raw, data['user'])
+                    user_update = relationship._presence_update(raw, data['user'])  # type: ignore
 
             else:
                 old = copy(relationship)
-                user_update = relationship._presence_update(raw, data['user'])
+                user_update = relationship._presence_update(raw, data['user'])  # type: ignore
 
             if user_update:
                 self.dispatch('user_update', user_update[0], user_update[1])
@@ -1112,7 +1112,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             return
 
         old_member = Member._copy(member)
-        user_update = member._presence_update(raw=raw, user=data['user'])
+        user_update = member._presence_update(raw=raw, user=data['user'])  # type: ignore
 
         if user_update:
             self.dispatch('user_update', user_update[0], user_update[1])

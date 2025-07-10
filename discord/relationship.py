@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .activity import ActivityTypes
-    from .presences import RawPresenceUpdateEvent
+    from .presences import Presence
     from .state import ConnectionState
     from .types.gateway import RelationshipEvent
     from .types.user import User as UserPayload, Relationship as RelationshipPayload
@@ -143,7 +143,7 @@ class Relationship(Hashable):
         self.origin_application_id: Optional[int] = _get_as_snowflake(data, 'origin_application_id')
         self.since: Optional[datetime] = parse_time(data.get('since'))
 
-    def _presence_update(self, raw: RawPresenceUpdateEvent, user: UserPayload) -> Optional[Tuple[User, User]]:
+    def _presence_update(self, raw: Presence, user: UserPayload) -> Optional[Tuple[User, User]]:
         self.activities = raw.activities
         self.client_status = raw.client_status
 

@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
 __all__ = (
     'Enum',
+    'ActivityActionType',
     'ActivityPlatform',
     'ActivityType',
     'AppCommandHandler',
@@ -234,6 +235,13 @@ else:
                 return cls._enum_value_map_[value]
             except (KeyError, TypeError):
                 return value
+
+
+class ActivityActionType(Enum):
+    join = 1
+    spectate = 2
+    listen = 3
+    join_request = 5
 
 
 class ActivityPartyPrivacy(Enum):
