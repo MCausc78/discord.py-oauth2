@@ -53,6 +53,7 @@ from .lobby import *
 from .member import *
 from .mentions import *
 from .message import *
+from .oauth2 import *
 from .object import *
 from .partial_emoji import *
 from .permissions import *
