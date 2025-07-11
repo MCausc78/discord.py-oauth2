@@ -1,7 +1,11 @@
+# This examples assumes that the application has Public Client option enabled
+
 from __future__ import annotations
 
 import asyncio
 import discord
+
+client_id = 1169421761859833997
 
 
 async def main():
@@ -10,7 +14,7 @@ async def main():
     client = discord.Client()
 
     await client.login()
-    flow = await client.start_device_flow(1169421761859833997, scopes=['sdk.social_layer', 'guilds'])
+    flow = await client.start_device_flow(client_id, scopes=['sdk.social_layer', 'guilds'])
     print('Go to', flow.complete_verification_uri, 'to complete the device flow.')
 
     result = await flow.poll()
