@@ -52,6 +52,7 @@ from .utils import MISSING, _get_as_snowflake, cached_slot_property, find, parse
 __all__ = (
     'BaseActivity',
     '_activity_asset_url',
+    '_status_field',
     'ActivityAssets',
     'ActivityButton',
     'ActivityParty',
@@ -147,6 +148,27 @@ def _activity_asset_url(image: Optional[str] = None, *, application_id: Optional
         return Asset.BASE + f'/app-assets/{application_id}/{image}.png'
 
 
+def _status_field(activity: ActivityTypes) -> Optional[str]:
+    status_display_type: Optional[StatusDisplayType] = getattr(activity, 'status_display_type')
+    if status_display_type is None:
+        lookup = {
+            ActivityType.playing: 'name',
+            ActivityType.streaming: 'details',
+            ActivityType.listening: 'name',
+            ActivityType.watching: 'name',
+            ActivityType.custom: 'name',
+            ActivityType.competing: 'name',
+        }
+        return getattr(activity, lookup.get(activity.type, 'name'), None)
+
+    lookup = {
+        StatusDisplayType.name_: 'name',
+        StatusDisplayType.details: 'details',
+        StatusDisplayType.state: 'state',
+    }
+    return getattr(activity, lookup.get(status_display_type, 'name'), None)
+
+
 class ActivityAssets:
     """Represents assets within in :class:`Game` activity.
 
@@ -208,9 +230,7 @@ class ActivityAssets:
             large_url=data.get('large_url'),
             small_image=data.get('small_image'),
             small_image_text=data.get('small_text'),
-            small_url=data.get(
-                'small_url',
-            ),
+            small_url=data.get('small_url'),
         )
         self._application_id = application_id
         return self
@@ -581,6 +601,16 @@ class Activity(BaseActivity):
         inner = ' '.join('%s=%r' % t for t in attrs)
         return f'<Activity {inner}>'
 
+    def __str__(self) -> str:
+        ret = str(self.type)
+        text = _status_field(self)
+
+        if text:
+            if ret:
+                return f'{ret} {text}'
+            return text
+        return ret
+
     def to_dict(
         self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
     ) -> Optional[SendableActivityPayload]:
@@ -861,7 +891,7 @@ class Game(BaseActivity):
         return None
 
     def __str__(self) -> str:
-        return str(self.name)
+        return _status_field(self) or ''
 
     def __repr__(self) -> str:
         return f'<Game name={self.name!r}>'
@@ -1075,11 +1105,11 @@ class Streaming(BaseActivity):
         """
         return ActivityType.streaming
 
-    def __str__(self) -> str:
-        return str(self.name)
-
     def __repr__(self) -> str:
         return f'<Streaming name={self.name!r}>'
+
+    def __str__(self) -> str:
+        return _status_field(self) or ''
 
     @property
     def twitch_name(self) -> Optional[str]:

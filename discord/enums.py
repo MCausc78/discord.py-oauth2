@@ -275,6 +275,16 @@ class ActivityType(Enum):
     def __int__(self) -> int:
         return self.value
 
+    def __str__(self) -> str:
+        lookup = {
+            ActivityType.playing: 'Playing',
+            ActivityType.streaming: 'Streaming',
+            ActivityType.listening: 'Listening to',
+            ActivityType.watching: 'Watching',
+            ActivityType.competing: 'Competing in',
+        }
+        return lookup.get(self, '')
+
 
 class AppCommandHandler(Enum):
     app_handler = 1
