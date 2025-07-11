@@ -44,8 +44,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .state import ConnectionState
-    from .types.activity import ActivityEmoji
     from .types.emoji import Emoji as EmojiPayload, PartialEmoji as PartialEmojiPayload
+    from .types.presences import ActivityEmoji
 
 
 class _EmojiTag:

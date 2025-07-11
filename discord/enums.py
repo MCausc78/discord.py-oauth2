@@ -52,6 +52,7 @@ __all__ = (
     'ChannelType',
     'ClientType',
     'ComponentType',
+    'CustomStatusLabel',
     'ConnectionType',
     'ConsoleHandoffType',
     'ContentFilter',
@@ -98,6 +99,7 @@ __all__ = (
     'SlayerSDKReceiveInGameDMs',
     'SpeakingState',
     'Status',
+    'StatusDisplayType',
     'StickerFormatType',
     'StickerType',
     'StreamDeletionReason',
@@ -645,6 +647,24 @@ class ContentFilter(Enum, comparable=True):
         return self.name
 
 
+class CustomStatusLabel(Enum):
+    question = 'question'
+    think = 'think'
+    love = 'love'
+    excited = 'excited'
+    recommend = 'recommend'
+
+    def __str__(self) -> str:
+        lookup = {
+            CustomStatusLabel.question: 'Question of the day',
+            CustomStatusLabel.think: 'Shower thought',
+            CustomStatusLabel.love: 'Current obsession',
+            CustomStatusLabel.excited: "Can't wait for",
+            CustomStatusLabel.recommend: 'Recommendation needed',
+        }
+        return lookup.get(self, '')
+
+
 class DefaultAvatar(Enum):
     blurple = 0
     grey = 1
@@ -1163,6 +1183,13 @@ class Status(Enum):
 
     def __str__(self) -> str:
         return self.value
+
+
+class StatusDisplayType(Enum):
+    # Has to be name_ because name conflicts with some enum.Enum attribute
+    name_ = 0
+    state = 1
+    details = 2
 
 
 class StickerFormatType(Enum):

@@ -58,7 +58,7 @@ class Session(TypedDict):
 
 class ClientInfo(TypedDict):
     version: int
-    os: Literal['windows', 'osx', 'linux', 'android', 'ios', 'playstation', 'xbox', 'other', 'unknown']
+    os: OperatingSystemType
     client: ClientType
 
 
@@ -85,8 +85,11 @@ class _BaseActivity(TypedDict, total=False):
     supported_platforms: List[ActivityPlatformType]
     timestamps: ActivityTimestamps
     application_id: Snowflake
+    status_display_type: StatusDisplayType
     details: Optional[str]
+    details_url: Optional[str]
     state: Optional[str]
+    state_url: Optional[str]
     sync_id: str
     flags: int
     buttons: List[str]
@@ -134,8 +137,10 @@ class ActivityEmoji(TypedDict):
 class ActivityAssets(TypedDict, total=False):
     large_image: str  # 1-256 characters
     large_text: str  # 2-128 characters
+    large_url: str  # max 256
     small_image: str  # 1-256 characters
     small_text: str  # 2-128 characters
+    small_url: str  # max 256
 
 
 class ActivityParty(TypedDict, total=False):
@@ -151,6 +156,16 @@ class ActivitySecrets(TypedDict, total=False):
     match: str  # 2-128 characters
     join: str  # 2-128
     spectate: str  # 2-128 characters
+
+
+CustomStatusLabel = Literal[
+    'question',
+    'think',
+    'love',
+    'excited',
+    'recommend',
+]
+StatusDisplayType = Literal[0, 1, 2]
 
 
 class ActivityMetadata(TypedDict, total=False):

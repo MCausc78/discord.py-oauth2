@@ -37,8 +37,10 @@ from .enums import (
     ActivityPlatform,
     ActivityType,
     ClientType,
+    CustomStatusLabel,
     OperatingSystem,
     Status,
+    StatusDisplayType,
 )
 from .flags import (
     ActivityFlags,
@@ -158,20 +160,26 @@ class ActivityAssets:
         You can find out about format of this string in the :userdoccers:`Discord Userdoccers <resources/presence#activity-asset-image>`.
     large_image_text: Optional[:class:`str`]
         The large image asset hover text of this activity, if applicable.
+    large_url: Optional[:class:`str`]
+        The URL that is opened when clicking on the large image. Can be only up to 256 characters.
     small_image: Optional[:class:`str`]
         An arbitrary string representing the small activity asset image.
 
         You can find out about format of this string in the :userdoccers:`Discord Userdoccers <resources/presence#activity-asset-image>`.
     small_image_text: Optional[:class:`str`]
         The small image asset hover text of this activity, if applicable.
+    small_url: Optional[:class:`str`]
+        The URL that is opened when clicking on the small image. Can be only up to 256 characters.
     """
 
     __slots__ = (
         '_application_id',
         'large_image',
         'large_image_text',
+        'large_url',
         'small_image',
         'small_image_text',
+        'small_url',
     )
 
     def __init__(
@@ -179,22 +187,30 @@ class ActivityAssets:
         *,
         large_image: Optional[str] = None,
         large_image_text: Optional[str] = None,
+        large_url: Optional[str] = None,
         small_image: Optional[str] = None,
         small_image_text: Optional[str] = None,
+        small_url: Optional[str] = None,
     ) -> None:
         self._application_id: Optional[int] = None
         self.large_image: Optional[str] = large_image
         self.large_image_text: Optional[str] = large_image_text
+        self.large_url: Optional[str] = large_url
         self.small_image: Optional[str] = small_image
         self.small_image_text: Optional[str] = small_image_text
+        self.small_url: Optional[str] = small_url
 
     @classmethod
     def from_dict(cls, data: ActivityAssetsPayload, application_id: Optional[int] = None) -> Self:
         self = cls(
             large_image=data.get('large_image'),
             large_image_text=data.get('large_text'),
+            large_url=data.get('large_url'),
             small_image=data.get('small_image'),
             small_image_text=data.get('small_text'),
+            small_url=data.get(
+                'small_url',
+            ),
         )
         self._application_id = application_id
         return self
@@ -208,11 +224,17 @@ class ActivityAssets:
         if self.large_image_text is not None:
             payload['large_text'] = self.large_image_text
 
+        if self.large_url is not None:
+            payload['large_url'] = self.large_url
+
         if self.small_image is not None:
             payload['small_image'] = self.small_image
 
         if self.small_image_text is not None:
             payload['small_text'] = self.small_image_text
+
+        if self.small_url is not None:
+            payload['small_url'] = self.small_url
 
         return payload
 
@@ -417,10 +439,18 @@ class Activity(BaseActivity):
         activity in milliseconds since Unix epoch.
     application_id: Optional[:class:`int`]
         The application ID of the game.
+    parent_application_id: Optional[:class:`int`]
+        The game's parent application ID.
+    status_display_type: Optional[:class:`StatusDisplayType`]
+        The field that is displayed in the user's status text (in member/DM list).
     details: Optional[:class:`str`]
         The detail of the user's current activity.
+    details_url: Optional[:class:`str`]
+        The URL that is opened when clicking on the details text. Can be only up to 256 characters.
     state: Optional[:class:`str`]
         The user's current state. For example, "In Game".
+    state_url: Optional[:class:`str`]
+        The URL that is opened when clicking on the state text. Can be only up to 256 characters.
     sync_id: Optional[:class:`str`]
         The ID of the synced activity (for example, a Spotify song ID).
     button_labels: List[:class:`str`]
@@ -467,8 +497,12 @@ class Activity(BaseActivity):
         'start_timestamp',
         'end_timestamp',
         'application_id',
+        'parent_application_id',
+        'status_display_type',
         'details',
+        'details_url',
         'state',
+        'state_url',
         'sync_id',
         '_flags',
         'button_labels',
@@ -482,7 +516,6 @@ class Activity(BaseActivity):
         super().__init__(**kwargs)
 
         activity_type = kwargs.get('type', -1)
-        platform = kwargs.get('platform')
         supported_platforms = kwargs.get('supported_platforms')
         timestamps = kwargs.get('timestamps')
         emoji = kwargs.get('emoji')
@@ -494,13 +527,7 @@ class Activity(BaseActivity):
         )
         self.url: Optional[str] = kwargs.get('url')
         self.session_id: Optional[str] = kwargs.get('session_id')
-
-        if platform is None:
-            self.platform: Optional[ActivityPlatform] = None
-        elif isinstance(platform, ActivityPlatform):
-            self.platform = platform
-        else:
-            self.platform = try_enum(ActivityPlatform, platform)
+        self.platform: Optional[ActivityPlatform] = kwargs.get('platform')
 
         if supported_platforms is None:
             self._supported_platforms: Optional[int] = None
@@ -517,8 +544,12 @@ class Activity(BaseActivity):
             self.end_timestamp = None
 
         self.application_id: Optional[int] = _get_as_snowflake(kwargs, 'application_id')
+        self.parent_application_id: Optional[int] = _get_as_snowflake(kwargs, 'parent_application_id')
+        self.status_display_type: Optional[StatusDisplayType] = kwargs.get('status_display_type')
         self.details: Optional[str] = kwargs.get('details')
+        self.details_url: Optional[str] = kwargs.get('details_url')
         self.state: Optional[str] = kwargs.get('state')
+        self.state_url: Optional[str] = kwargs.get('state_url')
         self.sync_id: Optional[str] = kwargs.get('sync_id')
         self._flags: int = kwargs.get('flags', 0)
 
@@ -567,6 +598,10 @@ class Activity(BaseActivity):
 
             if hasattr(value, 'to_dict'):
                 value = value.to_dict()  # type: ignore
+            elif hasattr(value, 'value'):
+                value = value.value  # type: ignore
+            else:
+                continue
 
             ret[attr] = value
 
@@ -594,14 +629,21 @@ class Activity(BaseActivity):
 
     @property
     def large_image_url(self) -> Optional[str]:
-        """Optional[:class:`str`]: Returns a URL pointing to the large image asset of this activity, if applicable."""
+        """Optional[:class:`str`]: Returns an URL pointing to the large image asset of this activity, if applicable."""
         if self.assets:
             return self.assets.large_image_url
         return None
 
     @property
+    def large_url(self) -> Optional[str]:
+        """Optional[:class:`str`]: The URL that is opened when clicking on the large image, if applicable."""
+        if self.assets:
+            return self.assets.large_url
+        return None
+
+    @property
     def small_image_url(self) -> Optional[str]:
-        """Optional[:class:`str`]: Returns a URL pointing to the small image asset of this activity, if applicable."""
+        """Optional[:class:`str`]: Returns an URL pointing to the small image asset of this activity, if applicable."""
         if self.assets:
             return self.assets.small_image_url
         return None
@@ -618,6 +660,13 @@ class Activity(BaseActivity):
         """Optional[:class:`str`]: Returns the small image asset hover text of this activity, if applicable."""
         if self.assets:
             return self.assets.small_image_text
+        return None
+
+    @property
+    def small_url(self) -> Optional[str]:
+        """Optional[:class:`str`]: The URL that is opened when clicking on the small image, if applicable."""
+        if self.assets:
+            return self.assets.small_url
         return None
 
 
@@ -669,10 +718,16 @@ class Game(BaseActivity):
         The game's application ID.
     parent_application_id: Optional[:class:`int`]
         The game's parent application ID.
+    status_display_type: Optional[:class:`StatusDisplayType`]
+        The field that is displayed in the user's status text (in member/DM list).
     details: Optional[:class:`str`]
         The game's details.
+    details_url: Optional[:class:`str`]
+        The URL that is opened when clicking on the details text. Can be only up to 256 characters.
     state: Optional[:class:`str`]
         The game's state.
+    state_url: Optional[:class:`str`]
+        The URL that is opened when clicking on the state text. Can be only up to 256 characters.
     button_labels: List[:class:`str`]
         A list of strings representing the labels of custom buttons shown in a rich presence.
 
@@ -714,8 +769,11 @@ class Game(BaseActivity):
         'end_timestamp',
         'application_id',
         'parent_application_id',
+        'status_display_type',
         'details',
+        'details_url',
         'state',
+        'state_url',
         '_flags',
         'button_labels',
         'party',
@@ -727,19 +785,12 @@ class Game(BaseActivity):
     def __init__(self, details: Optional[str] = None, **extra: Any) -> None:
         super().__init__(**extra)
 
-        platform = extra.get('platform')
         supported_platforms = extra.get('supported_platforms')
         timestamps = extra.get('timestamps')
 
         self.name: str = extra.get('name', '')
         self.session_id: Optional[str] = extra.get('session_id')
-
-        if platform is None:
-            self.platform: Optional[ActivityPlatform] = None
-        elif isinstance(platform, ActivityPlatform):
-            self.platform = platform
-        else:
-            self.platform = try_enum(ActivityPlatform, platform)
+        self.platform: Optional[ActivityPlatform] = extra.get('platform')
 
         if supported_platforms is None:
             self._supported_platforms: Optional[int] = None
@@ -757,6 +808,7 @@ class Game(BaseActivity):
 
         self.application_id: Optional[int] = _get_as_snowflake(extra, 'application_id')
         self.parent_application_id: Optional[int] = _get_as_snowflake(extra, 'parent_application_id')
+        self.status_display_type: Optional[StatusDisplayType] = extra.get('status_display_type')
         self.details: Optional[str] = details
         self.state: Optional[str] = extra.get('state')
         self._flags: int = extra.get('flags', 0)
@@ -872,7 +924,9 @@ class Game(BaseActivity):
             'application_id': application_id,
         }
         if self.assets:
-            payload['assets'] = self.assets
+            assets = self.assets.to_dict()
+            if assets:
+                payload['assets'] = assets
 
         if self.button_labels:
             payload['buttons'] = self.button_labels
@@ -883,6 +937,9 @@ class Game(BaseActivity):
 
         if self.details is not None:
             payload['details'] = self.details
+
+        if self.details_url is not None:
+            payload['details_url'] = self.details_url
 
         payload['flags'] = self._flags
         if self.metadata:
@@ -900,11 +957,22 @@ class Game(BaseActivity):
         if self.platform:
             payload['platform'] = self.platform.value
 
+        if self.secrets:
+            secrets = self.secrets.to_dict()
+            if secrets:
+                payload['secrets'] = secrets
+
         if session_id is not None:
             payload['session_id'] = session_id
 
         if self.state is not None:
             payload['state'] = self.state
+
+        if self.state_url is not None:
+            payload['state_url'] = self.state_url
+
+        if self.status_display_type is not None:
+            payload['status_display_type'] = self.status_display_type.value
 
         if self._supported_platforms is not None:
             payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()
@@ -964,6 +1032,7 @@ class Streaming(BaseActivity):
     url: :class:`str`
         The stream's URL.
     assets: :class:`ActivityAssets`
+        The stream's assets.
     """
 
     # assets is used to be documented as "A dictionary comprising of similar keys than those in :attr:`Activity.assets`."
@@ -1087,8 +1156,8 @@ class Spotify:
         self._assets: ActivityAssetsPayload = data.get('assets') or {}
         self._party: ActivityPartyPayload = data.get('party') or {}
         self._sync_id: str = data.get('sync_id', '')
-        self._session_id: Optional[str] = data.get('session_id', None)
-        self._created_at: Optional[float] = data.get('created_at', None)
+        self._session_id: Optional[str] = data.get('session_id')
+        self._created_at: Optional[float] = data.get('created_at')
 
     @property
     def type(self) -> ActivityType:
@@ -1270,9 +1339,20 @@ class CustomActivity(BaseActivity):
         The emoji to pass to the activity, if any.
     expires_at: Optional[:class:`~datetime.datetime`]
         When the custom activity will expire. This is only available from :attr:`UserSettings.custom_activity`.
+
+        .. versionadded:: 3.0
+    label: Optional[:class:`CustomStatusLabelType`]
+        The custom activity's label.
+
+        .. versionadded:: 3.0
     """
 
-    __slots__ = ('name', 'emoji', 'state', 'expires_at')
+    __slots__ = (
+        'name',
+        'expires_at',
+        'emoji',
+        'label',
+    )
 
     def __init__(
         self,
@@ -1284,8 +1364,10 @@ class CustomActivity(BaseActivity):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+
         if name == 'Custom Status':
             name = state
+
         self.name: Optional[str] = name
         self.expires_at: Optional[datetime] = expires_at
 
@@ -1301,11 +1383,13 @@ class CustomActivity(BaseActivity):
         else:
             raise TypeError(f'Expected str, PartialEmoji, or None, received {type(emoji)!r} instead.')
 
+        self.label: Optional[CustomStatusLabel] = kwargs.get('label')
+
     @property
     def type(self) -> ActivityType:
         """:class:`ActivityType`: Returns the activity's type. This is for compatibility with :class:`Activity`.
 
-        It always returns :attr:`ActivityType.custom`.
+        It always returns :attr:`~discord.ActivityType.custom`.
         """
         return ActivityType.custom
 
@@ -1338,16 +1422,16 @@ class CustomActivity(BaseActivity):
         payload: Dict[str, Any] = {
             'text': self.name,
         }
-        if self.emoji is not None:
-            emoji_payload = {}
 
+        if self.emoji is not None:
             emoji_id = self.emoji.id
             emoji_name = self.emoji.name
-            if emoji_id is not None and emoji_id != 0:
-                emoji_payload['id'] = str(emoji_id)
-            if emoji_name is not None and len(emoji_name):
-                emoji_payload['name'] = emoji_name
-            payload['emoji'] = emoji_payload
+
+            if emoji_id:
+                payload['emoji_id'] = str(emoji_id)
+
+            if emoji_name:
+                payload['emoji_name'] = emoji_name
 
         if self.expires_at is not None:
             payload['expires_at'] = self.expires_at.isoformat()
@@ -1360,16 +1444,19 @@ class CustomActivity(BaseActivity):
         if not self.name:
             return None
 
-        o = {
-            'flags': 0,
-            'name': 'Custom Status',
-            'state': self.name,  # :(
-            'type': ActivityType.custom.value,
-        }
+        ret = {}
+
+        if self.label:
+            ret['details'] = self.label.value
+        ret['flags'] = 0
+        ret['name'] = 'Custom Status'
+        ret['state'] = self.name
+        ret['type'] = ActivityType.custom.value
         # For some reason, SDK doesn't send emoji here, so we won't send it too :(
         # if self.emoji:
-        #    o['emoji'] = self.emoji.to_dict()
-        return o  # type: ignore
+        #    ret['emoji'] = self.emoji.to_dict()
+
+        return base  # type: ignore
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -1377,6 +1464,7 @@ class CustomActivity(BaseActivity):
             and other.name == self.name
             and other.emoji == self.emoji
             and other.expires_at == self.expires_at
+            and other.label == self.label
         )
 
     def __ne__(self, other: object) -> bool:
@@ -1388,17 +1476,25 @@ class CustomActivity(BaseActivity):
     def __str__(self) -> str:
         if self.emoji:
             if self.name:
-                return f'{self.emoji} {self.name}'
-            return str(self.emoji)
+                ret = f'{self.emoji} {self.name}'
+            else:
+                ret = str(self.emoji)
         else:
-            return str(self.name)
+            ret = ''
+
+        if self.label:
+            if ret:
+                return f'{self.label}: {ret}'
+            return str(self.label)
+
+        return ret
 
     def __repr__(self) -> str:
         return f'<CustomActivity name={self.name!r} emoji={self.emoji!r}>'
 
 
 class Session:
-    """Represents a connected Discord gateway session.
+    """Represents a connected Discord Gateway session.
 
     .. versionadded:: 3.0
 
@@ -1806,7 +1902,12 @@ def create_activity(
     if game_type is ActivityType.playing and 'application_id' not in data and 'session_id' not in data:
         cls = Game
     elif game_type is ActivityType.custom and 'name' in data:
-        ret = CustomActivity(**data)  # type: ignore
+        details = data.get('details')
+        if details is None:
+            ret = CustomActivity(**data)  # type: ignore
+        else:
+            ret = CustomActivity(**data, label=try_enum(CustomStatusLabel, details))  # type: ignore
+
         if isinstance(ret.emoji, PartialEmoji):
             ret.emoji._state = state
         return ret
@@ -1820,9 +1921,19 @@ def create_activity(
 
     transformed_kwargs: Optional[Dict[str, Any]] = None
 
+    raw_platform = data.get('platform')
     raw_supported_platforms = data.get('supported_platforms')
+    raw_status_display_type = data.get('status_display_type')
     raw_party = data.get('party')
     raw_assets = data.get('assets')
+
+    if raw_platform is not None:
+        platform = try_enum(ActivityPlatform, raw_platform)
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'platform': platform}
+        else:
+            transformed_kwargs['platform'] = platform
 
     if raw_supported_platforms is not None:
         supported_platforms = ActivityPlatforms.from_string_array(raw_supported_platforms).value
@@ -1831,6 +1942,14 @@ def create_activity(
             transformed_kwargs = {'supported_platforms': supported_platforms}
         else:
             transformed_kwargs['supported_platforms'] = supported_platforms
+
+    if raw_status_display_type is not None:
+        status_display_type = try_enum(StatusDisplayType, raw_status_display_type)
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'status_display_type': status_display_type}
+        else:
+            transformed_kwargs['status_display_type'] = status_display_type
 
     if raw_party is not None:
         party = ActivityParty.from_dict(raw_party)

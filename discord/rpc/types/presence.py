@@ -25,25 +25,21 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 from typing import List, Literal, Optional, TypedDict
-from typing_extensions import NotRequired
 
 from ...types.presences import (
     StatusType,
     ReceivableActivity as APIActivity,
     ActivityTimestamps,
     ActivityAssets,
-    ActivityParty as APIActivityParty,
+    ActivityParty,
     ActivitySecrets,
+    StatusDisplayType,
 )
 
 
 class RelationshipPresence(TypedDict):
     status: StatusType
     activity: Optional[APIActivity]  # Activity that is associated with authorized application
-
-
-class ActivityParty(APIActivityParty):
-    privacy: NotRequired[Literal[0, 1]]  # PRIVATE | PUBLIC
 
 
 class ActivityButton(TypedDict):
@@ -53,11 +49,15 @@ class ActivityButton(TypedDict):
 
 class Activity(TypedDict, total=False):
     state: str  # 2-128 characters
+    state_url: str  # 1-256 characters
     details: str  # 2-128 characters
+    details_url: str  # 1-256 characters
     timestamps: ActivityTimestamps
     assets: ActivityAssets
+    party: ActivityParty
     secrets: ActivitySecrets
     buttons: List[ActivityButton]  # 1-2 elements (0 elements aren't permitted; omit this if you want no buttons)
     instance: bool
     supported_platforms: List[str]  # 1-32 characters, 1-3 elements
     type: Literal[0, 2, 3, 5]
+    status_display_type: StatusDisplayType
