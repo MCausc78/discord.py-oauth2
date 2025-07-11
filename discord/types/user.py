@@ -78,6 +78,7 @@ class Relationship(TypedDict):
     user_ignored: bool
     origin_application_id: NotRequired[Optional[Snowflake]]
     since: NotRequired[str]
+    has_played_game: bool
 
 
 GameRelationshipType = Literal[1, 3, 4]

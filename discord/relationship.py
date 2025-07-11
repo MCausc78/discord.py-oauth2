@@ -99,6 +99,8 @@ class Relationship(Hashable):
     since: Optional[:class:`~datetime.datetime`]
         When the relationship was created.
         Only available for type :class:`RelationshipType.friend`, :class:`RelationshipType.blocked`, and :class:`RelationshipType.incoming_request`.
+    has_played_game: :class:`bool`
+        Whether the user have played the current application.
     """
 
     __slots__ = (
@@ -113,6 +115,7 @@ class Relationship(Hashable):
         'user_ignored',
         'origin_application_id',
         'since',
+        'has_played_game',
     )
 
     if TYPE_CHECKING:
@@ -142,6 +145,7 @@ class Relationship(Hashable):
         self.user_ignored: bool = data.get('user_ignored', False)
         self.origin_application_id: Optional[int] = _get_as_snowflake(data, 'origin_application_id')
         self.since: Optional[datetime] = parse_time(data.get('since'))
+        self.has_played_game: bool = data.get('has_played_game', getattr(self, 'has_played_game', False))
 
     def _presence_update(self, raw: Presence, user: UserPayload) -> Optional[Tuple[User, User]]:
         self.activities = raw.activities
