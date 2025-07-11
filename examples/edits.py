@@ -18,7 +18,7 @@ class MyClient(discord.Client):
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         if before.content == after.content:
             return
-        
+
         msg = f'**{before.author}** edited their message:\n{before.content} -> {after.content}'
         await before.channel.send(msg)
 
