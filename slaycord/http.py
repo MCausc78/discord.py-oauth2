@@ -638,7 +638,8 @@ class HTTPClient:
 
         if self.token is not None:
             headers['Authorization'] = 'Bearer ' + self.token
-        # some checking if it's a JSON request
+
+        # Some checking if it's a JSON request
         if 'json' in kwargs:
             headers['Content-Type'] = 'application/json'
             kwargs['data'] = _to_json(kwargs.pop('json'))
@@ -902,6 +903,10 @@ class HTTPClient:
 
         return data
 
+    async def set_token(self, token: str) -> None:
+        await self.startup()
+        self.token = token
+
     # Authentication
 
     def get_fingerprint(self) -> Response[Dict[Literal['fingerprint'], str]]:
@@ -921,7 +926,7 @@ class HTTPClient:
     def get_oauth2_device_code(
         self, payload: oauth2.GetOAuth2DeviceCodeRequestBody
     ) -> Response[oauth2.GetOAuth2DeviceCodeResponseBody]:
-        return self.request(Route('POST', '/oauth2/authorize/device'), data=aiohttp.FormData(payload))
+        return self.request(Route('POST', '/oauth2/device/authorize'), data=aiohttp.FormData(payload))
 
     def get_oauth2_token(self, payload: oauth2.GetOAuth2TokenRequestBody) -> Response[oauth2.OAuth2AccessToken]:
         return self.request(Route('POST', '/oauth2/token'), data=aiohttp.FormData(payload))

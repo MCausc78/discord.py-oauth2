@@ -213,7 +213,7 @@ class OAuth2DeviceFlow:
         """
 
         payload: GetOAuth2TokenRequestBodyPayload = {
-            'grant_type': 'urn:ietf:parms:oauth:grant-type:device_code',
+            'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
             'client_id': self._client_id,
             'device_code': self.device_code,
         }

@@ -83,7 +83,7 @@ class GetOAuth2TokenRequestBody(TypedDict, total=False):
             'authorization_code',
             'refresh_token',
             'client_credentials',
-            'urn:ietf:parms:oauth:grant-type:device_code',
+            'urn:ietf:params:oauth:grant-type:device_code',
         ]
     ]  # sob
     client_id: Snowflake

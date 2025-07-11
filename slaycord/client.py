@@ -143,6 +143,7 @@ if TYPE_CHECKING:
     from .types.oauth2 import (
         GetOAuth2DeviceCodeRequestBody as GetOAuth2DeviceCodeRequestBodyPayload,
         GetOAuth2TokenRequestBody as GetOAuth2TokenRequestBodyPayload,
+        GetProvisionalAccountTokenRequestBody as GetProvisionalAccountTokenRequestBodyPayload,
     )
     from .voice_client import VoiceProtocol
 
@@ -705,14 +706,18 @@ class Client(Dispatcher):
     # Login state management
 
     @overload
-    async def login(self, token: None) -> None:
+    async def login(self, token: None = None) -> None:
         ...
 
     @overload
-    async def login(self, token: str) -> OAuth2Authorization:
+    async def login(self, token: str, *, validate: Literal[True] = True) -> OAuth2Authorization:
         ...
 
-    async def login(self, token: Optional[str] = None) -> Optional[OAuth2Authorization]:
+    @overload
+    async def login(self, token: str, *, validate: Literal[False]) -> None:
+        ...
+
+    async def login(self, token: Optional[str] = None, *, validate: bool = True) -> Optional[OAuth2Authorization]:
         """|coro|
 
         Logs in the client with the specified credentials and
@@ -723,6 +728,8 @@ class Client(Dispatcher):
         token: Optional[:class:`str`]
             The authentication token. Do not prefix this token with
             anything as the library will do it for you.
+        validate: :class:`bool`
+            Whether to validate the token. Defaults to ``True``. If ``False``, the token will be set as is.
 
         Raises
         ------
@@ -735,11 +742,12 @@ class Client(Dispatcher):
 
         Returns
         -------
-        :class:`OAuth2Authorization`
+        Optional[:class:`OAuth2Authorization`]
             The OAuth2 authorization.
         """
 
         if token is None:
+            _log.info('Setting up internal HTTP client')
             if self.loop is _loop:
                 await self._async_setup_hook()
 
@@ -756,12 +764,16 @@ class Client(Dispatcher):
             raise TypeError(f'Expected token to be a str, received {token.__class__.__name__} instead')
 
         token = token.strip()
-        data = await self.http.static_login(token)
 
-        response = OAuth2Authorization(data=data, state=self._connection)
-        user = response.user
-        if user:
-            self._connection.user = user
+        if validate:
+            data = await self.http.static_login(token)
+            response = OAuth2Authorization(data=data, state=self._connection)
+            user = response.user
+            if user:
+                self._connection.user = user
+        else:
+            await self.http.set_token(token)
+
         await self.setup_hook()
         return response
 
@@ -810,7 +822,7 @@ class Client(Dispatcher):
                 while True:
                     await self.ws.poll_event()
             except ReconnectWebSocket as e:
-                _log.debug('Got a request to %s the websocket.', e.op)
+                _log.debug('Got a request to %s the WebSocket.', e.op)
                 self.dispatch('disconnect')
                 ws_params.update(sequence=self.ws.sequence, resume=e.resume, session=self.ws.session_id)
                 if e.resume:
@@ -1035,7 +1047,7 @@ class Client(Dispatcher):
 
         Parameters
         ----------
-        client_id: :class:`str`
+        client_id: :class:`int`
             The ID of the application.
         client_secret: Optional[:class:`str`]
             The client secret of the application.
@@ -1085,7 +1097,7 @@ class Client(Dispatcher):
 
         Parameters
         ----------
-        client_id: :class:`str`
+        client_id: :class:`int`
             The ID of the application.
         client_secret: Optional[:class:`str`]
             The client secret of the application.
@@ -1101,7 +1113,7 @@ class Client(Dispatcher):
         external_auth_token: Optional[:class:`str`]
             The external authentication token.
             If this is provided, then ``external_auth_type`` must be provided as well.
-        external_auth_type: Optional[:class:`ExternalAuthenticationProviderType`]
+        external_auth_type: Optional[:class:`~slaycord.ExternalAuthenticationProviderType`]
             The external authentication provider type.
             If this is provided, then ``external_auth_token`` must be provided as well.
 
@@ -1154,7 +1166,7 @@ class Client(Dispatcher):
         ----------
         refresh_token: :class:`str`
             The refresh token.
-        client_id: :class:`str`
+        client_id: :class:`int`
             The ID of the application.
         client_secret: Optional[:class:`str`]
             The client secret of the application.
@@ -1196,7 +1208,7 @@ class Client(Dispatcher):
 
         Parameters
         ----------
-        client_id: :class:`str`
+        client_id: :class:`int`
             The ID of the application.
         client_secret: :class:`str`
             The client secret of the application.
@@ -1223,6 +1235,51 @@ class Client(Dispatcher):
 
         state = self._connection
         data = await state.http.get_oauth2_token(payload)
+
+        return AccessToken(data=data, state=state)
+
+    async def fetch_provisional_account_token(
+        self,
+        token: str,
+        *,
+        external_auth_type: ExternalAuthenticationProviderType,
+        client_id: int,
+        client_secret: Optional[str] = None,
+    ) -> AccessToken:
+        """|coro|
+
+        Retrieves token for a provisional account.
+
+        Parameters
+        ----------
+        token: :class:`str`
+            The external authentication token.
+        external_auth_type: Optional[:class:`~slaycord.ExternalAuthenticationProviderType`]
+            The external authentication provider type.
+        client_id: :class:`int`
+            The ID of the application.
+        client_secret: Optional[:class:`str`]
+            The client secret of the application.
+            Required if the application does not have :attr:`~ApplicationFlags.public_oauth2_client` flag.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving the token for a provisional account failed.
+
+        Returns
+        -------
+        :class:`~slaycord.AccessToken`
+            The access token of the provisional account.
+        """
+        payload: GetProvisionalAccountTokenRequestBodyPayload = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'external_auth_token': token,
+            'external_auth_type': external_auth_type.value,
+        }
+        state = self._connection
+        data = await state.http.get_provisional_account_token(payload)
 
         return AccessToken(data=data, state=state)
 

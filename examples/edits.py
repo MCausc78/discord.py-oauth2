@@ -18,7 +18,7 @@ class MyClient(slaycord.Client):
     async def on_message_edit(self, before: slaycord.Message, after: slaycord.Message):
         if before.content == after.content:
             return
-        
+
         msg = f'**{before.author}** edited their message:\n{before.content} -> {after.content}'
         await before.channel.send(msg)
 
