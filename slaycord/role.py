@@ -37,83 +37,24 @@ __all__ = (
     'PRIMARY_HOLOGRAPHIC_ROLE_COLOR',
     'SECONDARY_HOLOGRAPHIC_ROLE_COLOR',
     'TERTIARY_HOLOGRAPHIC_ROLE_COLOR',
-    'RoleColors',
     'RoleTags',
     'Role',
 )
 
 if TYPE_CHECKING:
     import datetime
-    from typing_extensions import Self
 
     from .guild import Guild
     from .member import Member
     from .state import ConnectionState
     from .types.role import (
         Role as RolePayload,
-        RoleColors as RoleColorsPayload,
         RoleTags as RoleTagsPayload,
     )
 
 PRIMARY_HOLOGRAPHIC_ROLE_COLOR: int = 0xA9C9FF
 SECONDARY_HOLOGRAPHIC_ROLE_COLOR: int = 0xFFBBEC
 TERTIARY_HOLOGRAPHIC_ROLE_COLOR: int = 0xFFC3A0
-
-
-class RoleColors:
-    """Represents colors of a role.
-
-    Attributes
-    ----------
-    primary_color: :class:`int`
-        The primary role color.
-    secondary_color: :class:`int`
-        The secondary role color.
-    tertiary_color: :class:`int`
-        The tertiary role color.
-    """
-
-    __slots__ = (
-        'primary_color',
-        'secondary_color',
-        'tertiary_color',
-    )
-
-    def __init__(
-        self,
-        *,
-        primary_color: int,
-        secondary_color: Optional[int] = None,
-        tertiary_color: Optional[int] = None,
-    ) -> None:
-        self.primary_color: int = primary_color
-        self.secondary_color: Optional[int] = secondary_color
-        self.tertiary_color: Optional[int] = tertiary_color
-
-    @classmethod
-    def from_dict(cls, data: RoleColorsPayload) -> Self:
-        return cls(
-            primary_color=data['primary_color'],
-            secondary_color=data.get('secondary_color'),
-            tertiary_color=data.get('tertiary_color'),
-        )
-
-    def is_holographic(self) -> bool:
-        """:class:`bool`: Whether the role colors are holographic."""
-        return (
-            self.primary_color == PRIMARY_HOLOGRAPHIC_ROLE_COLOR
-            and self.secondary_color == SECONDARY_HOLOGRAPHIC_ROLE_COLOR
-            and self.tertiary_color == TERTIARY_HOLOGRAPHIC_ROLE_COLOR
-        )
-
-    @classmethod
-    def holographic(cls) -> Self:
-        """A factory method that returns a :class:`RoleColors` instance with holographic colors."""
-        return cls(
-            primary_color=PRIMARY_HOLOGRAPHIC_ROLE_COLOR,
-            secondary_color=SECONDARY_HOLOGRAPHIC_ROLE_COLOR,
-            tertiary_color=TERTIARY_HOLOGRAPHIC_ROLE_COLOR,
-        )
 
 
 class RoleTags:
@@ -285,7 +226,8 @@ class Role(Hashable):
         'hoist',
         '_permissions',
         '_color',
-        'colors',
+        '_secondary_color',
+        '_tertiary_color',
         'position',
         '_icon',
         'unicode_emoji',
@@ -343,18 +285,12 @@ class Role(Hashable):
         return not r
 
     def _update(self, data: RolePayload) -> None:
+        colors = data.get('colors') or {}
+
         self.name: str = data['name']
         self._permissions: int = int(data.get('permissions', 0))
         self.position: int = data.get('position', 0)
         self._color: int = data.get('color', 0)
-        self.colors: RoleColors = RoleColors.from_dict(
-            data=data.get('colors')
-            or {
-                'primary_color': self._color,
-                'secondary_color': None,
-                'tertiary_color': None,
-            }
-        )
         self.hoist: bool = data.get('hoist', False)
         self._icon: Optional[str] = data.get('icon')
         self.unicode_emoji: Optional[str] = data.get('unicode_emoji')
@@ -362,6 +298,8 @@ class Role(Hashable):
         self.mentionable: bool = data.get('mentionable', False)
         self.tags: Optional[RoleTags]
         self._flags: int = data.get('flags', 0)
+        self._secondary_color: Optional[int] = colors.get('secondary_color')
+        self._tertiary_color: Optional[int] = colors.get('tertiary_color')
 
         try:
             self.tags = RoleTags(data['tags'])  # pyright: ignore[reportTypedDictNotRequiredAccess]
@@ -402,18 +340,50 @@ class Role(Hashable):
         return not self.is_default() and not self.managed and (me.top_role > self or me.id == self.guild.owner_id)
 
     @property
+    def secondary_color(self) -> Optional[Color]:
+        """Optional[:class:`Color`]: Returns the role's secondary color.
+
+        .. versionadded:: 2.6
+        """
+        return None if self._secondary_color is None else Color(self._secondary_color)
+
+    @property
+    def secondary_colour(self) -> Optional[Color]:
+        """Optional[:class:`Color`]: Alias for :attr:`secondary_color`.
+
+        .. versionadded:: 2.6
+        """
+        return self.secondary_colour
+
+    @property
+    def tertiary_color(self) -> Optional[Color]:
+        """Optional[:class:`Color`]: Returns the role's tertiary color.
+
+        .. versionadded:: 2.6
+        """
+        return None if self._tertiary_color is None else Color(self._tertiary_color)
+
+    @property
+    def tertiary_colour(self) -> Optional[Color]:
+        """Optional[:class:`Color`]: Alias for :attr:`tertiary_color`.
+
+        .. versionadded:: 2.6
+        """
+        return self.tertiary_colour
+
+    @property
     def permissions(self) -> Permissions:
         """:class:`Permissions`: Returns the role's permissions."""
         return Permissions(self._permissions)
 
     @property
     def color(self) -> Color:
-        """:class:`Color`: Returns the role color. An alias exists under ``colour``."""
+        """:class:`Color`: Returns the role's primary color. An alias exists under ``colour``."""
         return Color(self._color)
 
     @property
     def colour(self) -> Color:
-        """:class:`Colour`: Returns the role colour.
+        """:class:`Colour`: Returns the role's primary colour.
 
         This is an alias of :attr:`color`.
         """

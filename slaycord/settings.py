@@ -48,7 +48,9 @@ if TYPE_CHECKING:
 
 
 class GuildFolder:
-    """Represents a guild folder or position if :attr:`id` is ``None``.
+    """Represents a guild folder (or position if :attr:`id` is ``None``).
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------
@@ -122,38 +124,40 @@ class UserSettings:
     | :meth:`UserSettings.edit` | :attr:`status`, :attr:`custom_activity`, :attr:`receive_in_game_dms` |
     +---------------------------+----------------------------------------------------------------------+
 
+    .. versionadded:: 3.0
+
     Attributes
     ----------
     status: :class:`Status`
         The current status. Defaults to :attr:`~Status.online`.
 
-        You must have ``'activities.read'`` or ``'presences.read'`` OAuth2 scope for this attribute to be populated.
+        You must have ``activities.read`` or ``presences.read`` OAuth2 scope for this attribute to be populated.
     show_current_game: :class:`bool`
         Whether to show the current game. Defaults to ``True``.
 
-        You must have ``'activities.read'`` or ``'presences.read'`` OAuth2 scope for this attribute to be populated.
+        You must have ``activities.read`` or ``presences.read`` OAuth2 scope for this attribute to be populated.
     guild_folders: List[:class:`GuildFolder`]
         A list of guild folders.
 
         .. note::
 
-        You must have ``'guilds'`` OAuth2 scope for this attribute to be populated.
+        You must have ``guilds`` OAuth2 scope for this attribute to be populated.
     custom_activity: Optional[:class:`CustomActivity`]
         The current custom status.
 
-        You must have ``'activities.read'`` or ``'presences.read'`` OAuth2 scope for this attribute to be populated.
+        You must have ``activities.read`` or ``presences.read`` OAuth2 scope for this attribute to be populated.
     allow_activity_party_privacy_friends: :class:`bool`
         Whether to allow friends to join your activity without sending a request.
 
         Defaults to ``True``.
 
-        You must have ``'activities.read'`` or ``'presences.write'`` OAuth2 scope for this attribute to be populated.
+        You must have ``activities.read`` or ``presences.write`` OAuth2 scope for this attribute to be populated.
     allow_activity_party_privacy_voice_channel: :class:`bool`
         Whether to allow people in the same voice channel as you to join your activity without sending a request. Does not apply to Community guilds.
 
         Defaults to ``True``.
 
-        You must have ``'activities.read'`` or ``'presences.write'`` OAuth2 scope for this attribute to be populated.
+        You must have ``activities.read`` or ``presences.write`` OAuth2 scope for this attribute to be populated.
     receive_in_game_dms: :class:`SlayerSDKReceiveInGameDMs`
         A setting for receiving in-game DMs via the social layer API.
 
@@ -297,6 +301,8 @@ class UserSettings:
 class AudioSettings:
     """Represents audio settings for an user.
 
+    .. versionadded:: 3.0
+
     Attributes
     ----------
     id: :class:`int`
@@ -411,6 +417,8 @@ class AudioSettings:
 class AudioSettingsManager:
     """Manager for audio settings.
 
+    .. versionadded:: 3.0
+
     Attributes
     ----------
     data: Dict[:class:`AudioContext`, Dict[:class:`int`, :class:`AudioSettings`]]
@@ -514,6 +522,8 @@ class MuteConfig:
         .. describe:: int(x)
 
             Returns the mute status as an int.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------

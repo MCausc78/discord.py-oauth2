@@ -165,7 +165,7 @@ class ConnectionRequest:
 
     Attributes
     ----------
-    handoff_type: Optional[:class:`ConsoleHandoffType`]
+    handoff_type: :class:`ConsoleHandoffType`
         The handoff type.
     """
 

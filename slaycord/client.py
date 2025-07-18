@@ -642,7 +642,12 @@ class Client(Dispatcher):
             activities.append(new_settings.custom_activity)
 
         _log.debug('Syncing presence to %s %s', status, new_settings.custom_activity)
-        await self.change_presence(status=status, activities=activities, edit_settings=False)
+        await self.change_presence(status=status, activities=activities, edit_settings=False, update_presence=True)
+
+        current_session = self._connection.current_session
+        if current_session:
+            current_session.activities = tuple(activities)
+            current_session.status = status
 
     # Hooks
 
@@ -2521,6 +2526,8 @@ class Client(Dispatcher):
         *,
         activity: Optional[ActivityTypes] = MISSING,
         activities: List[ActivityTypes] = MISSING,
+        application_id: Optional[int] = MISSING,
+        session_id: Optional[str] = MISSING,
         status: Status = MISSING,
         afk: bool = MISSING,
         idle_since: Optional[datetime] = MISSING,
@@ -2546,7 +2553,7 @@ class Client(Dispatcher):
 
         .. code-block:: python3
 
-            game = slaycord.Game("with the API")
+            game = slaycord.Game(name="with the API")
             await client.change_presence(status=slaycord.Status.idle, activity=game)
 
         Parameters
@@ -2557,6 +2564,14 @@ class Client(Dispatcher):
             A list of the activities being done. Cannot be sent with ``activity``.
 
             .. versionadded:: 2.0
+        application_id: Optional[:class:`int`]
+            The ID of the application the activities should be associated with.
+
+            .. versionadded:: 3.0
+        session_id: Optional[:class:`str`]
+            The ID of the Gateway session the activity should be associated with.
+
+            .. versionadded:: 3.0
         status: :class:`.Status`
             Indicates what status to change to.
         afk: :class:`bool`
@@ -2576,8 +2591,12 @@ class Client(Dispatcher):
             Required for setting/editing ``expires_at`` for custom activities.
             It's not recommended to change this, as setting it to ``False``
             can cause undefined behavior.
+
+            .. versionadded:: 3.0
         update_presence: :class:`bool`
             Whether to update presence immediately. This is useful when presence syncing is disabled.
+
+            .. versionadded:: 3.0
 
         Raises
         ------
@@ -2626,7 +2645,14 @@ class Client(Dispatcher):
             update_presence = (not edit_settings) or self.sync_presences
 
         if update_presence:
-            await self.ws.change_presence(status=status, activities=activities, afk=afk, since=since)
+            await self.ws.change_presence(
+                activities=activities,
+                application_id=application_id,
+                session_id=session_id,
+                status=status,
+                afk=afk,
+                since=since,
+            )
 
         if edit_settings:
             payload: Dict[str, Any] = {}
@@ -2650,6 +2676,8 @@ class Client(Dispatcher):
         """|coro|
 
         Creates, or updates a headless session.
+
+        .. versionadded:: 3.0
 
         Parameters
         ----------
@@ -2709,6 +2737,8 @@ class Client(Dispatcher):
 
         Retrieves :class:`list` of your :class:`Connection`\s.
 
+        .. versionadded:: 3.0
+
         Raises
         ------
         Forbidden
@@ -2718,7 +2748,7 @@ class Client(Dispatcher):
 
         Returns
         -------
-        List[:class:`Connection`]
+        List[:class:`~slaycord.Connection`]
             The retrieved connections.
         """
         state = self._connection
@@ -2888,6 +2918,8 @@ class Client(Dispatcher):
         """|coro|
 
         Creates an user data harvest request.
+
+        .. versionadded:: 3.0
 
         Parameters
         ----------

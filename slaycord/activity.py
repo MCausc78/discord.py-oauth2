@@ -840,7 +840,9 @@ class Game(BaseActivity):
         self.parent_application_id: Optional[int] = _get_as_snowflake(extra, 'parent_application_id')
         self.status_display_type: Optional[StatusDisplayType] = extra.get('status_display_type')
         self.details: Optional[str] = details
+        self.details_url: Optional[str] = extra.get('details_url')
         self.state: Optional[str] = extra.get('state')
+        self.state_url: Optional[str] = extra.get('state_url')
         self._flags: int = extra.get('flags', 0)
 
         try:
