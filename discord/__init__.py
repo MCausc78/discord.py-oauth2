@@ -36,8 +36,10 @@ from .color import *
 from .commands import *
 from .components import *
 from .connections import *
+from .dispatcher import *
 from .embeds import *
 from .emoji import *
+from .entitlements import *
 from .enums import *
 from .errors import *
 from .file import *

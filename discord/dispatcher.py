@@ -27,7 +27,7 @@ _loop: Any = _LoopSentinel()
 
 
 class Dispatcher:
-    """Implements discord.py event system.
+    """A mixin to implement discord.py event system.
 
     .. versionadded:: 3.0
     """

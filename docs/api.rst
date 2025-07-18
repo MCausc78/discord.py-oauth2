@@ -40,13 +40,38 @@ Client
 
 .. autoclass:: Client
     :members:
+    :inherited-members:
+
+Dispatcher
+~~~~~~~~~~
+
+.. attributetable:: Dispatcher
+
+.. autoclass:: Dispatcher
+    :members:
     :exclude-members: event
 
     .. automethod:: Client.event()
         :decorator:
 
+Impersonate
+~~~~~~~~~~~
+
+.. attributetable:: Impersonate
+
+.. autoclass:: Impersonate
+    :members:
+
+DefaultImpersonate
+~~~~~~~~~~~~~~~~~~
+
+.. attributetable:: DefaultImpersonate
+
+.. autoclass:: DefaultImpersonate
+    :members:
+
 Application Info
-------------------
+----------------
 
 AppInfo
 ~~~~~~~~
