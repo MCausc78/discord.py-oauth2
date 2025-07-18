@@ -5885,10 +5885,6 @@ The following exceptions are thrown by the library.
 
 .. autoexception:: ConnectionClosed
 
-.. autoexception:: PrivilegedIntentsRequired
-
-.. autoexception:: InteractionResponded
-
 .. autoexception:: MissingApplicationID
 
 .. autoexception:: discord.opus.OpusError
@@ -5906,13 +5902,10 @@ Exception Hierarchy
                 - :exc:`InvalidData`
                 - :exc:`LoginFailure`
                 - :exc:`ConnectionClosed`
-                - :exc:`PrivilegedIntentsRequired`
-                - :exc:`InteractionResponded`
                 - :exc:`MissingApplicationID`
             - :exc:`GatewayNotFound`
             - :exc:`HTTPException`
                 - :exc:`Forbidden`
                 - :exc:`NotFound`
                 - :exc:`DiscordServerError`
-                - :exc:`app_commands.CommandSyncFailure`
             - :exc:`RateLimited`
