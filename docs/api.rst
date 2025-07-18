@@ -4652,10 +4652,6 @@ Messageable
 
 .. autoclass:: discord.abc.Messageable()
     :members:
-    :exclude-members: typing
-
-    .. automethod:: discord.abc.Messageable.typing
-        :async-with:
 
 Connectable
 ~~~~~~~~~~~~
@@ -4709,10 +4705,6 @@ User
 .. autoclass:: User()
     :members:
     :inherited-members:
-    :exclude-members: typing
-
-    .. automethod:: typing
-        :async-with:
 
 Connection
 ~~~~~~~~~~
@@ -4978,10 +4970,6 @@ Member
 .. autoclass:: Member()
     :members:
     :inherited-members:
-    :exclude-members: typing
-
-    .. automethod:: typing
-        :async-with:
 
 LobbyMember
 ~~~~~~~~~~~
@@ -5067,10 +5055,6 @@ TextChannel
 .. autoclass:: TextChannel()
     :members:
     :inherited-members:
-    :exclude-members: typing
-
-    .. automethod:: typing
-        :async-with:
 
 .. attributetable:: LinkedLobby
 
@@ -5094,10 +5078,6 @@ Thread
 .. autoclass:: Thread()
     :members:
     :inherited-members:
-    :exclude-members: typing
-
-    .. automethod:: typing
-        :async-with:
 
 ThreadMember
 ~~~~~~~~~~~~
@@ -5186,10 +5166,7 @@ DMChannel
 .. autoclass:: DMChannel()
     :members:
     :inherited-members:
-    :exclude-members: typing
 
-    .. automethod:: typing
-        :async-with:
 
 GroupChannel
 ~~~~~~~~~~~~
@@ -5199,10 +5176,6 @@ GroupChannel
 .. autoclass:: GroupChannel()
     :members:
     :inherited-members:
-    :exclude-members: typing
-
-    .. automethod:: typing
-        :async-with:
 
 .. attributetable:: LinkedAccount
 
@@ -5217,10 +5190,6 @@ EphemeralDMChannel
 .. autoclass:: EphemeralDMChannel()
     :members:
     :inherited-members:
-    :exclude-members: typing
-
-    .. automethod:: typing
-        :async-with:
 
 PartialInviteGuild
 ~~~~~~~~~~~~~~~~~~~
