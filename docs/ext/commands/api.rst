@@ -332,22 +332,18 @@ Checks
 .. _ext_commands_api_context:
 
 Context
---------
+-------
 
 .. attributetable:: discord.ext.commands.Context
 
 .. autoclass:: discord.ext.commands.Context
     :members:
     :inherited-members:
-    :exclude-members: typing
-
-    .. automethod:: discord.ext.commands.Context.typing
-        :async-with:
 
 .. _ext_commands_api_converters:
 
 Converters
-------------
+----------
 
 .. attributetable:: discord.ext.commands.Converter
 
