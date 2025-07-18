@@ -4921,6 +4921,165 @@ Reaction
 .. autoclass:: Reaction()
     :members:
 
+MessageInteraction
+~~~~~~~~~~~~~~~~~~
+
+.. attributetable:: MessageInteraction
+
+.. autoclass:: MessageInteraction()
+    :members:
+
+Component
+~~~~~~~~~~
+
+.. attributetable:: Component
+
+.. autoclass:: Component()
+    :members:
+
+.. attributetable:: ActionRow
+
+.. autoclass:: ActionRow()
+    :members:
+
+.. attributetable:: Button
+
+.. autoclass:: Button()
+    :members:
+    :inherited-members:
+
+.. attributetable:: SelectMenu
+
+.. autoclass:: SelectMenu()
+    :members:
+    :inherited-members:
+
+.. attributetable:: SelectOption
+
+.. autoclass:: SelectOption()
+    :members:
+
+.. attributetable:: TextInput
+
+.. autoclass:: TextInput()
+    :members:
+    :inherited-members:
+
+.. attributetable:: Section
+
+.. autoclass:: Section()
+    :members:
+    :inherited-members:
+
+.. attributetable:: TextDisplay
+
+.. autoclass:: TextDisplay()
+    :members:
+    :inherited-members:
+
+.. attributetable:: UnfurledMediaItem
+
+.. autoclass:: UnfurledMediaItem()
+    :members:
+    :inherited-members:
+
+.. attributetable:: MediaGalleryItem
+
+.. autoclass:: MediaGalleryItem()
+    :members:
+    :inherited-members:
+
+.. attributetable:: Thumbnail
+
+.. autoclass:: Thumbnail()
+    :members:
+    :inherited-members:
+
+.. attributetable:: MediaGallery
+
+.. autoclass:: MediaGallery()
+    :members:
+    :inherited-members:
+
+.. attributetable:: FileComponent
+
+.. autoclass:: FileComponent()
+    :members:
+    :inherited-members:
+
+.. attributetable:: Separator
+
+.. autoclass:: Separator()
+    :members:
+    :inherited-members:
+
+.. attributetable:: ContentInventoryEntry
+
+.. autoclass:: ContentInventoryEntry()
+    :members:
+    :inherited-members:
+
+.. attributetable:: Container
+
+.. autoclass:: Container()
+    :members:
+    :inherited-members:
+
+AppCommand
+~~~~~~~~~~
+
+.. attributetable:: BaseCommand
+
+.. autoclass:: BaseCommand()
+    :members:
+    :inherited-members:
+
+.. attributetable:: SlashCommand
+
+.. autoclass:: SlashCommand()
+    :members:
+    :inherited-members:
+
+.. attributetable:: UserCommand
+
+.. autoclass:: UserCommand()
+    :members:
+    :inherited-members:
+
+.. attributetable:: MessageCommand
+
+.. autoclass:: MessageCommand()
+    :members:
+    :inherited-members:
+
+.. attributetable:: PrimaryEntryPointCommand
+
+.. autoclass:: PrimaryEntryPointCommand()
+    :members:
+    :inherited-members:
+
+.. attributetable:: UnknownCommand
+
+.. autoclass:: UnknownCommand()
+    :members:
+    :inherited-members:
+
+.. attributetable:: Option
+
+.. autoclass:: Option()
+    :members:
+
+.. attributetable:: SlashCommandGroup
+
+.. autoclass:: SlashCommandGroup()
+    :members:
+    :inherited-members:
+
+.. attributetable:: Choice
+
+.. autoclass:: Choice()
+    :members:
+
 Lobby
 ~~~~~
 

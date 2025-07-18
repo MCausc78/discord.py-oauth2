@@ -99,6 +99,16 @@ __all__ = (
     'SelectOption',
     'TextInput',
     'SelectDefaultValue',
+    'Section',
+    'TextDisplay',
+    'UnfurledMediaItem',
+    'MediaGalleryItem',
+    'Thumbnail',
+    'MediaGallery',
+    'FileComponent',
+    'Separator',
+    'ContentInventoryEntry',
+    'Container',
 )
 
 T = TypeVar('T', bound='Component')
