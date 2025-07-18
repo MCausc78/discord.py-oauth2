@@ -611,18 +611,17 @@ class HTTPClient:
 
         ratelimit = self.get_ratelimit(key)
 
-        # header creation
-
+        # Header creation
         initial_headers = self.impersonate.get_http_initial_headers()
         if isawaitable(initial_headers):
             initial_headers = await initial_headers
 
         headers: CIMultiDict[str] = CIMultiDict(initial_headers)
-        if 'User-Agent' not in headers:
-            user_agent = self.impersonate.get_http_user_agent()
-            if isawaitable(user_agent):
-                user_agent = await user_agent
-            headers['User-Agent'] = user_agent
+
+        # Some checking if it's a JSON request
+        if 'json' in kwargs:
+            headers['Content-Type'] = 'application/json'
+            kwargs['data'] = _to_json(kwargs.pop('json'))
 
         if 'X-Super-Properties' not in headers:
             xsp = self.impersonate.get_client_properties_base64()
@@ -632,25 +631,32 @@ class HTTPClient:
             if xsp is not None:
                 headers['X-Super-Properties'] = xsp
 
+        bot = kwargs.pop('bot', False)
+        token = kwargs.pop('token', self.token)
+
+        if token is not None:
+            if bot:
+                prefix = 'Bot '
+            else:
+                prefix = 'Bearer '
+
+            headers['Authorization'] = prefix + token
+
+        if 'User-Agent' not in headers:
+            user_agent = self.impersonate.get_http_user_agent()
+            if isawaitable(user_agent):
+                user_agent = await user_agent
+            headers['User-Agent'] = user_agent
+
         supplemental_headers = kwargs.pop('supplemental_headers', None)
         if supplemental_headers:
             headers.update(supplemental_headers)
 
-        if self.token is not None:
-            headers['Authorization'] = 'Bearer ' + self.token
-
-        # Some checking if it's a JSON request
-        if 'json' in kwargs:
-            headers['Content-Type'] = 'application/json'
-            kwargs['data'] = _to_json(kwargs.pop('json'))
-
-        try:
-            reason = kwargs.pop('reason')
-        except KeyError:
-            pass
+        if 'skip_auto_headers' in kwargs:
+            if kwargs['skip_auto_headers'] is None:
+                del kwargs['skip_auto_headers']
         else:
-            if reason:
-                headers['X-Audit-Log-Reason'] = _uriquote(reason, safe='/ ')
+            kwargs['skip_auto_headers'] = {'Accept', 'Accept-Encoding'}
 
         kwargs['headers'] = headers
 
@@ -845,14 +851,25 @@ class HTTPClient:
         if isawaitable(initial_headers):
             initial_headers = await initial_headers
 
-        headers: CIMultiDict[str] = CIMultiDict(initial_headers)
-        if 'User-Agent' not in headers:
+        if 'X-Super-Properties' not in initial_headers:
+            xsp = self.impersonate.get_client_properties_base64()
+            if isawaitable(xsp):
+                xsp = await xsp
+
+            if xsp is not None:
+                initial_headers['X-Super-Properties'] = xsp
+
+        if 'User-Agent' not in initial_headers:
             user_agent = self.impersonate.get_http_user_agent()
             if isawaitable(user_agent):
                 user_agent = await user_agent
-            headers['User-Agent'] = user_agent
+            initial_headers['User-Agent'] = user_agent
 
-        async with self.__session.get('https://latency.media.gaming-sdk.com/rtc', headers=headers) as resp:
+        async with self.__session.get(
+            'https://latency.media.gaming-sdk.com/rtc',
+            headers=initial_headers,
+            skip_auto_headers={'Accept', 'Accept-Encoding'},
+        ) as resp:
             if resp.status == 200:
                 return await resp.json()
             elif resp.status == 404:
@@ -1645,6 +1662,7 @@ class HTTPClient:
                 payment_source_type=payment_source_type,
             ),
             json=payload,
+            token=None,
         )
 
     # /api/v9/billing/popup-bridge/{payment_source_type}/callback/{state}/{response_type}
@@ -1782,7 +1800,7 @@ class HTTPClient:
 
     async def get_gateway_url(self) -> str:
         try:
-            data = await self.request(Route('GET', '/gateway'))
+            data = await self.request(Route('GET', '/gateway'), token=None)
         except HTTPException as exc:
             raise GatewayNotFound() from exc
 

@@ -51,7 +51,7 @@ Dispatcher
     :members:
     :exclude-members: event
 
-    .. automethod:: Client.event()
+    .. automethod:: Dispatcher.event()
         :decorator:
 
 Impersonate

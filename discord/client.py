@@ -751,6 +751,20 @@ class Client(Dispatcher):
             The OAuth2 authorization.
         """
 
+        # The SDK authentication flow is:
+        # Step 1) http.get("/auth/fingerprint") (idk what this does)
+        # Step 2) http.get("/oauth2/@me")
+        # Step 3) http.get("/gateway")
+        # Step 4) connect to websocket
+        # Step 5) regions = http.get("https://latency.media.gaming-sdk.com/rtc")
+        #         nonce = 0
+        #         for region in regions:
+        #           for ip in region.ips:
+        #             await udp(b'\x13\x37\xCA\xFE' + nonce.to_bytes(length=4, byteorder='little', signed=False), host=ip, port=???,
+        #             # The response will be 8 bytes and contain 1337F00D + <little-endian nonce>
+        #             nonce += 1
+        # Step 6) http.post("/science", blahblah)
+
         if token is None:
             _log.info('Setting up internal HTTP client')
             if self.loop is _loop:
