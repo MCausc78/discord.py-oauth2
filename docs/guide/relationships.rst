@@ -26,7 +26,7 @@ The following table demonstrates differences between platform-wide and in-game r
 
 +----------+------------------------------------------------+--------------+-----------------------------------------------------+-----------------------------------------------------------------------+
 | Type     | Do they persist across all games and platform? | Limit        | Presence accessibility                              | Private Messaging functionality                                       |
-+----------+------------------------------------------------+--------------+-----------------------------------------------------+-----------------------------------------------------------------------+
++==========+================================================+==============+=====================================================+=======================================================================+
 | Discord  | Yes                                            | 1000 friends | Friends can see your status everywhere              | Friends can message you at any time                                   |
 +----------+------------------------------------------------+--------------+-----------------------------------------------------+-----------------------------------------------------------------------+
 | In-Game  | Only in your game                              | None         | Friends can see your status only when you play game | Friends can message you only when you play the game they added you in |
@@ -49,6 +49,10 @@ and the current user will have a game relationship of type :attr:`~discord.Relat
 .. note::
 
     If the current user has relationship with type :attr:`~discord.RelationshipType.outgoing_request`, both target user and current user will become in-game friends.
+
+.. hint:: Help! Why I am getting ``discord.errors.HTTPException: 400 Bad Request (error code: 80000): Incoming friend requests disabled`` error despite target user having friend requests enabled?
+
+    This likely happens because the target user did not authorize your game.
 
 .. code-block:: python3
    :emphasize-lines: 2,6
@@ -132,14 +136,14 @@ Blocking an user will remove all existing Discord and in-game relationships with
 .. code-block:: python3
    :emphasize-lines: 6
 
-    # Currently, an instance of :class:`discord.User` is required to block them. In future, discord.py-oauth2 will have a way to do by having an user ID.
+    # Currently, an instance of discord.User is required to block them.
+    # In future, discord.py-oauth2 will have a way to do same by having only an user ID.
     user = client.get_user(1073325901825187841)
     if user is None:
         print('Huh? Where are they?')
     else:
         await user.block()
         print('Successfully blocked them :(')
-
 
 Unblocking Users
 ~~~~~~~~~~~~~~~~
@@ -149,7 +153,8 @@ Likewise, players may have misunderstood what other player did, and as such unbl
 .. code-block:: python3
    :emphasize-lines: 6
 
-    # Currently, an instance of :class:`discord.User` is required to block them. In future, discord.py-oauth2 will have a way to do by having an user ID.
+    # Currently, an instance of discord.User is required to block them.
+    # In future, discord.py-oauth2 will have a way to do same by having only an user ID.
     relationship = client.get_relationship(1073325901825187841)
     if relationship is None or relationship.type != discord.RelationshipType.blocked:
         print('They are not blocked.')

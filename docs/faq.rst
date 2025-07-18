@@ -182,7 +182,7 @@ and then pass an :class:`io.BytesIO` instance to :class:`File` like so:
 
 
 How can I add a reaction to a message?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You use the :meth:`Message.add_reaction` method.
 
@@ -262,7 +262,7 @@ How do I run something in the background?
 `Check the background_task.py example. <https://github.com/Rapptz/discord.py/blob/master/examples/background_task.py>`_
 
 How do I get a specific model?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are multiple ways of doing this. If you have a specific model's ID then you can use
 one of the following functions:

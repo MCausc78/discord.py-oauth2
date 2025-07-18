@@ -497,6 +497,7 @@ class DiscordWebSocket:
             properties = await properties
         
         inner_payload['properties'] = properties
+        inner_payload['token'] = 'Bearer ' + (self.token or '')
 
         payload = {
             'd': inner_payload,
