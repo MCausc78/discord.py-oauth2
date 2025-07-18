@@ -90,6 +90,7 @@ __all__ = (
     'PartialMessageable',
     'SafetyWarning',
     'VoiceChannelEffect',
+    'VoiceChannelBackground',
     'VoiceChannelSoundEffect',
     'LinkedAccount',
     '_guild_channel_factory',
