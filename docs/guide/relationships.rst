@@ -50,9 +50,13 @@ and the current user will have a game relationship of type :attr:`~discord.Relat
 
     If the current user has relationship with type :attr:`~discord.RelationshipType.outgoing_request`, both target user and current user will become in-game friends.
 
-.. hint:: Help! Why I am getting ``discord.errors.HTTPException: 400 Bad Request (error code: 80000): Incoming friend requests disabled`` error despite target user having friend requests enabled?
+.. note::
+    :collapsible: closed
+    
+    Make sure the target user did authorized your game, otherwise you may get
+    ``discord.errors.HTTPException: 400 Bad Request (error code: 80000): Incoming friend requests disabled``
+    errors despite target user having friend requests enabled.
 
-    This likely happens because the target user did not authorize your game.
 
 .. code-block:: python3
    :emphasize-lines: 2,6
