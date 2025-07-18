@@ -25,20 +25,24 @@ Key Features
   * Game Invites
   * Game Relationships
   * Gateway
+
     * Sessions
 
   * Headless Sessions
   * Lobbies
   * RPC
+
     * Billing
     * Event Subscriptions
     * Voice Settings
     * Activity Invites
     * Store (Entitlements, SKUs)
+  
   * Relationships
   * Transferring calls from Desktop/Mobile to PlayStation
   * User Settings
   * Voice
+
     * Calls
     * Stream API (This does not include actual UDP protocol implementation)
 
