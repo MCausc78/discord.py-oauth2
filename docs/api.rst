@@ -3457,7 +3457,7 @@ of :class:`enum.Enum`.
 
 .. class:: RelationshipType
 
-    Specifies the type of :class:`Relationship`.
+    Specifies the type of :class:`Relationship` or :class:`GameRelationship`..
 
     .. versionadded:: 3.0
 
