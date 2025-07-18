@@ -3,7 +3,7 @@
 .. _ext_commands_cogs:
 
 Cogs
-======
+====
 
 There comes a point in your bot's development when you want to organize a collection of commands, listeners, and some state into one class. Cogs allow you to do just that.
 
@@ -11,7 +11,6 @@ The gist:
 
 - Each cog is a Python class that subclasses :class:`.commands.Cog`.
 - Every command is marked with the :func:`.commands.command` decorator.
-- Every hybrid command is marked with the :func:`.commands.hybrid_command` decorator.
 - Every listener is marked with the :meth:`.commands.Cog.listener` decorator.
 - Cogs are then registered with the :meth:`.Bot.add_cog` call.
 - Cogs are subsequently removed with the :meth:`.Bot.remove_cog` call.

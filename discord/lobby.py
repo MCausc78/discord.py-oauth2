@@ -59,7 +59,7 @@ def _extract_user_id(data: LobbyMemberPayload, /) -> int:
 class LinkedLobby:
     """Represents channel link to a lobby.
 
-    .. verseionadded:: 3.0
+    .. versionadded:: 3.0
 
     Attributes
     ----------

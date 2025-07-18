@@ -18,7 +18,7 @@ Bot
 .. autoclass:: discord.ext.commands.Bot
     :members:
     :inherited-members:
-    :exclude-members: after_invoke, before_invoke, check, check_once, command, event, group, hybrid_command, hybrid_group, listen
+    :exclude-members: after_invoke, before_invoke, check, check_once, command, event, group, listen
 
     .. automethod:: Bot.after_invoke()
         :decorator:
@@ -41,17 +41,11 @@ Bot
     .. automethod:: Bot.group(*args, **kwargs)
         :decorator:
 
-    .. automethod:: Bot.hybrid_command(name=..., with_app_command=True, *args, **kwargs)
-        :decorator:
-
-    .. automethod:: Bot.hybrid_group(name=..., with_app_command=True, *args, **kwargs)
-        :decorator:
-
     .. automethod:: Bot.listen(name=None)
         :decorator:
 
 Prefix Helpers
-----------------
+--------------
 
 .. autofunction:: discord.ext.commands.when_mentioned
 
@@ -101,10 +95,10 @@ are custom to the command extension module.
 .. _ext_commands_api_command:
 
 Commands
-----------
+--------
 
 Decorators
-~~~~~~~~~~~~
+~~~~~~~~~~
 
 .. autofunction:: discord.ext.commands.command
     :decorator:
@@ -112,15 +106,8 @@ Decorators
 .. autofunction:: discord.ext.commands.group
     :decorator:
 
-.. autofunction:: discord.ext.commands.hybrid_command
-    :decorator:
-
-.. autofunction:: discord.ext.commands.hybrid_group
-    :decorator:
-
-
 Command
-~~~~~~~~~
+~~~~~~~
 
 .. attributetable:: discord.ext.commands.Command
 
@@ -177,57 +164,6 @@ GroupMixin
 
     .. automethod:: GroupMixin.group(*args, **kwargs)
         :decorator:
-
-HybridCommand
-~~~~~~~~~~~~~~
-
-.. attributetable:: discord.ext.commands.HybridCommand
-
-.. autoclass:: discord.ext.commands.HybridCommand
-    :members:
-    :special-members: __call__
-    :exclude-members: after_invoke, autocomplete, before_invoke, error
-
-    .. automethod:: HybridCommand.after_invoke()
-        :decorator:
-
-    .. automethod:: HybridCommand.autocomplete(name)
-        :decorator:
-
-    .. automethod:: HybridCommand.before_invoke()
-        :decorator:
-
-    .. automethod:: HybridCommand.error()
-        :decorator:
-
-HybridGroup
-~~~~~~~~~~~~
-
-.. attributetable:: discord.ext.commands.HybridGroup
-
-.. autoclass:: discord.ext.commands.HybridGroup
-    :members:
-    :inherited-members:
-    :exclude-members: after_invoke, autocomplete, before_invoke, command, error, group
-
-    .. automethod:: HybridGroup.after_invoke()
-        :decorator:
-
-    .. automethod:: HybridGroup.autocomplete(name)
-        :decorator:
-
-    .. automethod:: HybridGroup.before_invoke()
-        :decorator:
-
-    .. automethod:: HybridGroup.command(*args, **kwargs)
-        :decorator:
-
-    .. automethod:: HybridGroup.error()
-        :decorator:
-
-    .. automethod:: HybridGroup.group(*args, **kwargs)
-        :decorator:
-
 
 .. _ext_commands_api_cogs:
 
@@ -771,10 +707,6 @@ Exceptions
 .. autoexception:: discord.ext.commands.CommandRegistrationError
     :members:
 
-.. autoexception:: discord.ext.commands.HybridCommandError
-    :members:
-
-
 Exception Hierarchy
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -833,7 +765,6 @@ Exception Hierarchy
             - :exc:`~.commands.CommandInvokeError`
             - :exc:`~.commands.CommandOnCooldown`
             - :exc:`~.commands.MaxConcurrencyReached`
-            - :exc:`~.commands.HybridCommandError`
         - :exc:`~.commands.ExtensionError`
             - :exc:`~.commands.ExtensionAlreadyLoaded`
             - :exc:`~.commands.ExtensionNotLoaded`
