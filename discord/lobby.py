@@ -460,7 +460,7 @@ class Lobby(Hashable, Messageable):
         Raises
         ------
         Forbidden
-            You do not have permissions to unlink lobby to a channel.
+            You do not have permissions to unlink lobby from a channel.
         HTTPException
             Unlinking the lobby failed.
 

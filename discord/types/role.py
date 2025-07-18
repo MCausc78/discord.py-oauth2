@@ -30,11 +30,17 @@ from typing_extensions import NotRequired
 from .snowflake import Snowflake
 
 
+class RoleColors(TypedDict):
+    primary_color: int
+    secondary_color: Optional[int]
+    tertiary_color: Optional[int]
+
+
 class Role(TypedDict):
     id: Snowflake
     name: str
     color: int
-    colors: Optional[RoleColors]
+    colors: RoleColors
     hoist: bool
     position: int
     permissions: str
@@ -53,9 +59,3 @@ class RoleTags(TypedDict, total=False):
     premium_subscriber: None
     available_for_purchase: None
     guild_connections: None
-
-
-class RoleColors(TypedDict):
-    primary_color: int
-    secondary_color: Optional[int]
-    tertiary_color: Optional[int]

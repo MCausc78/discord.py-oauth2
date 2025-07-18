@@ -212,9 +212,14 @@ class Relationship(Hashable):
         self.client_status = ClientStatus()
         self.activities = ()
         self.type = RelationshipType.implicit
-        self.nick = None
-        self.since = None
         self.user = user
+        self.nick = None
+        self.spam_request = False
+        self.stranger_request = False
+        self.user_ignored = False
+        self.origin_application_id = None
+        self.since = None
+        self.has_played_game = False
         return self
 
     @classmethod
@@ -225,13 +230,18 @@ class Relationship(Hashable):
         self.client_status = client_status
         self.activities = activities
         self.type = relationship.type
-        self.nick = relationship.nick
-        self.since = relationship.since
         self.user = relationship.user
+        self.nick = relationship.nick
+        self.spam_request = relationship.spam_request
+        self.stranger_request = relationship.stranger_request
+        self.user_ignored = relationship.user_ignored
+        self.origin_application_id = relationship.origin_application_id
+        self.since = relationship.since
+        self.has_played_game = relationship.has_played_game
         return self
 
     def __repr__(self) -> str:
-        return f'<Relationship user={self.user!r} type={self.type!r} nick={self.nick!r}>'
+        return f'<Relationship type={self.type!r} user={self.user!r} nick={self.nick!r}>'
 
     @property
     def id(self) -> int:

@@ -64,14 +64,12 @@ from .flags import SystemChannelFlags
 from .invite import Invite
 from .member import Member, VoiceState
 from .mixins import Hashable
-from .object import Object
 from .role import Role
 from .scheduled_event import ScheduledEvent
 from .soundboard import SoundboardSound
 from .stage_instance import StageInstance
 from .sticker import GuildSticker
 from .threads import Thread
-from .user import User
 from .utils import (
     DEFAULT_FILE_SIZE_LIMIT_BYTES,
     MISSING,
@@ -86,7 +84,6 @@ from .widget import Widget
 
 
 __all__ = (
-    'BanEntry',
     'GuildPreview',
     'UserGuild',
     'Guild',
@@ -118,16 +115,6 @@ if TYPE_CHECKING:
     VocalGuildChannel = Union[VoiceChannel, StageChannel]
     GuildChannel = Union[VocalGuildChannel, ForumChannel, TextChannel, CategoryChannel]
     ByCategoryItem = Tuple[Optional[CategoryChannel], List[GuildChannel]]
-
-
-class BanEntry(NamedTuple):
-    reason: Optional[str]
-    user: User
-
-
-class BulkBanResult(NamedTuple):
-    banned: List[Object]
-    failed: List[Object]
 
 
 class _GuildLimit(NamedTuple):

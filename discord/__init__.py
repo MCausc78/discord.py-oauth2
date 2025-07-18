@@ -60,6 +60,7 @@ from .permissions import *
 from .player import *
 from .poll import *
 from .presences import *
+from .primary_guild import *
 from .raw_models import *
 from .reaction import *
 from .relationship import *

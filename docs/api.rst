@@ -1,9 +1,9 @@
 .. currentmodule:: discord
 
 API Reference
-===============
+=============
 
-The following section outlines the API of discord.py.
+The following section outlines the API of discord.py-oauth2.
 
 .. note::
 
@@ -31,7 +31,7 @@ There are two main ways to query version information about the library. For guar
     off of :pep:`440`.
 
 Clients
---------
+-------
 
 Client
 ~~~~~~~
@@ -281,10 +281,10 @@ AutoMod
 Channels
 ~~~~~~~~~
 
-.. function:: on_guild_channel_delete(channel)
-              on_guild_channel_create(channel)
+.. function:: on_guild_channel_create(channel)
+              on_guild_channel_delete(channel)
 
-    Called whenever a guild channel is deleted or created.
+    Called whenever a guild channel is created or deleted.
 
     Note that you can get the guild from :attr:`~abc.GuildChannel.guild`.
 
@@ -315,16 +315,35 @@ Channels
     :param last_pin: The latest message that was pinned as an aware datetime in UTC. Could be ``None``.
     :type last_pin: Optional[:class:`datetime.datetime`]
 
+.. function:: on_private_channel_create(channel)
+              on_private_channel_delete(channel)
+
+    Called whenever a private channel is created or deleted.
+
+    This requires :attr:`Intents.private_channels` to be enabled.
+
+    :param channel: The private channel that got created or deleted.
+    :type channel: :class:`abc.PrivateChannel`
+
 .. function:: on_private_channel_update(before, after)
 
-    Called whenever a private group DM is updated. e.g. changed name or topic.
+    Called whenever a private channel is updated. e.g. changed name or topic.
 
-    This requires :attr:`Intents.messages` to be enabled.
+    This requires :attr:`Intents.private_channels` to be enabled.
 
-    :param before: The updated group channel's old info.
-    :type before: :class:`GroupChannel`
-    :param after: The updated group channel's new info.
-    :type after: :class:`GroupChannel`
+    :param before: The updated private channel's old info.
+    :type before: :class:`abc.PrivateChannel`
+    :param after: The updated private channel's new info.
+    :type after: :class:`abc.PrivateChannel`
+
+.. function:: on_private_channel_delete(channel)
+
+    Called whenever a private channel is deleted.
+
+    This requires :attr:`Intents.private_channels` to be enabled.
+
+    :param after: The deleted private channel.
+    :type channel: :class:`abc.PrivateChannel`
 
 .. function:: on_private_channel_pins_update(channel, last_pin)
 
@@ -371,7 +390,7 @@ Channels
     :type payload: :class:`RawTypingEvent`
 
 Connection
-~~~~~~~~~~~
+~~~~~~~~~~
 
 .. function:: on_connect()
 
@@ -517,7 +536,7 @@ Entitlements
 
 
 Gateway
-~~~~~~~~
+~~~~~~~
 
 .. function:: on_ready()
 
@@ -534,6 +553,80 @@ Gateway
 .. function:: on_resumed()
 
     Called when the client has resumed a session.
+
+Relationships
+~~~~~~~~~~~~~
+
+.. function:: on_relationship_add(relationship)
+              on_relationship_remove(relationship)
+
+    Called when a :class:`Relationship` is added or removed from the
+    :class:`ClientUser`.
+
+    This requires :attr:`Intents.relationships` to be enabled.
+
+    :param relationship: The relationship that was added or removed.
+    :type relationship: :class:`Relationship`
+
+.. function:: on_relationship_update(before, after)
+
+    Called when a :class:`Relationship` is updated, e.g. when you
+    block a friend or a friendship is accepted.
+
+    This requires :attr:`Intents.relationships` to be enabled.
+
+    :param before: The previous relationship.
+    :type before: :class:`Relationship`
+    :param after: The updated relationship.
+    :type after: :class:`Relationship`
+
+.. function:: on_game_relationship_add(relationship)
+              on_game_relationship_remove(relationship)
+
+    Called when a :class:`GameRelationship` is added or removed from the
+    :class:`ClientUser`.
+
+    This requires :attr:`Intents.relationships` to be enabled.
+
+    :param relationship: The game relationship that was added or removed.
+    :type relationship: :class:`GameRelationship`
+
+.. function:: on_game_relationship_update(before, after)
+
+    Called when a :class:`GameRelationship` is updated, e.g. when you
+    accept a friend request.
+
+    This requires :attr:`Intents.relationships` to be enabled.
+
+    :param before: The previous game relationship.
+    :type before: :class:`GameRelationship`
+    :param after: The updated game relationship.
+    :type after: :class:`GameRelationship`
+
+Calls
+~~~~~
+
+.. function:: on_call_create(call)
+              on_call_delete(call)
+
+    Called when a call is created in a :class:`abc.PrivateChannel`.
+
+    This requires :attr:`Intents.calls` to be enabled.
+
+    :param call: The call that was created or deleted.
+    :type call: Union[:class:`PrivateCall`, :class:`GroupCall`]
+
+.. function:: on_call_update(before, after)
+
+    Called when a :class:`PrivateCall` or :class:`GroupCall` is updated,
+    e.g. when a member is added or another person is rung.
+
+    This requires :attr:`Intents.calls` to be enabled.
+
+    :param before: The previous call.
+    :type before: Union[:class:`PrivateCall`, :class:`GroupCall`]
+    :param after: The updated call.
+    :type after: Union[:class:`PrivateCall`, :class:`GroupCall`]
 
 Guilds
 ~~~~~~~
@@ -737,25 +830,47 @@ Integrations
     :param payload: The raw event payload data.
     :type payload: :class:`RawIntegrationDeleteEvent`
 
-Interactions
-~~~~~~~~~~~~~
+Lobbies
+~~~~~~~
 
-.. function:: on_interaction(interaction)
+.. function:: on_lobby_create(lobby)
+              on_lobby_delete(lobby)
 
-    Called when an interaction happened.
+    Called when a lobby is created or deleted.
 
-    This currently happens due to slash command invocations or components being used.
+    .. versionadded:: 3.0
 
-    .. warning::
+    :func:`on_lobby_create` requires :attr:`Intents.lobbies` to be enabled.
+    :func:`on_lobby_delete` requires :attr:`Intents.lobby_delete` to be enabled.
 
-        This is a low level function that is not generally meant to be used.
-        If you are working with components, consider using the callbacks associated
-        with the :class:`~discord.ui.View` instead as it provides a nicer user experience.
+    :param lobby: The lobby that got created or deleted.
+    :type lobby: :class:`Lobby`
 
-    .. versionadded:: 2.0
+.. function:: on_lobby_update(before, after)
 
-    :param interaction: The interaction data.
-    :type interaction: :class:`Interaction`
+    Called when a lobby is updated.
+
+    This requires :attr:`Intents.lobbies` to be enabled.
+
+    .. versionadded:: 3.0
+
+    :param before: The updated lobby's old info.
+    :type before: :class:`Lobby`
+    :param after: The updated lobby's updated info.
+    :type after: :class:`Lobby`
+
+.. function:: on_lobby_update(before, after)
+
+    Called when a lobby is updated.
+
+    This requires :attr:`Intents.lobbies` to be enabled.
+
+    .. versionadded:: 3.0
+
+    :param before: The updated lobby's old info.
+    :type before: :class:`Lobby`
+    :param after: The updated lobby's updated info.
+    :type after: :class:`Lobby`
 
 Members
 ~~~~~~~~
@@ -900,7 +1015,7 @@ Members
         
 
 Messages
-~~~~~~~~~
+~~~~~~~~
 
 .. function:: on_message(message)
 
@@ -3063,6 +3178,28 @@ of :class:`enum.Enum`.
 
         The action is the update of something.
 
+.. class:: ApplicationType
+
+    Represents the type of an :class:`Application`.
+
+    .. versionadded:: 3.0
+
+    .. attribute:: game
+
+        The application is a game.
+
+    .. attribute:: music
+
+        The application is music-related.
+
+    .. attribute:: ticketed_events
+
+        The application can use ticketed event.
+
+    .. attribute:: guild_role_subscriptions
+
+        The application can make custom guild role subscriptions.
+
 .. class:: TeamMembershipState
 
     Represents the membership state of a team member retrieved through :func:`Client.application_info`.
@@ -3293,9 +3430,176 @@ of :class:`enum.Enum`.
 
         The guild may contain NSFW content.
 
+.. class:: RelationshipType
+
+    Specifies the type of :class:`Relationship`.
+
+    .. versionadded:: 3.0
+
+    .. attribute:: friend
+
+        You are friends with this user.
+
+    .. attribute:: blocked
+
+        You have blocked this user.
+
+    .. attribute:: incoming_request
+
+        The user has sent you a friend request.
+
+    .. attribute:: outgoing_request
+
+        You have sent a friend request to this user.
+
+    .. attribute:: implicit
+
+        You frecently interact with this user. See :class:`UserAffinity` for more information.
+
+.. class:: PremiumType
+
+    Represents the user's Discord Nitro subscription type.
+    
+    .. versionadded:: 3.0
+
+    .. attribute:: none
+
+        The user does not have a Discord Nitro subscription.
+
+    .. attribute:: nitro
+
+        Represents the new, full Discord Nitro.
+
+    .. attribute:: nitro_classic
+
+        Represents the classic Discord Nitro.
+
+    .. attribute:: nitro_basic
+
+        Represents the basic Discord Nitro.
+
+        .. versionadded:: 2.0
+
+.. class:: PaymentSourceType
+
+    Represents the type of a payment source.
+
+    .. versionadded:: 3.0
+
+    .. attribute:: unknown
+
+        The payment source is unknown.
+
+    .. attribute:: credit_card
+
+        The payment source is a credit card.
+
+    .. attribute:: paypal
+
+        The payment source is a PayPal account.
+
+    .. attribute:: giropay
+
+        The payment source is a Giropay account.
+
+    .. attribute:: sofort
+
+        The payment source is a Sofort account.
+
+    .. attribute:: przelewy24
+
+        The payment source is a Przelewy24 account.
+
+    .. attribute:: sepa_debit
+
+        The payment source is a SEPA debit account.
+
+    .. attribute:: paysafecard
+
+        The payment source is a Paysafe card.
+
+    .. attribute:: gcash
+
+        The payment source is a GCash account.
+
+    .. attribute:: grabpay
+
+        The payment source is a GrabPay (Malaysia) account.
+
+    .. attribute:: momo_wallet
+
+        The payment source is a MoMo Wallet account.
+
+    .. attribute:: venmo
+
+        The payment source is a Venmo account.
+
+    .. attribute:: gopay_wallet
+
+        The payment source is a GoPay Wallet account.
+
+    .. attribute:: kakaopay
+
+        The payment source is a KakaoPay account.
+
+    .. attribute:: bancontact
+
+        The payment source is a Bancontact account.
+
+    .. attribute:: eps
+
+        The payment source is an EPS account.
+
+    .. attribute:: ideal
+
+        The payment source is an iDEAL account.
+
+    .. attribute:: cash_app
+
+        The payment source is a Cash App account.
+
+
+.. class:: OperatingSystem
+
+    Represents the operating system of a SKU's system requirements.
+
+    .. versionadded:: 3.0
+
+    .. attribute:: windows
+
+        Represents Windows.
+
+    .. attribute:: mac
+
+        Represents macOS.
+
+    .. attribute:: linux
+
+        Represents Linux.
+
+    .. attribute:: android
+
+        Represents Android.
+
+    .. attribute:: ios
+
+        Represents iOS.
+
+    .. attribute:: playstation
+
+        Represents PlayStation.
+
+    .. attribute:: xbox
+
+        Represents Xbox.
+
+    .. attribute:: unknown
+
+        Represents an unknown operating system.
+
 .. class:: Locale
 
-    Supported locales by Discord. Mainly used for application command localisation.
+    Supported locales by Discord.
 
     .. versionadded:: 2.0
 
@@ -3515,6 +3819,411 @@ of :class:`enum.Enum`.
 
         An alias for :attr:`completed`.
 
+.. class:: ConnectionType
+
+    Represents the type of connection a user has with Discord.
+
+    .. versionadded:: 3.0
+
+    .. attribute:: amazon_music
+
+        The user has an Amazon Music connection.
+
+    .. attribute:: battle_net
+
+        The user has a Battle.net connection.
+
+    .. attribute:: bluesky
+
+        The user has a Bluesky connection.
+
+    .. attribute:: bungie
+
+        The user has a Bungie connection.
+
+    .. attribute:: contacts
+
+        The user has a contact sync connection.
+
+    .. attribute:: crunchyroll
+
+        The user has a Crunchyroll connection.
+
+    .. attribute:: domain
+
+        The user has a domain connection.
+
+    .. attribute:: ebay
+
+        The user has an eBay connection.
+
+    .. attribute:: epic_games
+
+        The user has an Epic Games connection.
+
+    .. attribute:: facebook
+
+        The user has a Facebook connection.
+
+    .. attribute:: github
+
+        The user has a GitHub connection.
+
+    .. attribute:: instagram
+
+        The user has Instagram connection.
+
+    .. attribute:: league_of_legends
+
+        The user has a League of Legends connection.
+
+    .. attribute:: mastodon
+
+        The user has a Mastodon connection.
+
+    .. attribute:: paypal
+
+        The user has a PayPal connection.
+
+    .. attribute:: playstation
+
+        The user has a PlayStation connection.
+
+    .. attribute:: playstation_stg
+
+        The user has a PlayStation staging connection.
+
+    .. attribute:: reddit
+
+        The user has a Reddit connection.
+
+    .. attribute:: roblox
+
+        The user has a Roblox connection.
+
+    .. attribute:: riot_games
+
+        The user has a Riot Games connection.
+
+    .. attribute:: soundcloud
+
+        The user has a SoundCloud connection.
+
+    .. attribute:: spotify
+
+        The user has a Spotify connection.
+
+    .. attribute:: skype
+
+        The user has a Skype connection.
+
+    .. attribute:: steam
+
+        The user has a Steam connection.
+
+    .. attribute:: tiktok
+
+         The user has a TikTok connection.
+
+    .. attribute:: twitch
+
+        The user has a Twitch connection.
+
+    .. attribute:: twitter
+
+        The user has a Twitter connection.
+
+    .. attribute:: youtube
+
+        The user has a YouTube connection.
+
+    .. attribute:: xbox
+
+        The user has an Xbox Live connection.
+
+.. class:: ClientType
+
+    Represents a type of Discord client.
+
+    .. versionadded:: 2.0
+
+    .. attribute:: web
+
+        Represents the web client.
+
+    .. attribute:: mobile
+
+        Represents a mobile client.
+
+    .. attribute:: desktop
+
+        Represents a desktop client.
+
+    .. attribute:: embedded
+
+        Represents an embedded client.
+
+    .. attribute:: unknown
+
+        Represents an unknown client.
+
+.. class:: GiftStyle
+
+    Represents the special style of a gift.
+
+    .. versionadded:: 3.0
+
+    .. attribute:: snowglobe
+
+        The gift is a snowglobe.
+
+    .. attribute:: box
+
+        The gift is a box.
+
+
+.. class:: ComponentType
+
+    Represents the component type of a component.
+
+    .. versionadded:: 2.0
+
+    .. attribute:: action_row
+
+        Represents a component which holds different components in a row.
+
+    .. attribute:: button
+
+        Represents a button component.
+
+    .. attribute:: text_input
+
+        Represents a text box component.
+
+    .. attribute:: select
+
+        Represents a select component.
+
+    .. attribute:: string_select
+
+        An alias to :attr:`select`. Represents a default select component.
+
+    .. attribute:: user_select
+
+        Represents a user select component.
+
+    .. attribute:: role_select
+
+        Represents a role select component.
+
+    .. attribute:: mentionable_select
+
+        Represents a select in which both users and roles can be selected.
+
+    .. attribute:: channel_select
+        
+        Represents a channel select component.
+    
+    .. attribute:: section
+
+        Represents a component which holds different components in a section.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: text_display
+
+        Represents a text display component.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: thumbnail
+
+        Represents a thumbnail component.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: media_gallery
+
+        Represents a media gallery component.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: file
+
+        Represents a file component.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: separator
+
+        Represents a separator component.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: content_inventory_entry
+
+        Represents an entry from Activity Feed.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: container
+
+        Represents a component which holds different components in a container.
+
+        .. versionadded:: 3.0
+
+.. class:: ButtonStyle
+
+    Represents the style of the button component.
+
+    .. versionadded:: 2.0
+
+    .. attribute:: primary
+
+        Represents a blurple button for the primary action.
+    .. attribute:: secondary
+
+        Represents a grey button for the secondary action.
+    .. attribute:: success
+
+        Represents a green button for a successful action.
+    .. attribute:: danger
+
+        Represents a red button for a dangerous action.
+    .. attribute:: link
+
+        Represents a link button.
+    .. attribute:: premium
+
+        Represents a button denoting that buying a SKU is
+        required to perform this action.
+
+        .. versionadded:: 2.4
+    .. attribute:: blurple
+
+        An alias for :attr:`primary`.
+    .. attribute:: grey
+
+        An alias for :attr:`secondary`.
+    .. attribute:: gray
+
+        An alias for :attr:`secondary`.
+    .. attribute:: green
+
+        An alias for :attr:`success`.
+    .. attribute:: red
+
+        An alias for :attr:`danger`.
+    .. attribute:: url
+
+        An alias for :attr:`link`.
+
+.. class:: TextStyle
+
+    Represents the style of the text box component.
+
+    .. versionadded:: 2.0
+
+    .. attribute:: short
+
+        Represents a short text box.
+    .. attribute:: paragraph
+
+        Represents a long form text box.
+    .. attribute:: long
+
+        An alias for :attr:`paragraph`.
+
+.. class:: AppCommandOptionType
+
+    The application command's option type. This is usually the type of parameter an application command takes.
+
+    .. versionadded:: 2.0
+
+    .. attribute:: subcommand
+
+        A subcommand.
+    .. attribute:: subcommand_group
+
+        A subcommand group.
+    .. attribute:: string
+
+        A string parameter.
+    .. attribute:: integer
+
+        A integer parameter.
+    .. attribute:: boolean
+
+        A boolean parameter.
+    .. attribute:: user
+
+        A user parameter.
+    .. attribute:: channel
+
+        A channel parameter.
+    .. attribute:: role
+
+        A role parameter.
+    .. attribute:: mentionable
+
+        A mentionable parameter.
+    .. attribute:: number
+
+        A number parameter.
+    .. attribute:: attachment
+
+        An attachment parameter.
+
+.. class:: AppCommandType
+
+    The type of application command.
+
+    .. versionadded:: 2.0
+
+    .. attribute:: chat_input
+
+        A slash command.
+    .. attribute:: user
+
+        A user context menu command.
+    .. attribute:: message
+
+        A message context menu command.
+    .. attribute:: primary_entry_point
+
+        A primary entry-point for the application.
+
+        .. versionadded:: 3.0
+
+.. class:: AppCommandPermissionType
+
+    The application command's permission type.
+
+    .. versionadded:: 2.0
+
+    .. attribute:: role
+
+        The permission is for a role.
+    .. attribute:: channel
+
+        The permission is for one or all channels.
+    .. attribute:: user
+
+        The permission is for a user.
+
+.. class:: SeparatorSpacing
+
+    The separator's size type.
+
+    .. versionadded:: 3.0
+
+    .. attribute:: small
+
+        A small separator.
+    .. attribute:: large
+
+        A large separator.
+
 .. class:: AutoModRuleTriggerType
 
     Represents the trigger type of an automod rule.
@@ -3672,36 +4381,65 @@ of :class:`enum.Enum`.
 
     .. attribute:: purchase
 
-        The entitlement was purchased by the user.
+        The entitlement is from a purchase.
 
     .. attribute:: premium_subscription
 
-        The entitlement is for a nitro subscription.
+        The entitlement is a Discord premium subscription.
 
     .. attribute:: developer_gift
 
-        The entitlement was gifted by the developer.
+        The entitlement is gifted by the developer.
 
     .. attribute:: test_mode_purchase
 
-        The entitlement was purchased by a developer in application test mode.
+        The entitlement is from a free test mode purchase.
 
     .. attribute:: free_purchase
 
-        The entitlement was granted, when the SKU was free.
+        The entitlement is a free purchase.
 
     .. attribute:: user_gift
 
-        The entitlement was gifted by a another user.
+        The entitlement is gifted by a user.
 
     .. attribute:: premium_purchase
 
-        The entitlement was claimed for free by a nitro subscriber.
+        The entitlement is a premium subscription perk.
 
     .. attribute:: application_subscription
 
-        The entitlement was purchased as an app subscription.
+        The entitlement is an application subscription.
 
+    .. attribute:: free_staff_purchase
+
+        The entitlement is claimed for free by a Discord employee.
+
+        .. versionadded:: 3.0
+    
+    .. attribute:: quest_reward
+        
+        The entitlement is from a quest reward.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: fractional_redemption
+
+        The entitlement is for a fractional premium subscription.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: virtual_currency_redemption
+        
+        The entitlement was purchased with Discord Orbs.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: guild_powerup 
+
+        The entitlement was purchased with premium guild subscriptions (boosts).
+
+        .. versionadded:: 3.0
 
 .. class:: EntitlementOwnerType
 
@@ -3823,746 +4561,10 @@ of :class:`enum.Enum`.
 
         An alias for :attr:`.default`.
 
-.. _discord-api-audit-logs:
-
-Audit Log Data
-----------------
-
-Working with :meth:`Guild.audit_logs` is a complicated process with a lot of machinery
-involved. The library attempts to make it easy to use and friendly. In order to accomplish
-this goal, it must make use of a couple of data classes that aid in this goal.
-
-AuditLogEntry
-~~~~~~~~~~~~~~~
-
-.. attributetable:: AuditLogEntry
-
-.. autoclass:: AuditLogEntry
-    :members:
-
-AuditLogChanges
-~~~~~~~~~~~~~~~~~
-
-.. attributetable:: AuditLogChanges
-
-.. class:: AuditLogChanges
-
-    An audit log change set.
-
-    .. attribute:: before
-
-        The old value. The attribute has the type of :class:`AuditLogDiff`.
-
-        Depending on the :class:`AuditLogActionCategory` retrieved by
-        :attr:`~AuditLogEntry.category`\, the data retrieved by this
-        attribute differs:
-
-        +----------------------------------------+---------------------------------------------------+
-        |                Category                |                    Description                    |
-        +----------------------------------------+---------------------------------------------------+
-        | :attr:`~AuditLogActionCategory.create` | All attributes are set to ``None``.               |
-        +----------------------------------------+---------------------------------------------------+
-        | :attr:`~AuditLogActionCategory.delete` | All attributes are set the value before deletion. |
-        +----------------------------------------+---------------------------------------------------+
-        | :attr:`~AuditLogActionCategory.update` | All attributes are set the value before updating. |
-        +----------------------------------------+---------------------------------------------------+
-        | ``None``                               | No attributes are set.                            |
-        +----------------------------------------+---------------------------------------------------+
-
-    .. attribute:: after
-
-        The new value. The attribute has the type of :class:`AuditLogDiff`.
-
-        Depending on the :class:`AuditLogActionCategory` retrieved by
-        :attr:`~AuditLogEntry.category`\, the data retrieved by this
-        attribute differs:
-
-        +----------------------------------------+--------------------------------------------------+
-        |                Category                |                   Description                    |
-        +----------------------------------------+--------------------------------------------------+
-        | :attr:`~AuditLogActionCategory.create` | All attributes are set to the created value      |
-        +----------------------------------------+--------------------------------------------------+
-        | :attr:`~AuditLogActionCategory.delete` | All attributes are set to ``None``               |
-        +----------------------------------------+--------------------------------------------------+
-        | :attr:`~AuditLogActionCategory.update` | All attributes are set the value after updating. |
-        +----------------------------------------+--------------------------------------------------+
-        | ``None``                               | No attributes are set.                           |
-        +----------------------------------------+--------------------------------------------------+
-
-AuditLogDiff
-~~~~~~~~~~~~~
-
-.. attributetable:: AuditLogDiff
-
-.. class:: AuditLogDiff
-
-    Represents an audit log "change" object. A change object has dynamic
-    attributes that depend on the type of action being done. Certain actions
-    map to certain attributes being set.
-
-    Note that accessing an attribute that does not match the specified action
-    will lead to an attribute error.
-
-    To get a list of attributes that have been set, you can iterate over
-    them. To see a list of all possible attributes that could be set based
-    on the action being done, check the documentation for :class:`AuditLogAction`,
-    otherwise check the documentation below for all attributes that are possible.
-
-    .. container:: operations
-
-        .. describe:: iter(diff)
-
-            Returns an iterator over (attribute, value) tuple of this diff.
-
-    .. attribute:: name
-
-        A name of something.
-
-        :type: :class:`str`
-
-    .. attribute:: guild
-
-        The guild of something.
-
-        :type: :class:`Guild`
-
-    .. attribute:: icon
-
-        A guild's or role's icon. See also :attr:`Guild.icon` or :attr:`Role.icon`.
-
-        :type: :class:`Asset`
-
-    .. attribute:: splash
-
-        The guild's invite splash. See also :attr:`Guild.splash`.
-
-        :type: :class:`Asset`
-
-    .. attribute:: discovery_splash
-
-        The guild's discovery splash. See also :attr:`Guild.discovery_splash`.
-
-        :type: :class:`Asset`
-
-    .. attribute:: banner
-
-        The guild's banner. See also :attr:`Guild.banner`.
-
-        :type: :class:`Asset`
-
-    .. attribute:: owner
-
-        The guild's owner. See also :attr:`Guild.owner`
-
-        :type: Union[:class:`Member`, :class:`User`]
-
-    .. attribute:: afk_channel
-
-        The guild's AFK channel.
-
-        If this could not be found, then it falls back to a :class:`Object`
-        with the ID being set.
-
-        See :attr:`Guild.afk_channel`.
-
-        :type: Union[:class:`VoiceChannel`, :class:`Object`]
-
-    .. attribute:: system_channel
-
-        The guild's system channel.
-
-        If this could not be found, then it falls back to a :class:`Object`
-        with the ID being set.
-
-        See :attr:`Guild.system_channel`.
-
-        :type: Union[:class:`TextChannel`, :class:`Object`]
-
-
-    .. attribute:: rules_channel
-
-        The guild's rules channel.
-
-        If this could not be found then it falls back to a :class:`Object`
-        with the ID being set.
-
-        See :attr:`Guild.rules_channel`.
-
-        :type: Union[:class:`TextChannel`, :class:`Object`]
-
-
-    .. attribute:: public_updates_channel
-
-        The guild's public updates channel.
-
-        If this could not be found then it falls back to a :class:`Object`
-        with the ID being set.
-
-        See :attr:`Guild.public_updates_channel`.
-
-        :type: Union[:class:`TextChannel`, :class:`Object`]
-
-    .. attribute:: afk_timeout
-
-        The guild's AFK timeout. See :attr:`Guild.afk_timeout`.
-
-        :type: :class:`int`
-
-    .. attribute:: mfa_level
-
-        The guild's MFA level. See :attr:`Guild.mfa_level`.
-
-        :type: :class:`MFALevel`
-
-    .. attribute:: widget_enabled
-
-        The guild's widget has been enabled or disabled.
-
-        :type: :class:`bool`
-
-    .. attribute:: widget_channel
-
-        The widget's channel.
-
-        If this could not be found then it falls back to a :class:`Object`
-        with the ID being set.
-
-        :type: Union[:class:`TextChannel`, :class:`Object`]
-
-    .. attribute:: verification_level
-
-        The guild's verification level.
-
-        See also :attr:`Guild.verification_level`.
-
-        :type: :class:`VerificationLevel`
-
-    .. attribute:: default_notifications
-
-        The guild's default notification level.
-
-        See also :attr:`Guild.default_notifications`.
-
-        :type: :class:`NotificationLevel`
-
-    .. attribute:: explicit_content_filter
-
-        The guild's content filter.
-
-        See also :attr:`Guild.explicit_content_filter`.
-
-        :type: :class:`ContentFilter`
-
-    .. attribute:: vanity_url_code
-
-        The guild's vanity URL.
-
-        See also :meth:`Guild.vanity_invite` and :meth:`Guild.edit`.
-
-        :type: :class:`str`
-
-    .. attribute:: position
-
-        The position of a :class:`Role` or :class:`abc.GuildChannel`.
-
-        :type: :class:`int`
-
-    .. attribute:: type
-
-        The type of channel, sticker, webhook or integration.
-
-        :type: Union[:class:`ChannelType`, :class:`StickerType`, :class:`WebhookType`, :class:`str`]
-
-    .. attribute:: topic
-
-        The topic of a :class:`TextChannel` or :class:`StageChannel`.
-
-        See also :attr:`TextChannel.topic` or :attr:`StageChannel.topic`.
-
-        :type: :class:`str`
-
-    .. attribute:: bitrate
-
-        The bitrate of a :class:`VoiceChannel`.
-
-        See also :attr:`VoiceChannel.bitrate`.
-
-        :type: :class:`int`
-
-    .. attribute:: overwrites
-
-        A list of permission overwrite tuples that represents a target and a
-        :class:`PermissionOverwrite` for said target.
-
-        The first element is the object being targeted, which can either
-        be a :class:`Member` or :class:`User` or :class:`Role`. If this object
-        is not found then it is a :class:`Object` with an ID being filled and
-        a ``type`` attribute set to either ``'role'`` or ``'member'`` to help
-        decide what type of ID it is.
-
-        :type: List[Tuple[target, :class:`PermissionOverwrite`]]
-
-    .. attribute:: privacy_level
-
-        The privacy level of the stage instance or scheduled event
-
-        :type: :class:`PrivacyLevel`
-
-    .. attribute:: roles
-
-        A list of roles being added or removed from a member.
-
-        If a role is not found then it is a :class:`Object` with the ID and name being
-        filled in.
-
-        :type: List[Union[:class:`Role`, :class:`Object`]]
-
-    .. attribute:: nick
-
-        The nickname of a member.
-
-        See also :attr:`Member.nick`
-
-        :type: Optional[:class:`str`]
-
-    .. attribute:: deaf
-
-        Whether the member is being server deafened.
-
-        See also :attr:`VoiceState.deaf`.
-
-        :type: :class:`bool`
-
-    .. attribute:: mute
-
-        Whether the member is being server muted.
-
-        See also :attr:`VoiceState.mute`.
-
-        :type: :class:`bool`
-
-    .. attribute:: permissions
-
-        The permissions of a role.
-
-        See also :attr:`Role.permissions`.
-
-        :type: :class:`Permissions`
-
-    .. attribute:: colour
-                   color
-
-        The colour of a role.
-
-        See also :attr:`Role.colour`
-
-        :type: :class:`Colour`
-
-    .. attribute:: hoist
-
-        Whether the role is being hoisted or not.
-
-        See also :attr:`Role.hoist`
-
-        :type: :class:`bool`
-
-    .. attribute:: mentionable
-
-        Whether the role is mentionable or not.
-
-        See also :attr:`Role.mentionable`
-
-        :type: :class:`bool`
-
-    .. attribute:: code
-
-        The invite's code.
-
-        See also :attr:`Invite.code`
-
-        :type: :class:`str`
-
-    .. attribute:: channel
-
-        A guild channel.
-
-        If the channel is not found then it is a :class:`Object` with the ID
-        being set. In some cases the channel name is also set.
-
-        :type: Union[:class:`abc.GuildChannel`, :class:`Object`]
-
-    .. attribute:: inviter
-
-        The user who created the invite.
-
-        See also :attr:`Invite.inviter`.
-
-        :type: Optional[:class:`User`]
-
-    .. attribute:: max_uses
-
-        The invite's max uses.
-
-        See also :attr:`Invite.max_uses`.
-
-        :type: :class:`int`
-
-    .. attribute:: uses
-
-        The invite's current uses.
-
-        See also :attr:`Invite.uses`.
-
-        :type: :class:`int`
-
-    .. attribute:: max_age
-
-        The invite's max age in seconds.
-
-        See also :attr:`Invite.max_age`.
-
-        :type: :class:`int`
-
-    .. attribute:: temporary
-
-        If the invite is a temporary invite.
-
-        See also :attr:`Invite.temporary`.
-
-        :type: :class:`bool`
-
-    .. attribute:: allow
-                   deny
-
-        The permissions being allowed or denied.
-
-        :type: :class:`Permissions`
-
-    .. attribute:: id
-
-        The ID of the object being changed.
-
-        :type: :class:`int`
-
-    .. attribute:: avatar
-
-        The avatar of a member.
-
-        See also :attr:`User.avatar`.
-
-        :type: :class:`Asset`
-
-    .. attribute:: slowmode_delay
-
-        The number of seconds members have to wait before
-        sending another message in the channel.
-
-        See also :attr:`TextChannel.slowmode_delay`.
-
-        :type: :class:`int`
-
-    .. attribute:: rtc_region
-
-        The region for the voice channel’s voice communication.
-        A value of ``None`` indicates automatic voice region detection.
-
-        See also :attr:`VoiceChannel.rtc_region`.
-
-        :type: :class:`str`
-
-    .. attribute:: video_quality_mode
-
-        The camera video quality for the voice channel's participants.
-
-        See also :attr:`VoiceChannel.video_quality_mode`.
-
-        :type: :class:`VideoQualityMode`
-
-    .. attribute:: format_type
-
-        The format type of a sticker being changed.
-
-        See also :attr:`GuildSticker.format`
-
-        :type: :class:`StickerFormatType`
-
-    .. attribute:: emoji
-
-        The emoji which represents one of the following:
-
-        * :attr:`GuildSticker.emoji`
-        * :attr:`SoundboardSound.emoji`
-
-        :type: Union[:class:`str`, :class:`PartialEmoji`]
-
-    .. attribute:: unicode_emoji
-
-        The unicode emoji that is used as an icon for the role being changed.
-
-        See also :attr:`Role.unicode_emoji`.
-
-        :type: :class:`str`
-
-    .. attribute:: description
-
-        The description of a guild, a sticker, or a scheduled event.
-
-        See also :attr:`Guild.description`, :attr:`GuildSticker.description`, or
-        :attr:`ScheduledEvent.description`.
-
-        :type: :class:`str`
-
-    .. attribute:: available
-
-        The availability of one of the following being changed:
-
-        * :attr:`GuildSticker.available`
-        * :attr:`SoundboardSound.available`
-
-        :type: :class:`bool`
-
-    .. attribute:: archived
-
-        The thread is now archived.
-
-        :type: :class:`bool`
-
-    .. attribute:: locked
-
-        The thread is being locked or unlocked.
-
-        :type: :class:`bool`
-
-    .. attribute:: auto_archive_duration
-
-        The thread's auto archive duration being changed.
-
-        See also :attr:`Thread.auto_archive_duration`
-
-        :type: :class:`int`
-
-    .. attribute:: default_auto_archive_duration
-
-        The default auto archive duration for newly created threads being changed.
-
-        :type: :class:`int`
-
-    .. attribute:: invitable
-
-        Whether non-moderators can add users to this private thread.
-
-        :type: :class:`bool`
-
-    .. attribute:: timed_out_until
-
-        Whether the user is timed out, and if so until when.
-
-        :type: Optional[:class:`datetime.datetime`]
-
-    .. attribute:: enable_emoticons
-
-        Integration emoticons were enabled or disabled.
-
-        See also :attr:`StreamIntegration.enable_emoticons`
-
-        :type: :class:`bool`
-
-    .. attribute:: expire_behaviour
-                   expire_behavior
-
-        The behaviour of expiring subscribers changed.
-
-        See also :attr:`StreamIntegration.expire_behaviour`
-
-        :type: :class:`ExpireBehaviour`
-
-    .. attribute:: expire_grace_period
-
-        The grace period before expiring subscribers changed.
-
-        See also :attr:`StreamIntegration.expire_grace_period`
-
-        :type: :class:`int`
-
-    .. attribute:: preferred_locale
-
-        The preferred locale for the guild changed.
-
-        See also :attr:`Guild.preferred_locale`
-
-        :type: :class:`Locale`
-
-    .. attribute:: prune_delete_days
-
-        The number of days after which inactive and role-unassigned members are kicked has been changed.
-
-        :type: :class:`int`
-
-    .. attribute:: status
-
-        The status of the scheduled event.
-
-        :type: :class:`EventStatus`
-
-    .. attribute:: entity_type
-
-        The type of entity this scheduled event is for.
-
-        :type: :class:`EntityType`
-
-    .. attribute:: cover_image
-
-        The scheduled event's cover image.
-
-        See also :attr:`ScheduledEvent.cover_image`.
-
-        :type: :class:`Asset`
-
-    .. attribute:: app_command_permissions
-
-        List of permissions for the app command.
-
-        :type: List[:class:`~discord.app_commands.AppCommandPermissions`]
-
-    .. attribute:: enabled
-
-        Whether the automod rule is active or not.
-
-        :type: :class:`bool`
-
-    .. attribute:: event_type
-
-        The event type for triggering the automod rule.
-
-        :type: :class:`AutoModRuleEventType`
-
-    .. attribute:: trigger_type
-
-        The trigger type for the automod rule.
-
-        :type: :class:`AutoModRuleTriggerType`
-
-    .. attribute:: trigger
-
-        The trigger for the automod rule.
-
-        .. note ::
-
-            The :attr:`~AutoModTrigger.type` of the trigger may be incorrect.
-            Some attributes such as :attr:`~AutoModTrigger.keyword_filter`, :attr:`~AutoModTrigger.regex_patterns`,
-            and :attr:`~AutoModTrigger.allow_list` will only have the added or removed values.
-
-        :type: :class:`AutoModTrigger`
-
-    .. attribute:: actions
-
-        The actions to take when an automod rule is triggered.
-
-        :type: List[AutoModRuleAction]
-
-    .. attribute:: exempt_roles
-
-        The list of roles that are exempt from the automod rule.
-
-        :type: List[Union[:class:`Role`, :class:`Object`]]
-
-    .. attribute:: exempt_channels
-
-        The list of channels or threads that are exempt from the automod rule.
-
-        :type: List[:class:`abc.GuildChannel`, :class:`Thread`, :class:`Object`]
-
-    .. attribute:: premium_progress_bar_enabled
-
-        The guild’s display setting to show boost progress bar.
-
-        :type: :class:`bool`
-
-    .. attribute:: system_channel_flags
-
-        The guild’s system channel settings.
-
-        See also :attr:`Guild.system_channel_flags`
-
-        :type: :class:`SystemChannelFlags`
-
-    .. attribute:: nsfw
-
-        Whether the channel is marked as “not safe for work” or “age restricted”.
-
-        :type: :class:`bool`
-
-    .. attribute:: user_limit
-
-        The channel’s limit for number of members that can be in a voice or stage channel.
-
-        See also :attr:`VoiceChannel.user_limit` and :attr:`StageChannel.user_limit`
-
-        :type: :class:`int`
-
-    .. attribute:: flags
-
-        The channel flags associated with this thread or forum post.
-
-        See also :attr:`ForumChannel.flags` and :attr:`Thread.flags`
-
-        :type: :class:`ChannelFlags`
-
-    .. attribute:: default_thread_slowmode_delay
-
-        The default slowmode delay for threads created in this text channel or forum.
-
-        See also :attr:`TextChannel.default_thread_slowmode_delay` and :attr:`ForumChannel.default_thread_slowmode_delay`
-
-        :type: :class:`int`
-
-    .. attribute:: applied_tags
-
-        The applied tags of a forum post.
-
-        See also :attr:`Thread.applied_tags`
-
-        :type: List[Union[:class:`ForumTag`, :class:`Object`]]
-
-    .. attribute:: available_tags
-
-        The available tags of a forum.
-
-        See also :attr:`ForumChannel.available_tags`
-
-        :type: Sequence[:class:`ForumTag`]
-
-    .. attribute:: default_reaction_emoji
-
-        The default_reaction_emoji for forum posts.
-
-        See also :attr:`ForumChannel.default_reaction_emoji`
-
-        :type: Optional[:class:`PartialEmoji`]
-
-    .. attribute:: user
-
-        The user that represents the uploader of a soundboard sound.
-
-        See also :attr:`SoundboardSound.user`
-
-        :type: Union[:class:`Member`, :class:`User`]
-
-    .. attribute:: volume
-
-        The volume of a soundboard sound.
-
-        See also :attr:`SoundboardSound.volume`
-
-        :type: :class:`float`
-
-.. this is currently missing the following keys: reason and application_id
-   I'm not sure how to port these
-
 Webhook Support
-------------------
+---------------
 
-discord.py offers support for creating, editing, and executing webhooks through the :class:`Webhook` class.
+discord.py-oauth2 offers support for creating, editing, and executing webhooks through the :class:`Webhook` class.
 
 Webhook
 ~~~~~~~~~
@@ -4602,7 +4604,7 @@ SyncWebhookMessage
 .. _discord_api_abcs:
 
 Abstract Base Classes
------------------------
+---------------------
 
 An :term:`abstract base class` (also known as an ``abc``) is a class that models can inherit
 to get their behaviour. **Abstract base classes should not be instantiated**.
@@ -4666,7 +4668,7 @@ Connectable
 .. _discord_api_models:
 
 Discord Models
----------------
+--------------
 
 Models are classes that are received from Discord and are not meant to be created by
 the user of the library.
@@ -4712,6 +4714,121 @@ User
     .. automethod:: typing
         :async-with:
 
+Connection
+~~~~~~~~~~
+
+.. attributetable:: Connection
+
+.. autoclass:: Connection()
+    :members:
+
+Relationship
+~~~~~~~~~~~~
+
+.. attributetable:: Relationship
+
+.. autoclass:: Relationship()
+    :members:
+
+GameRelationship
+~~~~~~~~~~~~~~~~
+
+.. attribute:: GameRelationship
+
+.. autoclass:: GameRelationship()
+    :members:
+
+Settings
+~~~~~~~~
+
+.. attributetable:: UserSettings
+
+.. autoclass:: UserSettings()
+    :members:
+
+.. attributetable:: GuildFolder
+
+.. autoclass:: GuildFolder()
+    :members:
+
+.. attributetable:: AudioContext
+
+.. autoclass:: AudioContext()
+    :members:
+
+.. attributetable:: AudioSettingsManager
+
+.. autoclass:: AudioSettingsManager()
+    :members:
+
+.. attributetable:: MuteConfig
+
+.. autoclass:: MuteConfig()
+    :members:
+
+Entitlement
+~~~~~~~~~~~
+
+.. attributetable:: Entitlement
+
+.. autoclass:: Entitlement()
+    :members:
+
+.. attributetable:: Gift
+
+.. autoclass:: Gift()
+    :members:
+
+OAuth2
+~~~~~~
+
+.. attributetable:: OAuth2Authorization
+
+.. autoclass:: OAuth2Authorization()
+    :members:
+
+.. attributetable:: AccessToken
+
+.. autoclass:: AccessToken()
+    :members:
+
+.. attributetable:: OAuth2DeviceFlow
+
+.. autoclass:: OAuth2DeviceFlow()
+    :members:
+
+GameInvite
+~~~~~~~~~~
+
+.. attributetable:: GameInvite
+
+.. autoclass:: GameInvite()
+    :members:
+
+PartialStream
+~~~~~~~~~~~~~
+
+.. attributetable:: PartialStream
+
+.. autoclass:: PartialStream()
+    :members:
+
+Stream
+~~~~~~
+
+.. attributetable:: Stream
+
+.. autoclass:: Stream()
+    :members:
+
+Harvest
+~~~~~~~
+
+.. attributetable:: Harvest
+
+.. autoclass:: Harvest()
+    :members:
+
 AutoMod
 ~~~~~~~
 
@@ -4742,6 +4859,25 @@ Asset
     :members:
     :inherited-members:
 
+Call
+~~~~
+
+.. attributetable:: PrivateCall
+
+.. autoclass:: PrivateCall()
+    :members:
+
+.. attributetable:: GroupCall
+
+.. autoclass:: GroupCall()
+    :members:
+    :inherited-members:
+
+.. attributetable:: CallMessage
+
+.. autoclass:: CallMessage()
+    :members:
+
 Message
 ~~~~~~~
 
@@ -4768,6 +4904,14 @@ Reaction
 .. autoclass:: Reaction()
     :members:
 
+Lobby
+~~~~~
+
+.. attributetable:: Lobby
+
+.. autoclass:: Lobby()
+    :members:
+
 Guild
 ~~~~~~
 
@@ -4775,40 +4919,6 @@ Guild
 
 .. autoclass:: Guild()
     :members:
-
-.. class:: BanEntry
-
-    A namedtuple which represents a ban returned from :meth:`~Guild.bans`.
-
-    .. attribute:: reason
-
-        The reason this user was banned.
-
-        :type: Optional[:class:`str`]
-    .. attribute:: user
-
-        The :class:`User` that was banned.
-
-        :type: :class:`User`
-
-.. class:: BulkBanResult
-
-    A namedtuple which represents the result returned from :meth:`~Guild.bulk_ban`.
-
-    .. versionadded:: 2.4
-
-    .. attribute:: banned
-
-        The list of users that were banned. The inner :class:`Object` of the list
-        has the :attr:`Object.type` set to :class:`User`.
-
-        :type: List[:class:`Object`]
-    .. attribute:: failed
-
-        The list of users that could not be banned. The inner :class:`Object` of the list
-        has the :attr:`Object.type` set to :class:`User`.
-
-        :type: List[:class:`Object`]
 
 GuildPreview
 ~~~~~~~~~~~~
@@ -4873,8 +4983,17 @@ Member
     .. automethod:: typing
         :async-with:
 
+LobbyMember
+~~~~~~~~~~~
+
+.. attributetable:: LobbyMember
+
+.. autoclass:: LobbyMember()
+    :members:
+    :inherited-members:
+
 Spotify
-~~~~~~~~
+~~~~~~~
 
 .. attributetable:: Spotify
 
@@ -4887,6 +5006,14 @@ VoiceState
 .. attributetable:: VoiceState
 
 .. autoclass:: VoiceState()
+    :members:
+
+LobbyVoiceState
+~~~~~~~~~~~~~~~
+
+.. attributetable:: LobbyVoiceState
+
+.. autoclass:: LobbyVoiceState()
     :members:
 
 Emoji
@@ -4945,6 +5072,11 @@ TextChannel
     .. automethod:: typing
         :async-with:
 
+.. attributetable:: LinkedLobby
+
+.. autoclass:: LinkedLobby()
+    :members:
+
 ForumChannel
 ~~~~~~~~~~~~~
 
@@ -4955,7 +5087,7 @@ ForumChannel
     :inherited-members:
 
 Thread
-~~~~~~~~
+~~~~~~
 
 .. attributetable:: Thread
 
@@ -4968,7 +5100,7 @@ Thread
         :async-with:
 
 ThreadMember
-~~~~~~~~~~~~~
+~~~~~~~~~~~~
 
 .. attributetable:: ThreadMember
 
@@ -4987,6 +5119,12 @@ VoiceChannel
 .. attributetable:: VoiceChannelEffect
 
 .. autoclass:: VoiceChannelEffect()
+    :members:
+    :inherited-members:
+
+.. attributetable:: VoiceChannelBackground
+
+.. autoclass:: VoiceChannelBackground()
     :members:
     :inherited-members:
 
@@ -5059,6 +5197,24 @@ GroupChannel
 .. attributetable:: GroupChannel
 
 .. autoclass:: GroupChannel()
+    :members:
+    :inherited-members:
+    :exclude-members: typing
+
+    .. automethod:: typing
+        :async-with:
+
+.. attributetable:: LinkedAccount
+
+.. autoclass:: LinkedAccount()
+    :members:
+
+EphemeralDMChannel
+~~~~~~~~~~~~~~~~~~
+
+.. attributetable:: EphemeralDMChannel
+
+.. autoclass:: EphemeralDMChannel()
     :members:
     :inherited-members:
     :exclude-members: typing
@@ -5341,7 +5497,7 @@ RawPollVoteActionEvent
     :members:
 
 Presence
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
 
 .. attributetable:: Presence
 
@@ -5388,6 +5544,14 @@ ClientStatus
 .. attributetable:: ClientStatus
 
 .. autoclass:: ClientStatus()
+    :members:
+
+PrimaryGuild
+~~~~~~~~~~~~
+
+.. attributetable:: PrimaryGuild
+
+.. autoclass:: PrimaryGuild()
     :members:
 
 Data Classes
@@ -5477,46 +5641,6 @@ GuildProductPurchase
 .. autoclass:: GuildProductPurchase()
     :members:
 
-Intents
-~~~~~~~~~~
-
-.. attributetable:: Intents
-
-.. autoclass:: Intents
-    :members:
-
-MemberCacheFlags
-~~~~~~~~~~~~~~~~~~
-
-.. attributetable:: MemberCacheFlags
-
-.. autoclass:: MemberCacheFlags
-    :members:
-
-ApplicationFlags
-~~~~~~~~~~~~~~~~~
-
-.. attributetable:: ApplicationFlags
-
-.. autoclass:: ApplicationFlags
-    :members:
-
-ChannelFlags
-~~~~~~~~~~~~~~
-
-.. attributetable:: ChannelFlags
-
-.. autoclass:: ChannelFlags
-    :members:
-
-AutoModPresets
-~~~~~~~~~~~~~~
-
-.. attributetable:: AutoModPresets
-
-.. autoclass:: AutoModPresets
-    :members:
-
 AutoModRuleAction
 ~~~~~~~~~~~~~~~~~
 
@@ -5541,16 +5665,16 @@ File
 .. autoclass:: File
     :members:
 
-Colour
-~~~~~~
+Color
+~~~~~
 
-.. attributetable:: Colour
+.. attributetable:: Color
 
-.. autoclass:: Colour
+.. autoclass:: Color
     :members:
 
 BaseActivity
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~
 
 .. attributetable:: BaseActivity
 
@@ -5605,70 +5729,6 @@ PermissionOverwrite
 .. autoclass:: PermissionOverwrite
     :members:
 
-SystemChannelFlags
-~~~~~~~~~~~~~~~~~~~~
-
-.. attributetable:: SystemChannelFlags
-
-.. autoclass:: SystemChannelFlags
-    :members:
-
-MessageFlags
-~~~~~~~~~~~~
-
-.. attributetable:: MessageFlags
-
-.. autoclass:: MessageFlags
-    :members:
-
-PublicUserFlags
-~~~~~~~~~~~~~~~
-
-.. attributetable:: PublicUserFlags
-
-.. autoclass:: PublicUserFlags
-    :members:
-
-MemberFlags
-~~~~~~~~~~~~
-
-.. attributetable:: MemberFlags
-
-.. autoclass:: MemberFlags
-    :members:
-
-AttachmentFlags
-~~~~~~~~~~~~~~~~
-
-.. attributetable:: AttachmentFlags
-
-.. autoclass:: AttachmentFlags
-    :members:
-
-RoleFlags
-~~~~~~~~~~
-
-.. attributetable:: RoleFlags
-
-.. autoclass:: RoleFlags
-    :members:
-
-SKUFlags
-~~~~~~~~~~~
-
-.. attributetable:: SKUFlags
-
-.. autoclass:: SKUFlags()
-    :members:
-
-EmbedFlags
-~~~~~~~~~~
-
-.. attributetable:: EmbedFlags
-
-.. autoclass:: EmbedFlags()
-    :members:
-
 ForumTag
 ~~~~~~~~~
 
@@ -5676,6 +5736,115 @@ ForumTag
 
 .. autoclass:: ForumTag
     :members:
+
+Flags
+~~~~~
+
+.. attributetable:: AppCommandContext
+
+.. autoclass:: AppCommandContext
+    :members:
+
+.. attributetable:: ActivityFlags
+
+.. autoclass:: ActivityFlags
+    :members:
+
+.. attributetable:: ActivityPlatforms
+
+.. autoclass:: ActivityPlatforms
+    :members:
+
+.. attributetable:: AppInstallationType
+
+.. autoclass:: AppInstallationType
+    :members:
+
+.. attributetable:: ApplicationFlags
+
+.. autoclass:: ApplicationFlags
+    :members:
+
+.. attributetable:: AttachmentFlags
+
+.. autoclass:: AttachmentFlags
+    :members:
+
+.. attributetable:: AutoModPresets
+
+.. autoclass:: AutoModPresets
+    :members:
+
+.. attributetable:: ChannelFlags
+
+.. autoclass:: ChannelFlags
+    :members:
+
+.. attributetable:: EmbedFlags
+
+.. autoclass:: EmbedFlags
+    :members:
+
+.. attributetable:: GiftFlags
+
+.. autoclass:: GiftFlags
+    :members:
+
+.. attributetable:: Intents
+
+.. autoclass:: Intents
+    :members:
+
+.. attributetable:: LobbyMemberFlags
+
+.. autoclass:: LobbyMemberFlags
+    :members:
+
+.. attributetable:: MediaScanFlags
+
+.. autoclass:: MediaScanFlags
+    :members:
+
+.. attributetable:: MemberCacheFlags
+
+.. autoclass:: MemberCacheFlags
+    :members:
+
+.. attributetable:: MemberFlags
+
+.. autoclass:: MemberFlags
+    :members:
+
+.. attributetable:: MessageFlags
+
+.. autoclass:: MessageFlags
+    :members:
+
+.. attributetable:: PublicUserFlags
+
+.. autoclass:: PublicUserFlags
+    :members:
+
+.. attributetable:: RecipientFlags
+
+.. autoclass:: RecipientFlags
+    :members:
+
+.. attributetable:: RoleFlags
+
+.. autoclass:: RoleFlags
+    :members:
+
+.. attributetable:: SKUFlags
+
+.. autoclass:: SKUFlags
+    :members:
+
+.. attributetable:: SystemChannelFlags
+
+.. autoclass:: SystemChannelFlags
+    :members:
+
 
 Poll
 ~~~~
@@ -5692,15 +5861,6 @@ PollMedia
 
 .. autoclass:: PollMedia
     :members:
-
-CallMessage
-~~~~~~~~~~~~~~~~~~~
-
-.. attributetable:: CallMessage
-
-.. autoclass:: CallMessage()
-    :members:
-
 
 Exceptions
 ------------
