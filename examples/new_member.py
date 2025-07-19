@@ -1,9 +1,9 @@
 # This example requires the 'members' privileged intent to function.
 
-import slaycord
+import oauth2cord
 
 
-class MyClient(slaycord.Client):
+class MyClient(oauth2cord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
@@ -15,7 +15,7 @@ class MyClient(slaycord.Client):
             await guild.system_channel.send(to_send)
 
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.members = True
 
 client = MyClient(intents=intents)

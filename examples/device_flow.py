@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import asyncio
-import slaycord
+import oauth2cord
 
 client_id = 1169421761859833997
 
 
 async def main():
-    slaycord.utils.setup_logging()
+    oauth2cord.utils.setup_logging()
 
-    client = slaycord.Client()
+    client = oauth2cord.Client()
 
     await client.login()
     flow = await client.start_device_flow(client_id, scopes=['sdk.social_layer', 'guilds'])

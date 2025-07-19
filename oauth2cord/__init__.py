@@ -1,0 +1,100 @@
+"""
+Discord API Wrapper
+~~~~~~~~~~~~~~~~~~~
+
+A basic wrapper for the Discord user API.
+
+:copyright: (c) 2015-present Rapptz and 2025-present MCausc78
+:license: MIT, see LICENSE for more details.
+
+"""
+
+__title__ = 'oauth2cord.py-oauth2'
+__author__ = 'MCausc78'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2015-present Rapptz and 2025-present MCausc78'
+__version__ = '3.0.0a'
+
+__path__ = __import__('pkgutil').extend_path(__path__, __name__)
+
+import logging
+from typing import NamedTuple, Literal
+
+from . import (
+    abc as abc,
+    opus as opus,
+    utils as utils,
+)
+from .activity import *
+from .appinfo import *
+from .asset import *
+from .automod import *
+from .calls import *
+from .channel import *
+from .client import *
+from .color import *
+from .commands import *
+from .components import *
+from .connections import *
+from .dispatcher import *
+from .embeds import *
+from .emoji import *
+from .entitlements import *
+from .enums import *
+from .errors import *
+from .file import *
+from .flags import *
+from .game_invite import *
+from .game_relationship import *
+from .guild import *
+from .harvest import *
+from .impersonate import *
+from .integrations import *
+from .invite import *
+from .lobby import *
+from .member import *
+from .mentions import *
+from .message import *
+from .oauth2 import *
+from .object import *
+from .partial_emoji import *
+from .permissions import *
+from .player import *
+from .poll import *
+from .presences import *
+from .primary_guild import *
+from .raw_models import *
+from .reaction import *
+from .relationship import *
+from .role import *
+from .settings import *
+from .scheduled_event import *
+from .sku import *
+from .soundboard import *
+from .stage_instance import *
+from .sticker import *
+from .stream import *
+from .subscription import *
+from .team import *
+from .template import *
+from .threads import *
+from .user import *
+from .voice_client import *
+from .webhook import *
+from .welcome_screen import *
+from .widget import *
+
+
+class VersionInfo(NamedTuple):
+    major: int
+    minor: int
+    micro: int
+    releaselevel: Literal["alpha", "beta", "candidate", "final"]
+    serial: int
+
+
+version_info: VersionInfo = VersionInfo(major=3, minor=0, micro=0, releaselevel='alpha', serial=0)
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+del logging, NamedTuple, Literal, VersionInfo

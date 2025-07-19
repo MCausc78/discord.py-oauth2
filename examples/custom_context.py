@@ -3,8 +3,8 @@
 
 import random
 
-import slaycord
-from slaycord.ext import commands
+import oauth2cord
+from oauth2cord.ext import commands
 
 
 class MyContext(commands.Context):
@@ -17,7 +17,7 @@ class MyContext(commands.Context):
         try:
             # this will react to the command author's message
             await self.message.add_reaction(emoji)
-        except slaycord.HTTPException:
+        except oauth2cord.HTTPException:
             # sometimes errors occur during this, for example
             # maybe you don't have permission to do that
             # we don't mind, so we can just ignore them
@@ -32,7 +32,7 @@ class MyBot(commands.Bot):
         return await super().get_context(message, cls=cls)
 
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.message_content = True
 
 bot = MyBot(command_prefix='!', intents=intents)

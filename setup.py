@@ -4,7 +4,7 @@ import re
 
 def derive_version() -> str:
     version = ''
-    with open('slaycord/__init__.py') as f:
+    with open('oauth2cord/__init__.py') as f:
         version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', f.read(), re.MULTILINE).group(1)
 
     if not version:

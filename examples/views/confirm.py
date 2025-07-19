@@ -1,13 +1,13 @@
 # This example requires the 'message_content' privileged intent to function.
 
-from slaycord.ext import commands
+from oauth2cord.ext import commands
 
-import slaycord
+import oauth2cord
 
 
 class Bot(commands.Bot):
     def __init__(self):
-        intents = slaycord.Intents.default()
+        intents = oauth2cord.Intents.default()
         intents.message_content = True
 
         super().__init__(command_prefix=commands.when_mentioned_or('$'), intents=intents)
@@ -18,7 +18,7 @@ class Bot(commands.Bot):
 
 
 # Define a simple View that gives us a confirmation menu
-class Confirm(slaycord.ui.View):
+class Confirm(oauth2cord.ui.View):
     def __init__(self):
         super().__init__()
         self.value = None
@@ -26,15 +26,15 @@ class Confirm(slaycord.ui.View):
     # When the confirm button is pressed, set the inner value to `True` and
     # stop the View from listening to more input.
     # We also send the user an ephemeral message that we're confirming their choice.
-    @slaycord.ui.button(label='Confirm', style=slaycord.ButtonStyle.green)
-    async def confirm(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
+    @oauth2cord.ui.button(label='Confirm', style=oauth2cord.ButtonStyle.green)
+    async def confirm(self, interaction: oauth2cord.Interaction, button: oauth2cord.ui.Button):
         await interaction.response.send_message('Confirming', ephemeral=True)
         self.value = True
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
-    @slaycord.ui.button(label='Cancel', style=slaycord.ButtonStyle.grey)
-    async def cancel(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
+    @oauth2cord.ui.button(label='Cancel', style=oauth2cord.ButtonStyle.grey)
+    async def cancel(self, interaction: oauth2cord.Interaction, button: oauth2cord.ui.Button):
         await interaction.response.send_message('Cancelling', ephemeral=True)
         self.value = False
         self.stop()

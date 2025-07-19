@@ -1,25 +1,25 @@
 # This example requires the 'message_content' privileged intent to function.
 
 from typing import List
-from slaycord.ext import commands
-import slaycord
+from oauth2cord.ext import commands
+import oauth2cord
 
 # Defines a custom button that contains the logic of the game.
 # The ['TicTacToe'] bit is for type hinting purposes to tell your IDE or linter
 # what the type of `self.view` is. It is not required.
-class TicTacToeButton(slaycord.ui.Button['TicTacToe']):
+class TicTacToeButton(oauth2cord.ui.Button['TicTacToe']):
     def __init__(self, x: int, y: int):
         # A label is required, but we don't need one so a zero-width space is used
         # The row parameter tells the View which row to place the button under.
         # A View can only contain up to 5 rows -- each row can only have 5 buttons.
         # Since a Tic Tac Toe grid is 3x3 that means we have 3 rows and 3 columns.
-        super().__init__(style=slaycord.ButtonStyle.secondary, label='\u200b', row=y)
+        super().__init__(style=oauth2cord.ButtonStyle.secondary, label='\u200b', row=y)
         self.x = x
         self.y = y
 
     # This function is called whenever this particular button is pressed
     # This is part of the "meat" of the game logic
-    async def callback(self, interaction: slaycord.Interaction):
+    async def callback(self, interaction: oauth2cord.Interaction):
         assert self.view is not None
         view: TicTacToe = self.view
         state = view.board[self.y][self.x]
@@ -27,14 +27,14 @@ class TicTacToeButton(slaycord.ui.Button['TicTacToe']):
             return
 
         if view.current_player == view.X:
-            self.style = slaycord.ButtonStyle.danger
+            self.style = oauth2cord.ButtonStyle.danger
             self.label = 'X'
             self.disabled = True
             view.board[self.y][self.x] = view.X
             view.current_player = view.O
             content = "It is now O's turn"
         else:
-            self.style = slaycord.ButtonStyle.success
+            self.style = oauth2cord.ButtonStyle.success
             self.label = 'O'
             self.disabled = True
             view.board[self.y][self.x] = view.O
@@ -59,7 +59,7 @@ class TicTacToeButton(slaycord.ui.Button['TicTacToe']):
 
 
 # This is our actual board View
-class TicTacToe(slaycord.ui.View):
+class TicTacToe(oauth2cord.ui.View):
     # This tells the IDE or linter that all our children will be TicTacToeButtons
     # This is not required
     children: List[TicTacToeButton]
@@ -122,7 +122,7 @@ class TicTacToe(slaycord.ui.View):
 
 class TicTacToeBot(commands.Bot):
     def __init__(self):
-        intents = slaycord.Intents.default()
+        intents = oauth2cord.Intents.default()
         intents.message_content = True
 
         super().__init__(command_prefix=commands.when_mentioned_or('$'), intents=intents)

@@ -1,9 +1,9 @@
 # This example requires the 'message_content' privileged intent to function.
 
-import slaycord
+import oauth2cord
 
 
-class MyClient(slaycord.Client):
+class MyClient(oauth2cord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
@@ -17,7 +17,7 @@ class MyClient(slaycord.Client):
             await message.reply('Hello!', mention_author=True)
 
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.message_content = True
 
 client = MyClient(intents=intents)

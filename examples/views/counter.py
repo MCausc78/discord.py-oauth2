@@ -1,13 +1,13 @@
 # This example requires the 'message_content' privileged intent to function.
 
-from slaycord.ext import commands
+from oauth2cord.ext import commands
 
-import slaycord
+import oauth2cord
 
 
 class CounterBot(commands.Bot):
     def __init__(self):
-        intents = slaycord.Intents.default()
+        intents = oauth2cord.Intents.default()
         intents.message_content = True
 
         super().__init__(command_prefix=commands.when_mentioned_or('$'), intents=intents)
@@ -18,17 +18,17 @@ class CounterBot(commands.Bot):
 
 
 # Define a simple View that gives us a counter button
-class Counter(slaycord.ui.View):
+class Counter(oauth2cord.ui.View):
 
     # Define the actual button
     # When pressed, this increments the number displayed until it hits 5.
     # When it hits 5, the counter button is disabled and it turns green.
     # note: The name of the function does not matter to the library
-    @slaycord.ui.button(label='0', style=slaycord.ButtonStyle.red)
-    async def count(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
+    @oauth2cord.ui.button(label='0', style=oauth2cord.ButtonStyle.red)
+    async def count(self, interaction: oauth2cord.Interaction, button: oauth2cord.ui.Button):
         number = int(button.label) if button.label else 0
         if number + 1 >= 5:
-            button.style = slaycord.ButtonStyle.green
+            button.style = oauth2cord.ButtonStyle.green
             button.disabled = True
         button.label = str(number + 1)
 

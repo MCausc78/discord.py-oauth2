@@ -1,15 +1,15 @@
 # This example requires the 'members' and 'message_content' privileged intents to function.
 
-import slaycord
-from slaycord.ext import commands
+import oauth2cord
+from oauth2cord.ext import commands
 import random
 
-description = '''An example bot to showcase the slaycord.ext.commands extension
+description = '''An example bot to showcase the oauth2cord.ext.commands extension
 module.
 
 There are a number of utility commands being showcased here.'''
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.members = True
 intents.message_content = True
 
@@ -55,9 +55,9 @@ async def repeat(ctx, times: int, content='repeating...'):
 
 
 @bot.command()
-async def joined(ctx, member: slaycord.Member):
+async def joined(ctx, member: oauth2cord.Member):
     """Says when a member joined."""
-    await ctx.send(f'{member.name} joined {slaycord.utils.format_dt(member.joined_at)}')
+    await ctx.send(f'{member.name} joined {oauth2cord.utils.format_dt(member.joined_at)}')
 
 
 @bot.group()

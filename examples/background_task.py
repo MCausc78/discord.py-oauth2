@@ -1,9 +1,9 @@
-from slaycord.ext import tasks
+from oauth2cord.ext import tasks
 
-import slaycord
+import oauth2cord
 
 
-class MyClient(slaycord.Client):
+class MyClient(oauth2cord.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -29,5 +29,5 @@ class MyClient(slaycord.Client):
         await self.wait_until_ready()  # wait until the bot logs in
 
 
-client = MyClient(intents=slaycord.Intents.default())
+client = MyClient(intents=oauth2cord.Intents.default())
 client.run('token')

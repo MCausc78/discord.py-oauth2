@@ -1,5 +1,5 @@
 include README.rst
 include LICENSE
 include requirements.txt
-include slaycord/bin/*.dll
-include slaycord/py.typed
+include oauth2cord/bin/*.dll
+include oauth2cord/py.typed

@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "slaycord.py-oauth2"
+name = "oauth2cord.py-oauth2"
 description = "A Python wrapper for the Discord API"
 readme = { file = "README.rst", content-type = "text/x-rst" }
 license = { file = "LICENSE" }
@@ -76,11 +76,11 @@ dev = [
 
 [tool.setuptools]
 packages = [
-    "slaycord",
-    "slaycord.types",
-    "slaycord.webhook",
-    "slaycord.ext.commands",
-    "slaycord.ext.tasks",
+    "oauth2cord",
+    "oauth2cord.types",
+    "oauth2cord.webhook",
+    "oauth2cord.ext.commands",
+    "oauth2cord.ext.tasks",
 ]
 include-package-data = true
 
@@ -90,8 +90,8 @@ skip-string-normalization = true
 
 [tool.coverage.run]
 omit = [
-    "slaycord/__main__.py",
-    "slaycord/types/*",
+    "oauth2cord/__main__.py",
+    "oauth2cord/types/*",
     "*/_types.py",
 ]
 
@@ -109,11 +109,11 @@ line_length = 125
 
 [tool.pyright]
 include = [
-    "slaycord",
-    "slaycord/types",
-    "slaycord/ext",
-    "slaycord/ext/commands",
-    "slaycord/ext/tasks",
+    "oauth2cord",
+    "oauth2cord/types",
+    "oauth2cord/ext",
+    "oauth2cord/ext/commands",
+    "oauth2cord/ext/tasks",
 ]
 exclude = [
     "**/__pycache__",

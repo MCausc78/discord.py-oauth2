@@ -1,19 +1,19 @@
 # This example requires the 'message_content' privileged intent to function.
 
-import slaycord
-from slaycord.ext import commands
+import oauth2cord
+from oauth2cord.ext import commands
 
 # Defines a custom Select containing colour options
 # that the user can choose. The callback function
 # of this class is called when the user changes their choice
-class Dropdown(slaycord.ui.Select):
+class Dropdown(oauth2cord.ui.Select):
     def __init__(self):
 
         # Set the options that will be presented inside the dropdown
         options = [
-            slaycord.SelectOption(label='Red', description='Your favourite colour is red', emoji='🟥'),
-            slaycord.SelectOption(label='Green', description='Your favourite colour is green', emoji='🟩'),
-            slaycord.SelectOption(label='Blue', description='Your favourite colour is blue', emoji='🟦'),
+            oauth2cord.SelectOption(label='Red', description='Your favourite colour is red', emoji='🟥'),
+            oauth2cord.SelectOption(label='Green', description='Your favourite colour is green', emoji='🟩'),
+            oauth2cord.SelectOption(label='Blue', description='Your favourite colour is blue', emoji='🟦'),
         ]
 
         # The placeholder is what will be shown when no option is chosen
@@ -21,7 +21,7 @@ class Dropdown(slaycord.ui.Select):
         # The options parameter defines the dropdown options. We defined this above
         super().__init__(placeholder='Choose your favourite colour...', min_values=1, max_values=1, options=options)
 
-    async def callback(self, interaction: slaycord.Interaction):
+    async def callback(self, interaction: oauth2cord.Interaction):
         # Use the interaction object to send a response message containing
         # the user's favourite colour or choice. The self object refers to the
         # Select object, and the values attribute gets a list of the user's
@@ -29,7 +29,7 @@ class Dropdown(slaycord.ui.Select):
         await interaction.response.send_message(f'Your favourite colour is {self.values[0]}')
 
 
-class DropdownView(slaycord.ui.View):
+class DropdownView(oauth2cord.ui.View):
     def __init__(self):
         super().__init__()
 
@@ -39,7 +39,7 @@ class DropdownView(slaycord.ui.View):
 
 class Bot(commands.Bot):
     def __init__(self):
-        intents = slaycord.Intents.default()
+        intents = oauth2cord.Intents.default()
         intents.message_content = True
 
         super().__init__(command_prefix=commands.when_mentioned_or('$'), intents=intents)

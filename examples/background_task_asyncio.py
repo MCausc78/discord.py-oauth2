@@ -1,8 +1,8 @@
-import slaycord
+import oauth2cord
 import asyncio
 
 
-class MyClient(slaycord.Client):
+class MyClient(oauth2cord.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -24,5 +24,5 @@ class MyClient(slaycord.Client):
             await asyncio.sleep(60)  # task runs every 60 seconds
 
 
-client = MyClient(intents=slaycord.Intents.default())
+client = MyClient(intents=oauth2cord.Intents.default())
 client.run('token')

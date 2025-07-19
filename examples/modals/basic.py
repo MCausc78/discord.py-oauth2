@@ -1,22 +1,22 @@
-import slaycord
-from slaycord import app_commands
+import oauth2cord
+from oauth2cord import app_commands
 
 import traceback
 
 # The guild in which this slash command will be registered.
 # It is recommended to have a test guild to separate from your "production" bot
-TEST_GUILD = slaycord.Object(0)
+TEST_GUILD = oauth2cord.Object(0)
 
 
-class MyClient(slaycord.Client):
+class MyClient(oauth2cord.Client):
     def __init__(self) -> None:
-        # Just default intents and a `slaycord.Client` instance
+        # Just default intents and a `oauth2cord.Client` instance
         # We don't need a `commands.Bot` instance because we are not
         # creating text-based commands.
-        intents = slaycord.Intents.default()
+        intents = oauth2cord.Intents.default()
         super().__init__(intents=intents)
 
-        # We need an `slaycord.app_commands.CommandTree` instance
+        # We need an `oauth2cord.app_commands.CommandTree` instance
         # to register application commands (slash commands in this case)
         self.tree = app_commands.CommandTree(self)
 
@@ -29,15 +29,15 @@ class MyClient(slaycord.Client):
         await self.tree.sync(guild=TEST_GUILD)
 
 
-class Feedback(slaycord.ui.Modal, title='Feedback'):
-    # Our modal classes MUST subclass `slaycord.ui.Modal`,
+class Feedback(oauth2cord.ui.Modal, title='Feedback'):
+    # Our modal classes MUST subclass `oauth2cord.ui.Modal`,
     # but the title can be whatever you want.
 
     # This will be a short input, where the user can enter their name
     # It will also have a placeholder, as denoted by the `placeholder` kwarg.
     # By default, it is required and is a short-style input which is exactly
     # what we want.
-    name = slaycord.ui.TextInput(
+    name = oauth2cord.ui.TextInput(
         label='Name',
         placeholder='Your name here...',
     )
@@ -46,18 +46,18 @@ class Feedback(slaycord.ui.Modal, title='Feedback'):
     # Unlike the name, it is not required. If filled out, however, it will
     # only accept a maximum of 300 characters, as denoted by the
     # `max_length=300` kwarg.
-    feedback = slaycord.ui.TextInput(
+    feedback = oauth2cord.ui.TextInput(
         label='What do you think of this new feature?',
-        style=slaycord.TextStyle.long,
+        style=oauth2cord.TextStyle.long,
         placeholder='Type your feedback here...',
         required=False,
         max_length=300,
     )
 
-    async def on_submit(self, interaction: slaycord.Interaction):
+    async def on_submit(self, interaction: oauth2cord.Interaction):
         await interaction.response.send_message(f'Thanks for your feedback, {self.name.value}!', ephemeral=True)
 
-    async def on_error(self, interaction: slaycord.Interaction, error: Exception) -> None:
+    async def on_error(self, interaction: oauth2cord.Interaction, error: Exception) -> None:
         await interaction.response.send_message('Oops! Something went wrong.', ephemeral=True)
 
         # Make sure we know what the error actually is
@@ -68,7 +68,7 @@ client = MyClient()
 
 
 @client.tree.command(guild=TEST_GUILD, description="Submit feedback")
-async def feedback(interaction: slaycord.Interaction):
+async def feedback(interaction: oauth2cord.Interaction):
     # Send the modal with an instance of our `Feedback` class
     # Since modals require an interaction, they cannot be done as a response to a text command.
     # They can only be done as a response to either an application command or a button press.

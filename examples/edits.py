@@ -1,10 +1,10 @@
 # This example requires the 'message_content' privileged intent to function.
 
-import slaycord
+import oauth2cord
 import asyncio
 
 
-class MyClient(slaycord.Client):
+class MyClient(oauth2cord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
@@ -15,7 +15,7 @@ class MyClient(slaycord.Client):
             await asyncio.sleep(3.0)
             await msg.edit(content='40')
 
-    async def on_message_edit(self, before: slaycord.Message, after: slaycord.Message):
+    async def on_message_edit(self, before: oauth2cord.Message, after: oauth2cord.Message):
         if before.content == after.content:
             return
 
@@ -23,7 +23,7 @@ class MyClient(slaycord.Client):
         await before.channel.send(msg)
 
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.message_content = True
 
 client = MyClient(intents=intents)

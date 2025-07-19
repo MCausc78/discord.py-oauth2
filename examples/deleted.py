@@ -1,9 +1,9 @@
 # This example requires the 'message_content' privileged intent to function.
 
-import slaycord
+import oauth2cord
 
 
-class MyClient(slaycord.Client):
+class MyClient(oauth2cord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
@@ -16,12 +16,12 @@ class MyClient(slaycord.Client):
             # this also works
             await message.channel.send('Goodbye in 3 seconds...', delete_after=3.0)
 
-    async def on_message_delete(self, message: slaycord.Message):
+    async def on_message_delete(self, message: oauth2cord.Message):
         msg = f'{message.author} has deleted the message: {message.content}'
         await message.channel.send(msg)
 
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.message_content = True
 
 client = MyClient(intents=intents)

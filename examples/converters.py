@@ -4,10 +4,10 @@
 import traceback
 import typing
 
-import slaycord
-from slaycord.ext import commands
+import oauth2cord
+from oauth2cord.ext import commands
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.members = True
 intents.message_content = True
 
@@ -15,19 +15,19 @@ bot = commands.Bot('!', intents=intents)
 
 
 @bot.command()
-async def userinfo(ctx: commands.Context, user: slaycord.User):
+async def userinfo(ctx: commands.Context, user: oauth2cord.User):
     # In the command signature above, you can see that the `user`
-    # parameter is typehinted to `slaycord.User`. This means that
+    # parameter is typehinted to `oauth2cord.User`. This means that
     # during command invocation we will attempt to convert
-    # the value passed as `user` to a `slaycord.User` instance.
-    # The documentation notes what can be converted, in the case of `slaycord.User`
+    # the value passed as `user` to a `oauth2cord.User` instance.
+    # The documentation notes what can be converted, in the case of `oauth2cord.User`
     # you pass an ID, mention or username (discrim optional)
     # E.g. 80088516616269824, @Danny or Danny#0007
 
     # NOTE: typehinting acts as a converter within the `commands` framework only.
     # In standard Python, it is use for documentation and IDE assistance purposes.
 
-    # If the conversion is successful, we will have a `slaycord.User` instance
+    # If the conversion is successful, we will have a `oauth2cord.User` instance
     # and can do the following:
     user_id = user.id
     username = user.name
@@ -53,7 +53,7 @@ class ChannelOrMemberConverter(commands.Converter):
     async def convert(self, ctx: commands.Context, argument: str):
         # In this example we have made a custom converter.
         # This checks if an input is convertible to a
-        # `slaycord.Member` or `slaycord.TextChannel` instance from the
+        # `oauth2cord.Member` or `oauth2cord.TextChannel` instance from the
         # input the user has given us using the pre-existing converters
         # that the library provides.
 
@@ -94,19 +94,19 @@ async def notify(ctx: commands.Context, target: ChannelOrMemberConverter):
 
 
 @bot.command()
-async def ignore(ctx: commands.Context, target: typing.Union[slaycord.Member, slaycord.TextChannel]):
+async def ignore(ctx: commands.Context, target: typing.Union[oauth2cord.Member, oauth2cord.TextChannel]):
     # This command signature utilises the `typing.Union` typehint.
     # The `commands` framework attempts a conversion of each type in this Union *in order*.
-    # So, it will attempt to convert whatever is passed to `target` to a `slaycord.Member` instance.
-    # If that fails, it will attempt to convert it to a `slaycord.TextChannel` instance.
+    # So, it will attempt to convert whatever is passed to `target` to a `oauth2cord.Member` instance.
+    # If that fails, it will attempt to convert it to a `oauth2cord.TextChannel` instance.
     # See: https://discordpy.readthedocs.io/en/latest/ext/commands/commands.html#typing-union
     # NOTE: If a Union typehint converter fails it will raise `commands.BadUnionArgument`
     # instead of `commands.BadArgument`.
 
     # To check the resulting type, `isinstance` is used
-    if isinstance(target, slaycord.Member):
+    if isinstance(target, oauth2cord.Member):
         await ctx.send(f'Member found: {target.mention}, adding them to the ignore list.')
-    elif isinstance(target, slaycord.TextChannel):  # this could be an `else` but for completeness' sake.
+    elif isinstance(target, oauth2cord.TextChannel):  # this could be an `else` but for completeness' sake.
         await ctx.send(f'Channel found: {target.mention}, adding it to the ignore list.')
 
 

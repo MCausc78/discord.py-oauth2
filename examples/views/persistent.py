@@ -1,8 +1,8 @@
 # This example requires the 'message_content' privileged intent to function.
 from __future__ import annotations
 
-from slaycord.ext import commands
-import slaycord
+from oauth2cord.ext import commands
+import oauth2cord
 import re
 
 
@@ -14,20 +14,20 @@ import re
 # prevent conflicts with other buttons the bot sends.
 # For this example the custom_id is prefixed with the name of the bot.
 # Note that custom_ids can only be up to 100 characters long.
-class PersistentView(slaycord.ui.View):
+class PersistentView(oauth2cord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @slaycord.ui.button(label='Green', style=slaycord.ButtonStyle.green, custom_id='persistent_view:green')
-    async def green(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
+    @oauth2cord.ui.button(label='Green', style=oauth2cord.ButtonStyle.green, custom_id='persistent_view:green')
+    async def green(self, interaction: oauth2cord.Interaction, button: oauth2cord.ui.Button):
         await interaction.response.send_message('This is green.', ephemeral=True)
 
-    @slaycord.ui.button(label='Red', style=slaycord.ButtonStyle.red, custom_id='persistent_view:red')
-    async def red(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
+    @oauth2cord.ui.button(label='Red', style=oauth2cord.ButtonStyle.red, custom_id='persistent_view:red')
+    async def red(self, interaction: oauth2cord.Interaction, button: oauth2cord.ui.Button):
         await interaction.response.send_message('This is red.', ephemeral=True)
 
-    @slaycord.ui.button(label='Grey', style=slaycord.ButtonStyle.grey, custom_id='persistent_view:grey')
-    async def grey(self, interaction: slaycord.Interaction, button: slaycord.ui.Button):
+    @oauth2cord.ui.button(label='Grey', style=oauth2cord.ButtonStyle.grey, custom_id='persistent_view:grey')
+    async def grey(self, interaction: oauth2cord.Interaction, button: oauth2cord.ui.Button):
         await interaction.response.send_message('This is grey.', ephemeral=True)
 
 
@@ -37,12 +37,12 @@ class PersistentView(slaycord.ui.View):
 # For this example, the `template` class parameter is used to give the library a regular
 # expression to parse the custom_id with.
 # These custom IDs will be in the form of e.g. `button:user:80088516616269824`.
-class DynamicButton(slaycord.ui.DynamicItem[slaycord.ui.Button], template=r'button:user:(?P<id>[0-9]+)'):
+class DynamicButton(oauth2cord.ui.DynamicItem[oauth2cord.ui.Button], template=r'button:user:(?P<id>[0-9]+)'):
     def __init__(self, user_id: int) -> None:
         super().__init__(
-            slaycord.ui.Button(
+            oauth2cord.ui.Button(
                 label='Do Thing',
-                style=slaycord.ButtonStyle.blurple,
+                style=oauth2cord.ButtonStyle.blurple,
                 custom_id=f'button:user:{user_id}',
                 emoji='\N{THUMBS UP SIGN}',
             )
@@ -51,21 +51,21 @@ class DynamicButton(slaycord.ui.DynamicItem[slaycord.ui.Button], template=r'butt
 
     # This is called when the button is clicked and the custom_id matches the template.
     @classmethod
-    async def from_custom_id(cls, interaction: slaycord.Interaction, item: slaycord.ui.Button, match: re.Match[str], /):
+    async def from_custom_id(cls, interaction: oauth2cord.Interaction, item: oauth2cord.ui.Button, match: re.Match[str], /):
         user_id = int(match['id'])
         return cls(user_id)
 
-    async def interaction_check(self, interaction: slaycord.Interaction) -> bool:
+    async def interaction_check(self, interaction: oauth2cord.Interaction) -> bool:
         # Only allow the user who created the button to interact with it.
         return interaction.user.id == self.user_id
 
-    async def callback(self, interaction: slaycord.Interaction) -> None:
+    async def callback(self, interaction: oauth2cord.Interaction) -> None:
         await interaction.response.send_message('This is your very own button!', ephemeral=True)
 
 
 class PersistentViewBot(commands.Bot):
     def __init__(self):
-        intents = slaycord.Intents.default()
+        intents = oauth2cord.Intents.default()
         intents.message_content = True
 
         super().__init__(command_prefix=commands.when_mentioned_or('$'), intents=intents)
@@ -103,7 +103,7 @@ async def prepare(ctx: commands.Context):
 async def dynamic_button(ctx: commands.Context):
     """Starts a dynamic button."""
 
-    view = slaycord.ui.View(timeout=None)
+    view = oauth2cord.ui.View(timeout=None)
     view.add_item(DynamicButton(ctx.author.id))
     await ctx.send('Here is your very own button!', view=view)
 

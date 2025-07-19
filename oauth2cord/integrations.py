@@ -1,0 +1,331 @@
+"""
+The MIT License (MIT)
+
+Copyright (c) 2015-present Rapptz
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+"""
+
+from __future__ import annotations
+
+import datetime
+from typing import Optional, TYPE_CHECKING, Type, Tuple, Union
+
+from .enums import try_enum, ExpireBehavior
+from .user import User
+from .utils import _get_as_snowflake, parse_time, utcnow
+
+__all__ = (
+    'IntegrationAccount',
+    'IntegrationApplication',
+    'Integration',
+    'StreamIntegration',
+    'BotIntegration',
+    'PartialIntegration',
+)
+
+if TYPE_CHECKING:
+    from .guild import Guild, UserGuild
+    from .role import Role
+    from .state import ConnectionState
+    from .types.integration import (
+        IntegrationAccount as IntegrationAccountPayload,
+        Integration as IntegrationPayload,
+        StreamIntegration as StreamIntegrationPayload,
+        BotIntegration as BotIntegrationPayload,
+        IntegrationType,
+        IntegrationApplication as IntegrationApplicationPayload,
+        PartialIntegration as PartialIntegrationPayload,
+    )
+
+
+class IntegrationAccount:
+    """Represents an integration account.
+
+    .. versionadded:: 1.4
+
+    Attributes
+    ----------
+    id: :class:`str`
+        The account ID.
+    name: :class:`str`
+        The account name.
+    """
+
+    __slots__ = ('id', 'name')
+
+    def __init__(self, data: IntegrationAccountPayload) -> None:
+        self.id: str = data['id']
+        self.name: str = data['name']
+
+    def __repr__(self) -> str:
+        return f'<IntegrationAccount id={self.id} name={self.name!r}>'
+
+
+class Integration:
+    """Represents a guild integration.
+
+    .. versionadded:: 1.4
+
+    Attributes
+    ----------
+    id: Union[:class:`int`, :class:`str`]
+        The integration ID.
+    name: :class:`str`
+        The integration name.
+    guild: Union[:class:`Guild`, :class:`UserGuild`]
+        The guild of the integration.
+    type: :class:`str`
+        The integration type (i.e. Twitch).
+    enabled: :class:`bool`
+        Whether the integration is currently enabled.
+    account: :class:`IntegrationAccount`
+        The account linked to this integration.
+    user: :class:`User`
+        The user that added this integration.
+    """
+
+    __slots__ = (
+        'guild',
+        'id',
+        '_state',
+        'type',
+        'name',
+        'account',
+        'user',
+        'enabled',
+    )
+
+    def __init__(self, *, data: IntegrationPayload, guild: Union[Guild, UserGuild]) -> None:
+        self.guild: Union[Guild, UserGuild] = guild
+        self._state: ConnectionState = guild._state
+        self._from_data(data)
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} id={self.id} name={self.name!r}>'
+
+    def _from_data(self, data: IntegrationPayload) -> None:
+        id = data['id']
+        try:
+            self.id: Union[int, str] = int(id)
+        except ValueError:
+            # For Twitch Partners, `id` will be a string
+            self.id = id
+        self.type: IntegrationType = data['type']
+        self.name: str = data['name']
+        self.account: IntegrationAccount = IntegrationAccount(data['account'])
+
+        user = data.get('user')
+        self.user: Optional[User] = User(state=self._state, data=user) if user else None
+        self.enabled: bool = data.get('enabled', True)
+
+
+class StreamIntegration(Integration):
+    """Represents a stream integration for Twitch or YouTube.
+
+    .. versionadded:: 2.0
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The integration ID.
+    name: :class:`str`
+        The integration name.
+    guild: :class:`Guild`
+        The guild of the integration.
+    type: :class:`str`
+        The integration type (i.e. Twitch).
+    enabled: :class:`bool`
+        Whether the integration is currently enabled.
+    syncing: :class:`bool`
+        Where the integration is currently syncing.
+    enable_emoticons: Optional[:class:`bool`]
+        Whether emoticons should be synced for this integration (currently twitch only).
+    expire_behavior: :class:`ExpireBehavior`
+        The behavior of expiring subscribers. Aliased to ``expire_behaviour`` as well.
+    expire_grace_period: :class:`int`
+        The grace period (in days) for expiring subscribers.
+    user: :class:`User`
+        The user for the integration.
+    account: :class:`IntegrationAccount`
+        The integration account information.
+    synced_at: :class:`datetime.datetime`
+        An aware UTC datetime representing when the integration was last synced.
+    """
+
+    __slots__ = (
+        'revoked',
+        'expire_behavior',
+        'expire_grace_period',
+        'synced_at',
+        '_role_id',
+        'syncing',
+        'enable_emoticons',
+        'subscriber_count',
+    )
+
+    def _from_data(self, data: StreamIntegrationPayload) -> None:
+        super()._from_data(data)
+        self.revoked: bool = data['revoked']
+        self.expire_behavior: ExpireBehavior = try_enum(ExpireBehavior, data.get('expire_behavior', 0))
+        self.expire_grace_period: int = data.get('expire_grace_period', 0)
+        self.synced_at: datetime.datetime = parse_time(data.get('synced_at')) or utcnow()
+        self._role_id: Optional[int] = _get_as_snowflake(data, 'role_id')
+        self.syncing: bool = data.get('syncing', True)
+        self.enable_emoticons: bool = data['enable_emoticons']
+        self.subscriber_count: int = data['subscriber_count']
+
+    @property
+    def expire_behaviour(self) -> ExpireBehavior:
+        """:class:`ExpireBehavior`: An alias for :attr:`expire_behavior`."""
+        return self.expire_behavior
+
+    @property
+    def role(self) -> Optional[Role]:
+        """Optional[:class:`Role`] The role which the integration uses for subscribers."""
+        # The key is `int` but `int | None` will return `None` anyway.
+        return self.guild.get_role(self._role_id)  # type: ignore
+
+
+class IntegrationApplication:
+    """Represents an application for a bot integration.
+
+    .. versionadded:: 2.0
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The ID for this application.
+    name: :class:`str`
+        The application's name.
+    icon: Optional[:class:`str`]
+        The application's icon hash.
+    description: :class:`str`
+        The application's description. Can be an empty string.
+    summary: :class:`str`
+        The summary of the application. Can be an empty string.
+    user: Optional[:class:`User`]
+        The bot user on this application.
+    """
+
+    __slots__ = (
+        'id',
+        'name',
+        'icon',
+        'description',
+        'summary',
+        'user',
+    )
+
+    def __init__(self, *, data: IntegrationApplicationPayload, state: ConnectionState) -> None:
+        self.id: int = int(data['id'])
+        self.name: str = data['name']
+        self.icon: Optional[str] = data['icon']
+        self.description: str = data['description']
+        self.summary: str = data['summary']
+        user = data.get('bot')
+        self.user: Optional[User] = User(state=state, data=user) if user else None
+
+
+class BotIntegration(Integration):
+    """Represents a bot integration on oauth2cord.
+
+    .. versionadded:: 2.0
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The integration ID.
+    name: :class:`str`
+        The integration name.
+    guild: :class:`Guild`
+        The guild of the integration.
+    type: :class:`str`
+        The integration type (i.e. Twitch).
+    enabled: :class:`bool`
+        Whether the integration is currently enabled.
+    user: :class:`User`
+        The user that added this integration.
+    account: :class:`IntegrationAccount`
+        The integration account information.
+    application: :class:`IntegrationApplication`
+        The application tied to this integration.
+    """
+
+    __slots__ = ('application',)
+
+    def _from_data(self, data: BotIntegrationPayload) -> None:
+        super()._from_data(data)
+        self.application: IntegrationApplication = IntegrationApplication(data=data['application'], state=self._state)
+
+
+class PartialIntegration:
+    """Represents a partial guild integration.
+
+    .. versionadded:: 2.0
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The integration ID.
+    name: :class:`str`
+        The integration name.
+    guild: :class:`Guild`
+        The guild of the integration.
+    type: :class:`str`
+        The integration type (i.e. Twitch).
+    account: :class:`IntegrationAccount`
+        The account linked to this integration.
+    application_id: Optional[:class:`int`]
+        The id of the application this integration belongs to.
+    """
+
+    __slots__ = (
+        'guild',
+        '_state',
+        'id',
+        'type',
+        'name',
+        'account',
+        'application_id',
+    )
+
+    def __init__(self, *, data: PartialIntegrationPayload, guild: Guild):
+        self.guild: Guild = guild
+        self._state: ConnectionState = guild._state
+        self._from_data(data)
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} id={self.id} name={self.name!r}>'
+
+    def _from_data(self, data: PartialIntegrationPayload) -> None:
+        self.id: int = int(data['id'])
+        self.type: IntegrationType = data['type']
+        self.name: str = data['name']
+        self.account: IntegrationAccount = IntegrationAccount(data['account'])
+        self.application_id: Optional[int] = _get_as_snowflake(data, 'application_id')
+
+
+def _integration_factory(value: str) -> Tuple[Type[Integration], str]:
+    if value == 'discord':
+        return BotIntegration, value
+    elif value in ('twitch', 'youtube'):
+        return StreamIntegration, value
+    else:
+        return Integration, value

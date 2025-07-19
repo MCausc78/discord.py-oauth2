@@ -1,20 +1,20 @@
 # This example requires the 'members' privileged intents
 
-import slaycord
+import oauth2cord
 
 
-class MyClient(slaycord.Client):
+class MyClient(oauth2cord.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.role_message_id = 0  # ID of the message that can be reacted to to add/remove a role.
         self.emoji_to_role = {
-            slaycord.PartialEmoji(name='🔴'): 0,  # ID of the role associated with unicode emoji '🔴'.
-            slaycord.PartialEmoji(name='🟡'): 0,  # ID of the role associated with unicode emoji '🟡'.
-            slaycord.PartialEmoji(name='green', id=0): 0,  # ID of the role associated with a partial emoji's ID.
+            oauth2cord.PartialEmoji(name='🔴'): 0,  # ID of the role associated with unicode emoji '🔴'.
+            oauth2cord.PartialEmoji(name='🟡'): 0,  # ID of the role associated with unicode emoji '🟡'.
+            oauth2cord.PartialEmoji(name='green', id=0): 0,  # ID of the role associated with a partial emoji's ID.
         }
 
-    async def on_raw_reaction_add(self, payload: slaycord.RawReactionActionEvent):
+    async def on_raw_reaction_add(self, payload: oauth2cord.RawReactionActionEvent):
         """Gives a role based on a reaction emoji."""
         # Make sure that the message the user is reacting to is the one we care about.
         if payload.message_id != self.role_message_id:
@@ -39,11 +39,11 @@ class MyClient(slaycord.Client):
         try:
             # Finally, add the role.
             await payload.member.add_roles(role)
-        except slaycord.HTTPException:
+        except oauth2cord.HTTPException:
             # If we want to do something in case of errors we'd do it here.
             pass
 
-    async def on_raw_reaction_remove(self, payload: slaycord.RawReactionActionEvent):
+    async def on_raw_reaction_remove(self, payload: oauth2cord.RawReactionActionEvent):
         """Removes a role based on a reaction emoji."""
         # Make sure that the message the user is reacting to is the one we care about.
         if payload.message_id != self.role_message_id:
@@ -75,12 +75,12 @@ class MyClient(slaycord.Client):
         try:
             # Finally, remove the role.
             await member.remove_roles(role)
-        except slaycord.HTTPException:
+        except oauth2cord.HTTPException:
             # If we want to do something in case of errors we'd do it here.
             pass
 
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.members = True
 
 client = MyClient(intents=intents)

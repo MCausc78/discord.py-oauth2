@@ -1,0 +1,71 @@
+"""
+The MIT License (MIT)
+
+Copyright (c) 2025-present MCausc78
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+"""
+
+from typing import List, Literal, Optional, TypedDict
+from typing_extensions import NotRequired
+
+from .presences import StatusType
+from .snowflake import Snowflake
+
+
+class UserSettingsCustomStatus(TypedDict):
+    text: Optional[str]
+    emoji_id: Optional[Snowflake]
+    emoji_name: Optional[str]
+    expires_at: Optional[str]
+
+
+class GuildFolder(TypedDict):
+    color: Optional[int]
+    guild_ids: List[Snowflake]
+    id: Optional[int]
+    name: Optional[str]
+
+
+class UserSettings(TypedDict):
+    status: NotRequired[StatusType]  # Required scope: activities.read OR presences.read
+    custom_status: NotRequired[Optional[UserSettingsCustomStatus]]  # Required scope: activities.read OR presences.read
+    slayer_sdk_receive_in_game_dms: NotRequired[Literal[0, 1, 2, 3]]  # Not included in GatewayUserSettings
+
+
+class GatewayUserSettings(UserSettings):
+    show_current_game: NotRequired[bool]  # Required scope: activities.write OR presences.read
+    guild_folders: NotRequired[List[GuildFolder]]  # Required scope: guilds
+    allow_activity_party_privacy_voice_channel: NotRequired[bool]  # Required scope: activities.write OR presences.read
+    allow_activity_party_privacy_friends: NotRequired[bool]  # Required scope: activities.write OR presences.read
+    soundboard_volume: NotRequired[float]  # Required scope: voice
+
+
+AudioContext = Literal['user', 'stream']
+
+
+class AudioSettings(TypedDict):
+    muted: bool
+    volume: float
+    soundboard_muted: bool
+
+
+class MuteConfig(TypedDict):
+    end_time: Optional[str]
+    selected_time_window: Optional[int]

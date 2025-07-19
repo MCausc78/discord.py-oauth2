@@ -2,10 +2,10 @@
 
 import asyncio
 
-import slaycord
+import oauth2cord
 import youtube_dl
 
-from slaycord.ext import commands
+from oauth2cord.ext import commands
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -32,7 +32,7 @@ ffmpeg_options = {
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 
-class YTDLSource(slaycord.PCMVolumeTransformer):
+class YTDLSource(oauth2cord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
 
@@ -51,7 +51,7 @@ class YTDLSource(slaycord.PCMVolumeTransformer):
             data = data['entries'][0]
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(slaycord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+        return cls(oauth2cord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 
 class Music(commands.Cog):
@@ -59,7 +59,7 @@ class Music(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def join(self, ctx, *, channel: slaycord.VoiceChannel):
+    async def join(self, ctx, *, channel: oauth2cord.VoiceChannel):
         """Joins a voice channel"""
 
         if ctx.voice_client is not None:
@@ -71,7 +71,7 @@ class Music(commands.Cog):
     async def play(self, ctx, *, query):
         """Plays a file from the local filesystem"""
 
-        source = slaycord.PCMVolumeTransformer(slaycord.FFmpegPCMAudio(query))
+        source = oauth2cord.PCMVolumeTransformer(oauth2cord.FFmpegPCMAudio(query))
         ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
 
         await ctx.send(f'Now playing: {query}')
@@ -126,7 +126,7 @@ class Music(commands.Cog):
             ctx.voice_client.stop()
 
 
-intents = slaycord.Intents.default()
+intents = oauth2cord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(
