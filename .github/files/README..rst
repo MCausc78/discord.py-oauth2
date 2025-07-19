@@ -1,4 +1,4 @@
-discord_slayer_sdk
-------------------
+oauth2cord
+----------
 
 ...

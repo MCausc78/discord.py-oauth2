@@ -1282,11 +1282,9 @@ class UserFlags(Enum):
     hypesquad_balance = 1 << 8
     early_supporter = 1 << 9
     team_user = 1 << 10
-    is_hubspot_contact = 1 << 11
     system = 1 << 12
     has_unread_urgent_messages = 1 << 13
     bug_hunter_level_2 = 1 << 14
-    underage_deleted = 1 << 15
     verified_bot = 1 << 16
     verified_bot_developer = 1 << 17
     discord_certified_moderator = 1 << 18
@@ -1295,18 +1293,7 @@ class UserFlags(Enum):
     disable_premium = 1 << 21
     active_developer = 1 << 22
     provisional_account = 1 << 23
-    high_global_rate_limit = 1 << 33
-    deleted = 1 << 34
-    disabled_suspicious_activity = 1 << 35
-    self_deleted = 1 << 36
-    premium_discriminator = 1 << 37
-    used_desktop_client = 1 << 38
-    used_web_client = 1 << 39
-    used_mobile_client = 1 << 40
-    disabled = 1 << 41
-    has_session_started = 1 << 43
     quarantined = 1 << 44
-    premium_eligible_for_unique_username = 1 << 47
     collaborator = 1 << 50
     restricted_collaborator = 1 << 51
 

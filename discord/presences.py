@@ -149,7 +149,7 @@ class Presence(_RawReprMixin):
 
     .. versionchanged:: 3.0
 
-        ``RawPresenceUpdateEvent`` was renamed to ``Presence``.
+        Renamed from ``RawPresenceUpdateEvent``.
 
     Attributes
     ----------
@@ -157,6 +157,8 @@ class Presence(_RawReprMixin):
         The ID of the user that triggered the presence update.
     user: Optional[:class:`User`]
         The user that triggered the presence update, if available.
+
+        .. versionadded:: 3.0
     guild_id: Optional[:class:`int`]
         The guild ID for the users presence update. Could be ``None``.
     guild: Optional[:class:`Guild`]
@@ -169,8 +171,12 @@ class Presence(_RawReprMixin):
     hidden_activities: Tuple[Union[:class:`BaseActivity`, :class:`Spotify`]]
         The hidden activities the user is currently doing. Due to a Discord API limitation, a user's Spotify activity may not appear
         if they are listening to a song with a title longer than ``128`` characters. See :issue:`1738` for more information.
+
+        .. versionadded:: 3.0
     pair: Optional[Union[Tuple[:class:`Member`, :class:`Member`], Tuple[:class:`Relationship`, :class:`Relationship`], Tuple[:class:`GameRelationship`, :class:`GameRelationship`]]
         The ``(old, new)`` pair representing old and new presence.
+
+        .. versionadded:: 3.0
     """
 
     __slots__ = (
@@ -203,6 +209,8 @@ class Presence(_RawReprMixin):
 
 class Presences:
     """Represents presences for all your relationships.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------

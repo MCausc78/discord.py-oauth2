@@ -62,3 +62,7 @@ class LobbyMember(TypedDict):
     metadata: NotRequired[Optional[Dict[str, str]]]
     flags: NotRequired[int]
     connected: NotRequired[bool]
+
+
+class LobbyGuildInvite(TypedDict):
+    code: str

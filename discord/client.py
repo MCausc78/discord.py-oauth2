@@ -395,18 +395,12 @@ class Client(Dispatcher):
 
     @property
     def lobbies(self) -> Sequence[Lobby]:
-        """Sequence[:class:`.Lobby`]: The lobbies that the connected client is a member of."""
+        """Sequence[:class:`~discord.Lobby`]: The lobbies that the connected client is a member of."""
         return self._connection.lobbies
 
     @property
     def emojis(self) -> Sequence[Emoji]:
-        """Sequence[:class:`.Emoji`]: The emojis that the connected client has.
-
-        .. note::
-
-            This not include the emojis that are owned by the application.
-            Use :meth:`.fetch_application_emoji` to get those.
-        """
+        """Sequence[:class:`.Emoji`]: The emojis that the connected client has."""
         return self._connection.emojis
 
     @property
@@ -419,9 +413,11 @@ class Client(Dispatcher):
 
     @property
     def sessions(self) -> Sequence[Session]:
-        """Sequence[:class:`.Session`]: The gateway sessions that the current user is connected in with.
+        """Sequence[:class:`~discord.Session`]: The Gateway sessions that the current user is connected in with.
 
         When connected, this includes a representation of the library's session and an "all" session representing the user's overall presence.
+
+        .. versionadded:: 3.0
         """
         return SequenceProxy(self._connection._sessions.values())
 
@@ -459,51 +455,80 @@ class Client(Dispatcher):
 
     @property
     def relationships(self) -> Sequence[Relationship]:
-        """Sequence[:class:`.Relationship`]: Returns all the relationships that the connected client has."""
+        """Sequence[:class:`.Relationship`]: Returns all the relationships that the connected client has.
+
+        .. versionadded:: 3.0
+        """
         return SequenceProxy(self._connection._relationships.values())
 
     @property
     def game_relationships(self) -> Sequence[GameRelationship]:
-        """Sequence[:class:`.GameRelationship`]: Returns all the game relationships that the connected client has."""
+        """Sequence[:class:`.GameRelationship`]: Returns all the game relationships that the connected client has.
+
+        .. versionadded:: 3.0
+        """
         return SequenceProxy(self._connection._game_relationships.values())
 
     @property
     def friends(self) -> List[Relationship]:
-        """List[:class:`.Relationship`]: Returns all the users that the connected client is friends with."""
+        """List[:class:`.Relationship`]: Returns all the users that the connected client is friends with.
+
+        .. versionadded:: 3.0
+        """
         return [r for r in self._connection._relationships.values() if r.type is RelationshipType.friend]
 
     @property
     def incoming_friend_requests(self) -> List[Relationship]:
-        """List[:class:`.Relationship`]: Returns all the users that the connected client has friend request from."""
+        """List[:class:`.Relationship`]: Returns all the users that the connected client has friend request from.
+
+        .. versionadded:: 3.0
+        """
         return [r for r in self._connection._relationships.values() if r.type is RelationshipType.incoming_request]
 
     @property
     def outgoing_friend_requests(self) -> List[Relationship]:
-        """List[:class:`.Relationship`]: Returns all the users that the connected client has sent friend request to."""
+        """List[:class:`.Relationship`]: Returns all the users that the connected client has sent friend request to.
+
+        .. versionadded:: 3.0
+        """
         return [r for r in self._connection._relationships.values() if r.type is RelationshipType.outgoing_request]
 
     @property
     def game_friends(self) -> List[GameRelationship]:
-        """List[:class:`.GameRelationship`]: Returns all the users that the connected client is friends with in-game."""
+        """List[:class:`.GameRelationship`]: Returns all the users that the connected client is friends with in-game.
+
+        .. versionadded:: 3.0
+        """
         return [r for r in self._connection._game_relationships.values() if r.type is RelationshipType.friend]
 
     @property
     def incoming_game_friend_requests(self) -> List[GameRelationship]:
-        """List[:class:`.GameRelationship`]: Returns all the users that the connected client has game friend request from."""
+        """List[:class:`.GameRelationship`]: Returns all the users that the connected client has game friend request from.
+
+        .. versionadded:: 3.0
+        """
         return [r for r in self._connection._game_relationships.values() if r.type is RelationshipType.incoming_request]
 
     @property
     def outgoing_game_friend_requests(self) -> List[GameRelationship]:
-        """List[:class:`.GameRelationship`]: Returns all the users that the connected client has sent game friend request."""
+        """List[:class:`.GameRelationship`]: Returns all the users that the connected client has sent game friend request.
+
+        .. versionadded:: 3.0
+        """
         return [r for r in self._connection._game_relationships.values() if r.type is RelationshipType.outgoing_request]
 
     @property
     def blocked(self) -> List[Relationship]:
-        """List[:class:`.Relationship`]: Returns all the users that the connected client has blocked."""
+        """List[:class:`.Relationship`]: Returns all the users that the connected client has blocked.
+
+        .. versionadded:: 3.0
+        """
         return [r for r in self._connection._relationships.values() if r.type is RelationshipType.blocked]
 
     def get_game_relationship(self, user_id: int, /) -> Optional[GameRelationship]:
         """Retrieves the :class:`.GameRelationship`, if applicable.
+
+        .. versionadded:: 3.0
 
         Parameters
         ----------
@@ -520,6 +545,8 @@ class Client(Dispatcher):
     def get_relationship(self, user_id: int, /) -> Optional[Relationship]:
         """Retrieves the :class:`.Relationship`, if applicable.
 
+        .. versionadded:: 3.0
+
         Parameters
         ----------
         user_id: :class:`int`
@@ -534,17 +561,26 @@ class Client(Dispatcher):
 
     @property
     def settings(self) -> UserSettings:
-        """:class:`.UserSettings`: Returns the user's settings."""
+        """:class:`.UserSettings`: Returns the user's settings.
+
+        .. versionadded:: 3.0
+        """
         return self._connection.settings
 
     @property
     def audio_settings(self) -> AudioSettingsManager:
-        """:class:`.AudioSettingsManager`: Returns the manager for user's audio settings."""
+        """:class:`.AudioSettingsManager`: Returns the manager for user's audio settings.
+
+        .. versionadded:: 3.0
+        """
         return self._connection._audio_settings
 
     @property
     def game_invites(self) -> Sequence[GameInvite]:
-        """Sequence[:class:`.GameInvite`]: Returns all the game invites that the connected client has."""
+        """Sequence[:class:`.GameInvite`]: Returns all the game invites that the connected client has received.
+
+        .. versionadded:: 3.0
+        """
         return SequenceProxy(self._connection._game_invites.values())
 
     @property
@@ -570,7 +606,10 @@ class Client(Dispatcher):
 
     @property
     def application_name(self) -> str:
-        """:class:`str`: The client's application name."""
+        """:class:`str`: The client's application name.
+
+        .. versionadded:: 3.0
+        """
         return self._connection.application_name or ''
 
     @property
@@ -591,25 +630,32 @@ class Client(Dispatcher):
 
         This is ``None`` if accessed before :meth:`~discord.Client.login` is called.
 
-        .. seealso:: The :meth:`~discord.Client.application_info` API call
-
         .. versionadded:: 2.0
         """
         return self._application
 
     @property
     def disclose(self) -> Sequence[str]:
-        """Sequence[:class:`str`]: Upcoming changes to the user's account."""
+        """Sequence[:class:`str`]: The upcoming changes to the user's account.
+
+        .. versionadded:: 3.0
+        """
         return SequenceProxy(self._connection.disclose)
 
     @property
     def av_sf_protocol_floor(self) -> int:
-        """:class:`int`: The minimum DAVE version. Currently ``-1``."""
+        """:class:`int`: The minimum DAVE version. Currently ``-1``.
+
+        .. versionadded:: 3.0
+        """
         return self._connection.av_sf_protocol_floor
 
     @property
     def scopes(self) -> Tuple[str, ...]:
-        """Tuple[:class:`str`, ...]: The OAuth2 scopes the connected client has."""
+        """Tuple[:class:`str`, ...]: The OAuth2 scopes the connected client has.
+
+        .. versionadded:: 3.0
+        """
         return self._connection.scopes
 
     def is_ready(self) -> bool:
@@ -736,6 +782,8 @@ class Client(Dispatcher):
         validate: :class:`bool`
             Whether to validate the token. Defaults to ``True``. If ``False``, the token will be set as is.
 
+            .. versionadded:: 3.0
+
         Raises
         ------
         LoginFailure
@@ -749,6 +797,8 @@ class Client(Dispatcher):
         -------
         Optional[:class:`OAuth2Authorization`]
             The OAuth2 authorization.
+
+            .. versionadded:: 3.0
         """
 
         # The SDK authentication flow is:
@@ -1062,7 +1112,9 @@ class Client(Dispatcher):
     ) -> OAuth2DeviceFlow:
         """|coro|
 
-        Starts a OAuth2 device flow.
+        Starts an OAuth2 device flow.
+
+        .. versionadded:: 3.0
 
         Parameters
         ----------
@@ -1113,6 +1165,8 @@ class Client(Dispatcher):
         """|coro|
 
         Exchanges a code.
+
+        .. versionadded:: 3.0
 
         Parameters
         ----------
@@ -1181,6 +1235,8 @@ class Client(Dispatcher):
 
         Refreshes an access token.
 
+        .. versionadded:: 3.0
+
         Parameters
         ----------
         refresh_token: :class:`str`
@@ -1225,6 +1281,8 @@ class Client(Dispatcher):
 
         Retrieve access token for a team user, or user who owns the requesting application.
 
+        .. versionadded:: 3.0
+
         Parameters
         ----------
         client_id: :class:`int`
@@ -1268,6 +1326,8 @@ class Client(Dispatcher):
         """|coro|
 
         Retrieves token for a provisional account.
+
+        .. versionadded:: 3.0
 
         Parameters
         ----------

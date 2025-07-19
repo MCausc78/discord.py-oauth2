@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from typing import List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
-from .activity import StatusType
+from .presences import StatusType
 from .snowflake import Snowflake
 
 

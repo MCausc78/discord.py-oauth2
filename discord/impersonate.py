@@ -411,8 +411,8 @@ class SimpleImpersonate(Impersonate):
     ) -> None:
         if value is not None:
             if gateway_value is not None and http_value is not None:
-                gateway_value = gateway_value | value
-                http_value = http_value | value
+                gateway_value = {**value, **gateway_value}
+                http_value = {**value, **http_value}
             elif gateway_value is None:
                 gateway_value = value
             if http_value is None:

@@ -66,7 +66,8 @@ if TYPE_CHECKING:
     from ..message import Attachment
     from ..abc import Snowflake
     from ..state import ConnectionState
-    from ..ui import View
+
+    # from ..ui import View
     from ..types.webhook import (
         Webhook as WebhookPayload,
     )
@@ -921,7 +922,7 @@ class SyncWebhook(BaseWebhook):
         silent: bool = False,
         applied_tags: List[ForumTag] = MISSING,
         poll: Poll = MISSING,
-        view: View = MISSING,
+        # view: View = MISSING,
     ) -> Optional[SyncWebhookMessage]:
         """Sends a message using the webhook.
 
@@ -1038,12 +1039,12 @@ class SyncWebhook(BaseWebhook):
         else:
             flags = MISSING
 
-        if view is not MISSING:
-            if not hasattr(view, '__discord_ui_view__'):
-                raise TypeError(f'expected view parameter to be of type View not {view.__class__.__name__}')
+        # if view is not MISSING:
+        #     if not hasattr(view, '__discord_ui_view__'):
+        #         raise TypeError(f'expected view parameter to be of type View not {view.__class__.__name__}')
 
-            if view.is_dispatchable():
-                raise ValueError('SyncWebhook views can only contain URL buttons')
+        #     if view.is_dispatchable():
+        #         raise ValueError('SyncWebhook views can only contain URL buttons')
 
         if thread_name is not MISSING and thread is not MISSING:
             raise TypeError('Cannot mix thread_name and thread keyword arguments.')
@@ -1068,7 +1069,7 @@ class SyncWebhook(BaseWebhook):
             flags=flags,
             applied_tags=applied_tag_ids,
             poll=poll,
-            view=view,
+            # view=view,
         ) as params:
             adapter: WebhookAdapter = _get_webhook_adapter()
             thread_id: Optional[int] = None
@@ -1084,7 +1085,7 @@ class SyncWebhook(BaseWebhook):
                 files=params.files,
                 thread_id=thread_id,
                 wait=wait,
-                with_components=view is not MISSING,
+                # with_components=view is not MISSING,
             )
 
         msg = None

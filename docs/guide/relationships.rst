@@ -20,7 +20,7 @@ Relationships aren't made just for friendships. Relationships are also used to s
 
 .. warning::
 
-    While discord.py-oauth2 allows you to manage user's relationships, **you never should not act without their explicit consent**. You generally should not send or accept friend requests automatically. You should manage relationships only when requested by the user.
+    While discord.py-oauth2 allows you to manage user's relationships, **you should never act without their explicit consent**. You generally should not send or accept friend requests automatically. You should manage relationships only when requested by the user.
 
 The following table demonstrates differences between platform-wide and in-game relationships:
 
@@ -51,7 +51,7 @@ and the current user will have a game relationship of type :attr:`~discord.Relat
     If the current user has relationship with type :attr:`~discord.RelationshipType.outgoing_request`, both target user and current user will become in-game friends.
 
 .. note::
-    :collapsible: closed
+    :collapsible:
     
     Make sure the target user did authorized your game, otherwise you may get
     ``discord.errors.HTTPException: 400 Bad Request (error code: 80000): Incoming friend requests disabled``

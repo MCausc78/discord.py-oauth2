@@ -28,7 +28,8 @@ from typing import Dict, List, Literal, Optional, TypedDict, Tuple, Union
 from typing_extensions import NotRequired, Required
 
 from .appinfo import GatewayApplication, PartialApplication
-from .audit_log import AuditLogEntry
+
+# from .audit_log import AuditLogEntry
 from .automod import AutoModerationAction, AutoModerationRuleTriggerType
 from .channel import ChannelType, DMChannel, GroupDMChannel, StageInstance, VoiceChannelEffect
 from .connections import ConnectionRequest
@@ -428,10 +429,6 @@ class AutoModerationActionExecution(TypedDict):
     content: str
     matched_keyword: Optional[str]
     matched_content: Optional[str]
-
-
-class GuildAuditLogEntryCreate(AuditLogEntry):
-    guild_id: Snowflake
 
 
 class VoiceChannelStatusUpdateEvent(TypedDict):

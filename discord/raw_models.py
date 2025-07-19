@@ -183,7 +183,7 @@ class RawMessageUpdateEvent(_RawReprMixin):
         .. versionadded:: 1.7
 
     data: :class:`dict`
-        The raw data given by the :ddocs:`Gateway <topics/gateway-events#message-update>`
+        The raw data given by the :userdoccers:`Gateway <topics/gateway-events#message-update>`
     cached_message: Optional[:class:`Message`]
         The cached message, if found in the internal message cache. Represents the message before
         it is modified by the data in :attr:`RawMessageUpdateEvent.data`.
@@ -207,6 +207,8 @@ class RawMessageUpdateEvent(_RawReprMixin):
 
 class RawLobbyMessageUpdateEvent(_RawReprMixin):
     """Represents the payload for a :func:`on_raw_lobby_message_edit` event.
+
+    .. versionadded:: 3.0
 
     Attributes
     ----------
@@ -233,7 +235,7 @@ class RawLobbyMessageUpdateEvent(_RawReprMixin):
         self.data: LobbyMessageUpdateEvent = data
         self.message: LobbyMessage = message
         self.cached_message: Optional[LobbyMessage] = None
-        self.lobby_id: int = message.lobby_id  # type: ignore # ??? it's literally a LobbyMessage not Message
+        self.lobby_id: int = message.lobby_id
 
 
 class RawReactionActionEvent(_RawReprMixin):
@@ -275,6 +277,10 @@ class RawReactionActionEvent(_RawReprMixin):
         and if ``event_type`` is ``REACTION_ADD``.
 
         .. versionadded:: 2.0
+
+        .. versionchanged:: 3.0
+
+            Renamed from ``burst_colours``.
     type: :class:`ReactionType`
         The type of the reaction.
 
@@ -312,7 +318,7 @@ class RawReactionActionEvent(_RawReprMixin):
     def burst_colours(self) -> List[Color]:
         """An alias of :attr:`burst_colors`.
 
-        .. versionadded:: 2.4
+        .. versionadded:: 3.0
         """
         return self.burst_colors
 

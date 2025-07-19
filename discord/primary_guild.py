@@ -42,7 +42,7 @@ class PrimaryGuild:
     .. versionadded:: 2.6
 
     Attributes
-    -----------
+    ----------
     id: Optional[:class:`int`]
         The ID of the user's primary guild, if any.
     tag: Optional[:class:`str`]

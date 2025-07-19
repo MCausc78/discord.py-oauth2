@@ -1013,17 +1013,6 @@ class HTTPClient:
     def start_private_message(self, user_id: Snowflake) -> Response[channel.DMChannel]:
         return self.request(Route('GET', '/users/@me/dms/{user_id}', user_id=user_id))
 
-    def send_lobby_message(
-        self,
-        lobby_id: Snowflake,
-        params: MultipartParameters,
-    ) -> Response[message.Message]:
-        r = Route('POST', '/lobbies/{lobby_id}/messages', lobby_id=lobby_id)
-        if params.files:
-            return self.request(r, files=params.files, form=params.multipart)
-        else:
-            return self.request(r, json=params.payload)
-
     def send_user_message(
         self,
         user_id: Snowflake,
@@ -1184,6 +1173,64 @@ class HTTPClient:
             params['guild_scheduled_event_id'] = guild_scheduled_event_id
 
         return self.request(Route('GET', '/invites/{invite_id}', invite_id=invite_id), params=params)
+
+    # Lobbies
+    def create_or_join_lobby(
+        self,
+        *,
+        secret: str,
+        lobby_metadata: Optional[Dict[str, str]] = None,
+        member_metadata: Optional[Dict[str, str]] = None,
+        idle_timeout_seconds: Optional[int] = None,
+    ) -> Response[lobby.Lobby]:
+        payload = {
+            'secret': secret,
+            'lobby_metadata': lobby_metadata,
+            'member_metadata': member_metadata,
+        }
+        if idle_timeout_seconds is not None:
+            payload['idle_timeout_seconds'] = idle_timeout_seconds
+
+        return self.request(Route('PUT', '/lobbies'), json=payload)
+
+    def leave_lobby(self, lobby_id: Snowflake) -> Response[None]:
+        return self.request(Route('DELETE', '/lobbies/{lobby_id}/members/@me', lobby_id=lobby_id))
+
+    def create_lobby_invite_for_current_user(self, lobby_id: Snowflake) -> Response[lobby.LobbyGuildInvite]:
+        return self.request(Route('POST', '/lobbies/{lobby_id}/members/@me/invites', lobby_id=lobby_id))
+
+    def create_lobby_invite(self, lobby_id: Snowflake, user_id: Snowflake) -> Response[lobby.LobbyGuildInvite]:
+        return self.request(
+            Route('POST', '/lobbies/{lobby_id}/members/{user_id}/invites', lobby_id=lobby_id, user_id=user_id)
+        )
+
+    def set_linked_lobby(self, lobby_id: Snowflake, *, channel_id: Optional[Snowflake]) -> Response[lobby.Lobby]:
+        payload = {
+            'channel_id': channel_id,
+        }
+        route = Route('PATCH', '/lobbies/{lobby_id}/channel-linking', lobby_id=lobby_id)
+
+        return self.request(route, json=payload)
+
+    def get_lobby_messages(self, lobby_id: Snowflake, *, limit: Optional[int] = None) -> Response[List[message.Message]]:
+        params = {}
+
+        if limit is not None:
+            params['limit'] = limit
+
+        return self.request(Route('GET', '/lobbies/{lobby_id}/messages', lobby_id=lobby_id), params=params)
+
+    def send_lobby_message(
+        self,
+        lobby_id: Snowflake,
+        params: MultipartParameters,
+    ) -> Response[message.Message]:
+        route = Route('POST', '/lobbies/{lobby_id}/messages', lobby_id=lobby_id)
+
+        if params.files:
+            return self.request(route, files=params.files, form=params.multipart)
+
+        return self.request(route, json=params.payload)
 
     # Application commands
     # TODO: Global app commands (excluding deleting and editing ofc)
@@ -1544,36 +1591,6 @@ class HTTPClient:
     def create_user_harvest(self, *, email: str) -> Response[harvest.Harvest]:
         payload = {'email': email}
         return self.request(Route('POST', '/users/@me/harvest'), json=payload)
-
-    # Lobbies
-    def create_or_join_lobby(
-        self,
-        *,
-        secret: str,
-        lobby_metadata: Optional[Dict[str, str]] = None,
-        member_metadata: Optional[Dict[str, str]] = None,
-        idle_timeout_seconds: Optional[int] = None,
-    ) -> Response[lobby.Lobby]:
-        payload = {
-            'secret': secret,
-            'lobby_metadata': lobby_metadata,
-            'member_metadata': member_metadata,
-        }
-        if idle_timeout_seconds is not None:
-            payload['idle_timeout_seconds'] = idle_timeout_seconds
-
-        return self.request(Route('PUT', '/lobbies'), json=payload)
-
-    def leave_lobby(self, lobby_id: Snowflake) -> Response[None]:
-        return self.request(Route('DELETE', '/lobbies/{lobby_id}/members/@me', lobby_id=lobby_id))
-
-    def set_linked_lobby(self, lobby_id: Snowflake, *, channel_id: Optional[Snowflake]) -> Response[lobby.Lobby]:
-        payload = {
-            'channel_id': channel_id,
-        }
-        route = Route('PATCH', '/lobbies/{lobby_id}/channel-linking', lobby_id=lobby_id)
-
-        return self.request(route, json=payload)
 
     # Relationships
     def get_relationships(self, *, with_implicit: Optional[bool] = None) -> Response[List[user.Relationship]]:

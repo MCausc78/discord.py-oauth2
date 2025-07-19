@@ -2901,8 +2901,18 @@ class PublicUserFlags(BaseFlags):
 
     @flag_value
     def bug_hunter(self) -> int:
-        """:class:`bool`: Returns ``True`` if the user is a Bug Hunter"""
+        """:class:`bool`: Returns ``True`` if the user is a Discord Bug Hunter."""
         return UserFlags.bug_hunter.value
+
+    @flag_value
+    def mfa_sms(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user has SMS recovery for Multi Factor Authentication enabled.."""
+        return UserFlags.mfa_sms.value
+
+    @flag_value
+    def premium_promo_dismissed(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user has dismissed the Discord Nitro promotion."""
+        return UserFlags.premium_promo_dismissed.value
 
     @flag_value
     def hypesquad_bravery(self) -> int:
@@ -2933,6 +2943,11 @@ class PublicUserFlags(BaseFlags):
     def system(self) -> int:
         """:class:`bool`: Returns ``True`` if the user is a system user (i.e. represents Discord officially)."""
         return UserFlags.system.value
+
+    @flag_value
+    def has_unread_urgent_messages(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user has an unread system message."""
+        return UserFlags.has_unread_urgent_messages.value
 
     @flag_value
     def bug_hunter_level_2(self) -> int:
@@ -2989,6 +3004,38 @@ class PublicUserFlags(BaseFlags):
         .. versionadded:: 2.1
         """
         return UserFlags.active_developer.value
+
+    @flag_value
+    def provisional_account(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user is a provisional account.
+
+        .. versionadded:: 3.0
+        """
+        return UserFlags.provisional_account.value
+
+    @flag_value
+    def quarantined(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user is quarautined.
+
+        .. versionadded:: 3.0
+        """
+        return UserFlags.quarantined.value
+
+    @flag_value
+    def collaborator(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user is a collaborator and considered staff.
+
+        .. versionadded:: 3.0
+        """
+        return UserFlags.collaborator.value
+
+    @flag_value
+    def restricted_collaborator(self) -> int:
+        """:class:`bool`: Returns ``True`` if the user is a restricted collaborator and considered staff.
+
+        .. versionadded:: 3.0
+        """
+        return UserFlags.restricted_collaborator.value
 
     def all(self) -> List[UserFlags]:
         """List[:class:`UserFlags`]: Returns all public flags the user has."""

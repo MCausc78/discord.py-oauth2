@@ -1779,19 +1779,19 @@ of :class:`enum.Enum`.
 
     .. attribute:: news_thread
 
-        A news thread
+        A news thread.
 
         .. versionadded:: 2.0
 
     .. attribute:: public_thread
 
-        A public thread
+        A public thread.
 
         .. versionadded:: 2.0
 
     .. attribute:: private_thread
 
-        A private thread
+        A private thread.
 
         .. versionadded:: 2.0
 
@@ -1806,6 +1806,18 @@ of :class:`enum.Enum`.
         A media channel.
 
         .. versionadded:: 2.4
+    
+    .. attribute:: lobby
+
+        A lobby channel.
+
+        .. versionadded:: 3.0
+    
+    .. attribute:: ephemeral_dm
+
+        An ephemeral DM channel.
+
+        .. versionadded:: 3.0
 
 .. class:: MessageType
 
@@ -2014,6 +2026,8 @@ of :class:`enum.Enum`.
 
         The system message sent when a poll has closed.
 
+        .. versionadded:: 2.5
+
 .. class:: UserFlags
 
     Represents Discord User flags.
@@ -2085,6 +2099,30 @@ of :class:`enum.Enum`.
         The user is an active developer.
 
         .. versionadded:: 2.1
+
+    .. attribute:: provisional_account
+
+        The user is a provisional account.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: quarantined
+
+        The user is quarantined.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: collaborator
+
+        The user is a collaborator and considered staff.
+
+        .. versionadded:: 3.0
+
+    .. attribute:: restricted_collaborator
+
+        The user is a restricted collaborator and considered staff.
+
+        .. versionadded:: 3.0
 
 .. class:: ActivityType
 
@@ -3970,7 +4008,7 @@ of :class:`enum.Enum`.
 
     Represents a type of Discord client.
 
-    .. versionadded:: 2.0
+    .. versionadded:: 3.0
 
     .. attribute:: web
 
@@ -4592,7 +4630,7 @@ Webhook Support
 discord.py-oauth2 offers support for creating, editing, and executing webhooks through the :class:`Webhook` class.
 
 Webhook
-~~~~~~~~~
+~~~~~~~
 
 .. attributetable:: Webhook
 
@@ -4601,7 +4639,7 @@ Webhook
     :inherited-members:
 
 WebhookMessage
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
 
 .. attributetable:: WebhookMessage
 

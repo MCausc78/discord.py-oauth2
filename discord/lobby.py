@@ -375,7 +375,7 @@ class Lobby(Hashable, Messageable):
 
         .. note::
 
-            This function is intentionally low level to replace :attr:`members`
+            This function is intentionally low level to replace :attr:`voice_members`
             when the member cache is unavailable.
 
         Returns
@@ -420,6 +420,34 @@ class Lobby(Hashable, Messageable):
             Leaving failed.
         """
         await self._state.http.leave_lobby(self.id)
+
+    async def create_invite(self, *, target: Optional[Snowflake] = None) -> str:
+        """|coro|
+
+        Creates an invite for channel linked to this lobby.
+
+        Parameters
+        ----------
+        target: Optional[:class:`User`]
+            The user to create the invite for. If ``None``, the invite will be acceptable only
+            by you.
+
+        Raises
+        ------
+        Forbidden
+            You do not have permissions to create lobby invite.
+        HTTPException
+            Creating the lobby invite failed.
+        """
+
+        state = self._state
+        http = state.http
+        if target is None:
+            data = await http.create_lobby_invite_for_current_user(self.id)
+        else:
+            data = await http.create_lobby_invite(self.id, target.id)
+
+        return data['code']
 
     async def link(self, to: Snowflake) -> Lobby:
         """|coro|

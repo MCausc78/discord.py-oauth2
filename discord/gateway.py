@@ -491,11 +491,11 @@ class DiscordWebSocket:
 
         if state._intents is not None:
             inner_payload['intents'] = state._intents.value
-        
+
         properties = self.impersonate.get_client_properties(nonce=self.nonce)
         if isawaitable(properties):
             properties = await properties
-        
+
         inner_payload['properties'] = properties
         inner_payload['token'] = 'Bearer ' + (self.token or '')
 
@@ -969,11 +969,11 @@ class DiscordVoiceWebSocket:
         if hook:
             self._hook = hook  # type: ignore
 
-    async def _hook(self, *args: Any) -> None:
+    async def _hook(self, *args: Any) -> Any:
         pass
 
     async def send_as_json(self, data: Any) -> None:
-        _log.debug('Sending voice websocket frame: %s.', data)
+        _log.debug('Sending voice WebSocket frame: %s.', data)
         await self.ws.send_str(_to_json(data))
 
     send_heartbeat = send_as_json

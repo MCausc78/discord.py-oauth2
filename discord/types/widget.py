@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from typing import List, Optional, TypedDict
 
-from .activity import Activity
+from .presences import ReceivableActivity
 from .snowflake import Snowflake
 from .user import User
 
@@ -37,7 +37,7 @@ class WidgetChannel(TypedDict):
 
 class WidgetMember(User, total=False):
     nick: str
-    game: Activity
+    game: ReceivableActivity
     status: str
     avatar_url: str
     deaf: bool

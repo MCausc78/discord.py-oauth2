@@ -71,6 +71,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .message import MessageApplication, Message
+    from .rpc.types.presence import Activity as RPCActivityPayload
     from .state import ConnectionState
     from .types.presences import (
         SendableActivity as SendableActivityPayload,
@@ -113,6 +114,8 @@ class BaseActivity:
     ----------
     id: :class:`str`
         The activity's ID. Only unique per user.
+
+        .. versionadded:: 3.0
     """
 
     __slots__ = (
@@ -136,6 +139,9 @@ class BaseActivity:
     def to_dict(
         self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
     ) -> Optional[SendableActivityPayload]:
+        raise NotImplementedError
+
+    def to_rpc_dict(self) -> RPCActivityPayload:
         raise NotImplementedError
 
 
@@ -461,16 +467,24 @@ class Activity(BaseActivity):
         The application ID of the game.
     parent_application_id: Optional[:class:`int`]
         The game's parent application ID.
+
+        .. versionadded:: 3.0
     status_display_type: Optional[:class:`StatusDisplayType`]
         The field that is displayed in the user's status text (in member/DM list).
+
+        .. versionadded:: 3.0
     details: Optional[:class:`str`]
         The detail of the user's current activity.
     details_url: Optional[:class:`str`]
         The URL that is opened when clicking on the details text. Can be only up to 256 characters.
+
+        .. versionadded:: 3.0
     state: Optional[:class:`str`]
         The user's current state. For example, "In Game".
     state_url: Optional[:class:`str`]
         The URL that is opened when clicking on the state text. Can be only up to 256 characters.
+
+        .. versionadded:: 3.0
     sync_id: Optional[:class:`str`]
         The ID of the synced activity (for example, a Spotify song ID).
     button_labels: List[:class:`str`]
@@ -480,16 +494,23 @@ class Activity(BaseActivity):
 
         .. versionchanged:: 3.0
 
-            The attribute was renamed from ``buttons`` to ``button_labels``.
+            Renamed from ``buttons``.
     emoji: Optional[:class:`PartialEmoji`]
         The emoji that belongs to this activity.
     party: Optional[:class:`ActivityParty`]
         The party of the activity.
+
+        .. versionchanged:: 3.0
+
+            The type was changed from :class:`dict`.
     assets: Optional[:class:`ActivityAssets`]
         The images and their hover text of an activity.
+
+        .. versionchanged:: 3.0
+
+            The type was changed from :class:`dict`.
     metadata: Dict[:class:`str`, Any]
         A dictionary representing the activity metadata.
-
 
         It contains the following optional keys:
 
