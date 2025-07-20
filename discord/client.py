@@ -692,6 +692,8 @@ class Client(Dispatcher):
         _log.debug('Syncing presence to %s %s', status, new_settings.custom_activity)
         await self.change_presence(status=status, activities=activities, edit_settings=False, update_presence=True)
 
+        # Discord doesn't dispatch SESSIONS_REPLACE in OAuth2 contexts, so we
+        # have to manually update our session data :(
         current_session = self._connection.current_session
         if current_session:
             current_session.activities = tuple(activities)
