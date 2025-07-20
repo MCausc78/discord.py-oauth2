@@ -97,6 +97,10 @@ class GameInvite(Hashable):
         The URL for installing the game.
     game_icon_url: :class:`str`
         The game's icon URL.
+
+        .. warning::
+
+            When accessing from :meth:`oauth2cord.Client.create_game_invite`, this will not be a proxied URL.
     game_name: :class:`str`
         The game's name.
     """
