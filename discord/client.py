@@ -69,6 +69,7 @@ from .enums import (
 )
 from .errors import *
 from .flags import ApplicationFlags, Intents
+from .game_invite import GameInvite
 from .game_relationship import GameRelationship
 from .gateway import *
 from .guild import UserGuild, Guild
@@ -96,6 +97,7 @@ from .utils import (
     resolve_invite,
     resolve_template,
     setup_logging,
+    snowflake_time,
     time_snowflake,
 )
 from .voice_client import VoiceClient
@@ -111,7 +113,6 @@ if TYPE_CHECKING:
     from .automod import AutoModAction, AutoModRule
     from .channel import DMChannel, GroupChannel, EphemeralDMChannel
     from .ext.commands import Bot, Context, CommandError
-    from .game_invite import GameInvite
     from .guild import GuildChannel
     from .integrations import Integration
     from .member import Member, VoiceState
@@ -139,6 +140,7 @@ if TYPE_CHECKING:
     from .scheduled_event import ScheduledEvent
     from .subscription import Subscription
     from .threads import ThreadMember
+    from .types.game_invite import GameInvite as GameInvitePayload
     from .types.guild import Guild as GuildPayload
     from .types.oauth2 import (
         GetOAuth2DeviceCodeRequestBody as GetOAuth2DeviceCodeRequestBodyPayload,
@@ -3164,7 +3166,7 @@ class Client(Dispatcher):
         game_icon_url: str,  # max 2048 characters
         fallback_url: Optional[str] = MISSING,
         ttl: Optional[int] = MISSING,  # 300-86400, default 900
-    ) -> int:
+    ) -> GameInvite:
         """|coro|
 
         Creates a game invite for specified user.
@@ -3181,7 +3183,7 @@ class Client(Dispatcher):
             - ``titleId``: The ID of the game invite title.
             - ``inviteToken``: The token of the game invite.
         game_name: :class:`str`
-            The name of the game.
+            The name of the game. Must be between 2 and 128 characters.
         game_icon_url: :class:`str`
             The URL of the game icon.
         fallback_url: Optional[:class:`str`]
@@ -3198,13 +3200,15 @@ class Client(Dispatcher):
 
         Returns
         -------
-        :class:`int`
-            The ID of the game invite.
+        :class:`~discord.GameInvite`
+            The game invite created.
         """
+
         if isinstance(launch_parameters, dict):
             launch_parameters = _to_json(launch_parameters)
 
-        data = await self.http.create_game_invite(
+        state = self._connection
+        data = await state.http.create_game_invite(
             recipient.id,
             launch_parameters=launch_parameters,
             application_name=game_name,
@@ -3212,7 +3216,27 @@ class Client(Dispatcher):
             fallback_url=fallback_url,
             ttl=ttl,
         )
-        return int(data['invite_id'])
+        invite_id = int(data['invite_id'])
+
+        me = self.user
+        if me is None:
+            inviter_id = 0
+        else:
+            inviter_id = me.id
+
+        invite_data: GameInvitePayload = {
+            'invite_id': invite_id,
+            'created_at': snowflake_time(invite_id).isoformat(),
+            'ttl': 900 if ttl in (MISSING, None) else ttl,
+            'inviter_id': inviter_id,
+            'recipient_id': recipient.id,
+            'platform_type': 'xbox',
+            'launch_parameters': launch_parameters,
+            'fallback_url': None if fallback_url is MISSING else fallback_url,
+            'application_asset': game_icon_url,
+            'application_name': game_name,
+        }
+        return GameInvite(data=invite_data, state=state)
 
     # Store
     async def fetch_skus(self) -> List[SKU]:
