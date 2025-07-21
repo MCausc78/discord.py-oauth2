@@ -124,127 +124,10 @@ class _GuildLimit(NamedTuple):
     filesize: int
 
 
-class GuildPreview(Hashable):
-    """Represents a preview of a Discord guild.
+class PartialGuild(Hashable):
+    """Represents a very partial guild.
 
-    .. versionadded:: 2.5
-
-    .. container:: operations
-
-        .. describe:: x == y
-
-            Checks if two guild previews are equal.
-
-        .. describe:: x != y
-
-            Checks if two guild previews are not equal.
-
-        .. describe:: hash(x)
-
-            Returns the guild's hash.
-
-        .. describe:: str(x)
-
-            Returns the guild's name.
-
-    Attributes
-    ----------
-    name: :class:`str`
-        The guild preview's name.
-    id: :class:`int`
-        The guild preview's ID.
-    features: List[:class:`str`]
-        A list of features the guild has. See :attr:`Guild.features` for more information.
-    description: Optional[:class:`str`]
-        The guild preview's description.
-    emojis: Tuple[:class:`Emoji`, ...]
-        All emojis that the guild owns.
-    stickers: Tuple[:class:`GuildSticker`, ...]
-        All stickers that the guild owns.
-    approximate_member_count: :class:`int`
-        The approximate number of members in the guild.
-    approximate_presence_count: :class:`int`
-        The approximate number of members currently active in in the guild. Offline members are excluded.
-    """
-
-    __slots__ = (
-        '_state',
-        '_icon',
-        '_splash',
-        '_discovery_splash',
-        'id',
-        'name',
-        'emojis',
-        'stickers',
-        'features',
-        'description',
-        "approximate_member_count",
-        "approximate_presence_count",
-    )
-
-    def __init__(self, *, data: GuildPreviewPayload, state: ConnectionState) -> None:
-        self._state: ConnectionState = state
-
-        self.id = int(data['id'])
-        guild = state._get_or_create_unavailable_guild(self.id)
-        self.name: str = data['name']
-        self._icon: Optional[str] = data.get('icon')
-        self._splash: Optional[str] = data.get('splash')
-        self._discovery_splash: Optional[str] = data.get('discovery_splash')
-        self.emojis: Tuple[Emoji, ...] = tuple(
-            map(
-                lambda d: Emoji(guild=guild, state=state, data=d),
-                data.get('emojis', ()),
-            )
-        )
-        self.stickers: Tuple[GuildSticker, ...] = tuple(
-            map(lambda d: GuildSticker(state=state, data=d), data.get('stickers', ()))
-        )
-        self.features: List[GuildFeature] = data.get('features', [])
-        self.description: Optional[str] = data.get('description')
-        self.approximate_member_count: int = data.get('approximate_member_count')
-        self.approximate_presence_count: int = data.get('approximate_presence_count')
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return (
-            f'<{self.__class__.__name__} id={self.id} name={self.name!r} description={self.description!r} '
-            f'features={self.features}>'
-        )
-
-    @property
-    def created_at(self) -> datetime.datetime:
-        """:class:`datetime.datetime`: Returns the guild's creation time in UTC."""
-        return snowflake_time(self.id)
-
-    @property
-    def icon(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the guild's icon asset, if available."""
-        if self._icon is None:
-            return None
-        return Asset._from_guild_icon(self._state, self.id, self._icon)
-
-    @property
-    def splash(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the guild's invite splash asset, if available."""
-        if self._splash is None:
-            return None
-        return Asset._from_guild_image(self._state, self.id, self._splash, path='splashes')
-
-    @property
-    def discovery_splash(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the guild's discovery splash asset, if available."""
-        if self._discovery_splash is None:
-            return None
-        return Asset._from_guild_image(self._state, self.id, self._discovery_splash, path='discovery-splashes')
-
-
-class UserGuild(Hashable):
-    """Represents a Discord partial guild.
-
-    This is referred to as a "server" in the official Discord UI.
+    .. versionadded:: 3.0
 
     .. container:: operations
 
@@ -269,21 +152,11 @@ class UserGuild(Hashable):
     id: :class:`int`
         The guild's ID.
     name: :class:`str`
-        The guild name.
-    owner: :class:`bool`
-        Whether you own the guild.
+        The guild's name.
     features: List[:class:`str`]
         A list of features that the guild has. The features that a guild can have are
         subject to arbitrary change by Discord. A list of guild features can be found
-        in :ddocs:`the Discord documentation <resources/guild#guild-object-guild-features>`.
-
-    approximate_member_count: Optional[:class:`int`]
-        The approximate number of members in the guild. This is ``None`` unless the guild is obtained
-        using :meth:`Client.fetch_guild` or :meth:`Client.fetch_guilds` with ``with_counts=True``.
-    approximate_presence_count: Optional[:class:`int`]
-        The approximate number of members currently active in the guild.
-        Offline members are excluded. This is ``None`` unless the guild is obtained using
-        :meth:`Client.fetch_guild` or :meth:`Client.fetch_guilds` with ``with_counts=True``.
+        in :userdoccers:`Discord Userdoccers <resources/guild#guild-features>`.
     """
 
     __slots__ = (
@@ -291,28 +164,28 @@ class UserGuild(Hashable):
         'id',
         'name',
         '_icon',
-        '_banner',
-        'is_owner',
         'features',
-        '_permissions',
-        'approximate_member_count',
-        'approximate_presence_count',
     )
 
-    def __init__(self, *, data: GuildPayload, state: ConnectionState) -> None:
+    def __init__(
+        self, *, id: int, name: str, icon_hash: Optional[str] = None, features: List[GuildFeature], state: ConnectionState
+    ) -> None:
         self._state: ConnectionState = state
-        self.id: int = int(data['id'])
-        self.name: str = data['name']
-        self._icon: Optional[str] = data.get('icon')
-        self._banner: Optional[str] = data.get('banner')
-        self.is_owner: bool = data.get('owner', False)
-        self.features: List[GuildFeature] = data.get('features', [])
-        self._permissions: int = int(data.get('permissions', 0))
-        self.approximate_member_count: Optional[int] = data.get('approximate_member_count')
-        self.approximate_presence_count: Optional[int] = data.get('approximate_presence_count')
+        self.id: int = id
+        self.name: str = name
+        self._icon: Optional[str] = icon_hash
+        self.features: List[GuildFeature] = features
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} id={self.id} name={self.name!r} features={self.features!r}>'
 
     def __str__(self) -> str:
-        return self.name or ''
+        return self.name
+
+    @property
+    def created_at(self) -> datetime.datetime:
+        """:class:`datetime.datetime`: Returns the guild's creation time in UTC."""
+        return snowflake_time(self.id)
 
     @property
     def icon(self) -> Optional[Asset]:
@@ -320,13 +193,6 @@ class UserGuild(Hashable):
         if self._icon is None:
             return None
         return Asset._from_guild_icon(self._state, self.id, self._icon)
-
-    @property
-    def banner(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the guild's banner asset, if available."""
-        if self._banner is None:
-            return None
-        return Asset._from_guild_image(self._state, self.id, self._banner, path='banners')
 
     async def fetch_command(self, id: int, /) -> List[Union[SlashCommand, UserCommand, MessageCommand]]:
         """|coro|
@@ -340,7 +206,7 @@ class UserGuild(Hashable):
 
         Raises
         ------
-        HTTPExcetion
+        HTTPException
             Fetching the command failed.
         MissingApplicationID
             The application ID could not be found.
@@ -368,7 +234,7 @@ class UserGuild(Hashable):
 
         Raises
         ------
-        HTTPExcetion
+        HTTPException
             Fetching the commands failed.
         MissingApplicationID
             The application ID could not be found.
@@ -410,7 +276,25 @@ class UserGuild(Hashable):
         """
         state = self._state
         data = await state.http.get_guild_me(self.id)
-        return Member(data=data, guild=self, state=state)  # type: ignore
+
+        if isinstance(self, Guild):
+            guild = self
+        else:
+            guild = state._get_or_create_unavailable_guild(
+                self.id,
+                data={
+                    'name': self.name,
+                    'icon': self._icon,
+                    'banner': getattr(self, '_banner', None),
+                    'owner_id': state.self_id if getattr(self, 'is_owner', False) else 0,
+                    'features': self.features,
+                    'approximate_presence_count': getattr(self, 'approximate_presence_count', None),
+                    'approximate_member_count': getattr(self, 'approximate_member_count', None),
+                    'unavailable': True,
+                },
+            )
+
+        return Member(data=data, guild=guild, state=state)  # type: ignore
 
     async def widget(self) -> Widget:
         """|coro|
@@ -462,6 +346,7 @@ class UserGuild(Hashable):
         self_video: :class:`bool`
             Indicates if the client should show camera.
         """
+
         ws = self._state._get_websocket()
         channel_id = channel.id if channel else None
         await ws.voice_state(
@@ -628,6 +513,193 @@ class UserGuild(Hashable):
             'nsfw': False,
         }
         return MessageCommand(data=fake_payload, state=state)
+
+
+class GuildPreview(PartialGuild):
+    """Represents a preview of a Discord guild.
+
+    This inherits from :class:`PartialGuild`.
+
+    .. versionadded:: 2.5
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two guilds are equal.
+
+        .. describe:: x != y
+
+            Checks if two guilds are not equal.
+
+        .. describe:: hash(x)
+
+            Returns the guild's hash.
+
+        .. describe:: str(x)
+
+            Returns the guild's name.
+
+    Attributes
+    ----------
+    description: Optional[:class:`str`]
+        The guild preview's description.
+    emojis: Tuple[:class:`Emoji`, ...]
+        All emojis that the guild owns.
+    stickers: Tuple[:class:`GuildSticker`, ...]
+        All stickers that the guild owns.
+    approximate_member_count: :class:`int`
+        The approximate number of members in the guild.
+    approximate_presence_count: :class:`int`
+        The approximate number of members currently active in in the guild. Offline members are excluded.
+    """
+
+    __slots__ = (
+        '_splash',
+        '_discovery_splash',
+        'emojis',
+        'stickers',
+        'description',
+        "approximate_member_count",
+        "approximate_presence_count",
+    )
+
+    def __init__(self, *, data: GuildPreviewPayload, state: ConnectionState) -> None:
+        super().__init__(
+            id=int(data['id']),
+            name=data['name'],
+            icon_hash=data.get('icon'),
+            features=data['features'],
+            state=state,
+        )
+
+        self._splash: Optional[str] = data.get('splash')
+        self._discovery_splash: Optional[str] = data.get('discovery_splash')
+        self.emojis: Tuple[Emoji, ...] = tuple(
+            map(
+                lambda d: Emoji(guild=self, state=state, data=d),
+                data.get('emojis', ()),
+            )
+        )
+        self.stickers: Tuple[GuildSticker, ...] = tuple(
+            map(lambda d: GuildSticker(state=state, data=d), data.get('stickers', ()))
+        )
+        self.features: List[GuildFeature] = data.get('features', [])
+        self.description: Optional[str] = data.get('description')
+        self.approximate_member_count: int = data.get('approximate_member_count')
+        self.approximate_presence_count: int = data.get('approximate_presence_count')
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return (
+            f'<{self.__class__.__name__} id={self.id} name={self.name!r} description={self.description!r} '
+            f'features={self.features}>'
+        )
+
+    @property
+    def created_at(self) -> datetime.datetime:
+        """:class:`datetime.datetime`: Returns the guild's creation time in UTC."""
+        return snowflake_time(self.id)
+
+    @property
+    def icon(self) -> Optional[Asset]:
+        """Optional[:class:`Asset`]: Returns the guild's icon asset, if available."""
+        if self._icon is None:
+            return None
+        return Asset._from_guild_icon(self._state, self.id, self._icon)
+
+    @property
+    def splash(self) -> Optional[Asset]:
+        """Optional[:class:`Asset`]: Returns the guild's invite splash asset, if available."""
+        if self._splash is None:
+            return None
+        return Asset._from_guild_image(self._state, self.id, self._splash, path='splashes')
+
+    @property
+    def discovery_splash(self) -> Optional[Asset]:
+        """Optional[:class:`Asset`]: Returns the guild's discovery splash asset, if available."""
+        if self._discovery_splash is None:
+            return None
+        return Asset._from_guild_image(self._state, self.id, self._discovery_splash, path='discovery-splashes')
+
+
+class UserGuild(PartialGuild):
+    """Represents a Discord partial guild.
+
+    This is referred to as a "server" in the official Discord UI.
+
+    This inherits from :class:`UserGuild`.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two guilds are equal.
+
+        .. describe:: x != y
+
+            Checks if two guilds are not equal.
+
+        .. describe:: hash(x)
+
+            Returns the guild's hash.
+
+        .. describe:: str(x)
+
+            Returns the guild's name.
+
+    Attributes
+    ----------
+    owner: :class:`bool`
+        Whether you own the guild.
+    approximate_member_count: Optional[:class:`int`]
+        The approximate number of members in the guild. This is ``None`` unless the guild is obtained
+        using :meth:`Client.fetch_guild` or :meth:`Client.fetch_guilds` with ``with_counts=True``.
+    approximate_presence_count: Optional[:class:`int`]
+        The approximate number of members currently active in the guild.
+        Offline members are excluded. This is ``None`` unless the guild is obtained using
+        :meth:`Client.fetch_guild` or :meth:`Client.fetch_guilds` with ``with_counts=True``.
+    """
+
+    __slots__ = (
+        '_banner',
+        'is_owner',
+        'features',
+        '_permissions',
+        'approximate_member_count',
+        'approximate_presence_count',
+    )
+
+    def __init__(self, *, data: GuildPayload, state: ConnectionState) -> None:
+        self._state: ConnectionState = state
+        self.id: int = int(data['id'])
+        self.name: str = data['name']
+        self._icon: Optional[str] = data.get('icon')
+        self._banner: Optional[str] = data.get('banner')
+        self.is_owner: bool = data.get('owner', False)
+        self.features: List[GuildFeature] = data.get('features', [])
+        self._permissions: int = int(data.get('permissions', 0))
+        self.approximate_member_count: Optional[int] = data.get('approximate_member_count')
+        self.approximate_presence_count: Optional[int] = data.get('approximate_presence_count')
+
+    def __str__(self) -> str:
+        return self.name or ''
+
+    @property
+    def icon(self) -> Optional[Asset]:
+        """Optional[:class:`Asset`]: Returns the guild's icon asset, if available."""
+        if self._icon is None:
+            return None
+        return Asset._from_guild_icon(self._state, self.id, self._icon)
+
+    @property
+    def banner(self) -> Optional[Asset]:
+        """Optional[:class:`Asset`]: Returns the guild's banner asset, if available."""
+        if self._banner is None:
+            return None
+        return Asset._from_guild_image(self._state, self.id, self._banner, path='banners')
 
 
 class Guild(UserGuild):
