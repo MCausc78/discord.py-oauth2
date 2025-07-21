@@ -2585,23 +2585,7 @@ class Client(Dispatcher):
             :ref:`event reference <discord-api-events>`.
         """
 
-        future = self.loop.create_future()
-        if check is None:
-
-            def _check(*args):
-                return True
-
-            check = _check
-
-        ev = event.lower()
-        try:
-            listeners = self._listeners[ev]
-        except KeyError:
-            listeners = []
-            self._listeners[ev] = listeners
-
-        listeners.append((future, check))
-        return asyncio.wait_for(future, timeout)
+        return self._wait_for(event, check=check, timeout=timeout)
 
     # Gateway
 

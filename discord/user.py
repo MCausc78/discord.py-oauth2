@@ -174,8 +174,8 @@ class BaseUser(_UserTag):
         return payload
 
     @classmethod
-    def from_rpc(cls, payload: RPCUserPayload, state: BaseConnectionState) -> Self:
-        avatar_decoration_data = payload.get('avatar_decoration_data')
+    def _from_rpc(cls, data: RPCUserPayload, state: BaseConnectionState) -> Self:
+        avatar_decoration_data = data.get('avatar_decoration_data')
         if avatar_decoration_data is None:
             add: Optional[AvatarDecorationDataPayload] = None
         else:
@@ -185,16 +185,16 @@ class BaseUser(_UserTag):
             }
 
         transformed_payload: UserPayload = {
-            'id': payload['id'],
-            'username': payload['username'],
-            'discriminator': payload['discriminator'],
-            'avatar': payload.get('avatar'),
-            'global_name': payload.get('global_name'),
+            'id': data['id'],
+            'username': data['username'],
+            'discriminator': data['discriminator'],
+            'avatar': data.get('avatar'),
+            'global_name': data.get('global_name'),
             'avatar_decoration_data': add,
             'primary_guild': None,
-            'bot': payload['bot'],
-            'flags': payload['flags'],
-            'premium_type': payload['premium_type'],  # type: ignore
+            'bot': data['bot'],
+            'flags': data['flags'],
+            'premium_type': data['premium_type'],  # type: ignore
         }
         return cls(data=transformed_payload, state=state)
 

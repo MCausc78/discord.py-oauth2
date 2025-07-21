@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Callable, Dict, Coroutine, List, Tuple, TypeVar
+from typing import Any, Callable, Dict, Coroutine, List, Optional, Tuple, TypeVar
 
 _log = logging.getLogger(__name__)
 
@@ -68,6 +68,32 @@ class Dispatcher:
         wrapped = self._run_event(coro, event_name, *args, **kwargs)
         # Schedules the task
         return self.loop.create_task(wrapped, name=f'discord.py: {event_name}')
+
+    def _wait_for(
+        self,
+        event: str,
+        /,
+        *,
+        check: Optional[Callable[..., bool]] = None,
+        timeout: Optional[float] = None,
+    ) -> Coro[Any]:
+        future = self.loop.create_future()
+        if check is None:
+
+            def _check(*args):
+                return True
+
+            check = _check
+
+        ev = event.lower()
+        try:
+            listeners = self._listeners[ev]
+        except KeyError:
+            listeners = []
+            self._listeners[ev] = listeners
+
+        listeners.append((future, check))
+        return asyncio.wait_for(future, timeout)
 
     def dispatch(self, event: str, /, *args: Any, **kwargs: Any) -> None:
         r"""Dispatch an event.

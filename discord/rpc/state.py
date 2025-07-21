@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Callable, Dict, TYPE_CHECKING
+from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
 
 from ..state import BaseConnectionState
+from ..user import ClientUser
 
 if TYPE_CHECKING:
     from ..http import HTTPClient
@@ -16,10 +17,11 @@ class RPCConnectionState(BaseConnectionState):
     __slots__ = (
         'dispatch',
         'parsers',
-        'v',
+        'version',
         'cdn_host',
         'api_endpoint',
         'environment',
+        'user',
     )
 
     def __init__(self, *, dispatch: Callable[..., None], http: HTTPClient) -> None:
@@ -33,20 +35,23 @@ class RPCConnectionState(BaseConnectionState):
         self.clear()
 
     def clear(self) -> None:
-        self.v: int = 0
+        self.version: int = 0
         self.cdn_host: str = ''
         self.api_endpoint: str = ''
         self.environment: str = 'production'
+        self.user: Optional[ClientUser] = None
+
+    async def close(self) -> None:
+        pass
 
     def parse_ready(self, data: ReadyEventPayload) -> None:
         config_data = data['config']
+        user_data = data.get('user')
 
-        self.v = data['v']
+        self.version = data['v']
         self.cdn_host = config_data['cdn_host']
         self.api_endpoint = config_data['api_endpoint']
         self.environment = config_data['environment']
-
-        # TODO: When we implement BaseConnectionState we will be able to implement this:
-        # self.user = User(data=config_data['user'], state=self)
-
+        self.user = ClientUser._from_rpc(user_data, self) if user_data else None
+        
         self.dispatch('ready')

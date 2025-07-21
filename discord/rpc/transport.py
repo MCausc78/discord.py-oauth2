@@ -43,6 +43,9 @@ class IPCTransport:
         self._reader: asyncio.StreamReader = reader
         self._writer: asyncio.StreamWriter = writer
 
+    async def close(self) -> None:
+        self._writer.close()
+
     @classmethod
     async def from_client(
         cls,
@@ -71,6 +74,7 @@ class IPCTransport:
                 client.loop.create_pipe_connection(lambda: rp, path),  # type: ignore
                 timeout,
             )
+            
 
         _log.debug('Connection is opened.')
         transport = cls(dispatch=dispatch, reader=reader, writer=writer)
@@ -79,12 +83,15 @@ class IPCTransport:
 
     async def recv(self) -> Tuple[int, Any]:
         raw_length = await self._reader.read(8)
-        code: int
-        length: int
-        code, length = _RECV_STRUCT.unpack(raw_length)
-        data = await self._reader.read(length)
-        _log.debug('For IPC event: %i %s', code, data)
-        return code, data
+        if raw_length:
+            code: int
+            length: int
+            code, length = _RECV_STRUCT.unpack(raw_length)
+            data = await self._reader.read(length)
+            _log.debug('For IPC event: %i %s', code, data)
+            return code, data
+        
+        raise StopAsyncIteration
 
     async def send(self, op: int, payload: Any, /) -> None:
         raw = _to_json(payload)
@@ -177,3 +184,4 @@ class IPCTransport:
 
         await self.send(1, payload)
         return await future
+
