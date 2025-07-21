@@ -67,6 +67,7 @@ __all__ = (
     'MemberCacheFlags',
     'MemberFlags',
     'MessageFlags',
+    'OverlayMethodFlags',
     'PublicUserFlags',
     'RecipientFlags',
     'RoleFlags',
@@ -2815,6 +2816,66 @@ class MessageFlags(BaseFlags):
     def sent_by_social_layer_integration(self) -> int:
         """:class:`bool`: Whether the message is trigged by the social layer integration."""
         return 1 << 16
+
+@fill_with_flags()
+class OverlayMethodFlags(BaseFlags):
+    """Wraps up the Discord Overlay method flags.
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two OverlayMethodFlags are equal.
+        .. describe:: x != y
+
+            Checks if two OverlayMethodFlags are not equal.
+
+        .. describe:: x | y, x |= y
+
+            Returns a OverlayMethodFlags instance with all enabled flags from
+            both x and y.
+
+        .. describe:: x & y, x &= y
+
+            Returns a OverlayMethodFlags instance with only flags enabled on
+            both x and y.
+
+        .. describe:: x ^ y, x ^= y
+
+            Returns a OverlayMethodFlags instance with only flags enabled on
+            only one of x or y, not on both.
+
+        .. describe:: ~x
+
+            Returns a OverlayMethodFlags instance with all flags inverted from x.
+
+        .. describe:: hash(x)
+
+            Return the flag's hash.
+        .. describe:: iter(x)
+
+            Returns an iterator of ``(name, value)`` pairs. This allows it
+            to be, for example, constructed as a dict or a list of pairs.
+            Note that aliases are not shown.
+
+        .. describe:: bool(b)
+
+            Returns whether any flag is set to ``True``.
+
+    .. versionadded:: 3.0
+
+    Attributes
+    ----------
+    value: :class:`int`
+        The raw value. This value is a bit array field of a 53-bit integer
+        representing the currently available flags. You should query
+        flags via the properties rather than using this raw value.
+    """
+
+    @flag_value
+    def out_of_process(self) -> int:
+        """:class:`bool`: Returns ``True`` if the overlay can be rendered out of process."""
+        return 1 << 0
 
 
 @fill_with_flags()

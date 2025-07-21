@@ -27,7 +27,6 @@ from __future__ import annotations
 from typing import Dict, List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
-from .emoji import Emoji
 from .snowflake import Snowflake
 from .team import Team
 from .user import User
@@ -88,6 +87,20 @@ class GatewayApplication(TypedDict):
     flags: int
     parent_id: NotRequired[Snowflake]
 
+class ApplicationExecutable(TypedDict):
+    os: Literal['win32', 'darwin', 'linux']
+    name: str
+    is_launcher: bool
+    arguments: NotRequired[str]
 
-class ListAppEmojis(TypedDict):
-    items: List[Emoji]
+class DetectableApplication(TypedDict):
+    id: Snowflake
+    name: str
+    aliases: List[str]
+    executables: List[ApplicationExecutable]
+    themes: List[str]
+    hook: bool
+    overlay: bool
+    overlay_methods: Optional[int]
+    overlay_warn: bool
+    overlay_compatibility_hook: bool

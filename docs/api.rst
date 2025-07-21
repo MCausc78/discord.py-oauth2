@@ -5761,6 +5761,22 @@ PrimaryGuild
 .. autoclass:: PrimaryGuild()
     :members:
 
+ApplicationExecutable
+~~~~~~~~~~~~~~~~~~~~~
+
+.. attributetable:: ApplicationExecutable
+
+.. autoclass:: ApplicationExecutable()
+    :members:
+
+DetectableApplication
+~~~~~~~~~~~~~~~~~~~~~
+
+.. attributetable:: DetectableApplication
+
+.. autoclass:: DetectableApplication()
+    :members:
+
 Data Classes
 --------------
 
@@ -6027,6 +6043,11 @@ Flags
 .. autoclass:: MessageFlags
     :members:
 
+.. attribute:: OverlayMethodFlags
+
+.. autoclass:: OverlayMethodFlags
+    :members:
+
 .. attributetable:: PublicUserFlags
 
 .. autoclass:: PublicUserFlags
@@ -6067,6 +6088,22 @@ PollMedia
 .. attributetable:: PollMedia
 
 .. autoclass:: PollMedia
+    :members:
+
+Option
+~~~~~~
+
+.. attributetable:: Option
+
+.. autoclass:: Option
+    :members:
+
+SlashCommandGroup
+~~~~~~~~~~~~~~~~~
+
+.. attributetable:: SlashCommandGroup
+
+.. autoclass:: SlashCommandGroup
     :members:
 
 Exceptions
