@@ -694,6 +694,12 @@ class Client(Dispatcher):
 
         # Discord doesn't dispatch SESSIONS_REPLACE in OAuth2 contexts, so we
         # have to manually update our session data :(
+        # Necessary because if you do (without this workaround):
+        # - First, the user should have set status: online
+        # - Second, in client, set status to dnd
+        # - Third, in client, set status to online
+        # As a result, client_status for Presence of that user will be set to `{<desktop or mobile or web>: 'online', embedded: 'dnd'}`
+        # Which results in undefined behavior (embedded is library session status)
         current_session = self._connection.current_session
         if current_session:
             current_session.activities = tuple(activities)
@@ -1634,7 +1640,7 @@ class Client(Dispatcher):
         Optional[:class:`.Guild`]
             The guild or ``None`` if not found.
         """
-        return self._connection._get_guild(id)
+        return self._connection.get_guild(id)
 
     def get_user(self, id: int, /) -> Optional[User]:
         """Returns a user with the given ID.
@@ -1721,7 +1727,7 @@ class Client(Dispatcher):
         Optional[:class:`.Lobby`]
             The lobby or ``None`` if not found.
         """
-        return self._connection._get_lobby(id)
+        return self._connection.get_lobby(id)
 
     def get_all_channels(self) -> Generator[GuildChannel, None, None]:
         """A generator that retrieves every :class:`.abc.GuildChannel` the client can 'access'.

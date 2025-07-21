@@ -171,7 +171,7 @@ class ScheduledEvent(Hashable):
     @property
     def guild(self) -> Optional[Guild]:
         """Optional[:class:`Guild`]: The guild this scheduled event is in."""
-        return self._state._get_guild(self.guild_id)
+        return self._state.get_guild(self.guild_id)
 
     @property
     def channel(self) -> Optional[Union[VoiceChannel, StageChannel]]:

@@ -801,7 +801,7 @@ class Messageable:
                 if guild_id is None:
                     tmp = state._get_private_channel(channel_id)
                 else:
-                    guild = state._get_guild(channel_id)
+                    guild = state.get_guild(channel_id)
                     if guild is None:
                         tmp = None
                     else:

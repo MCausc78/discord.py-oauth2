@@ -2427,7 +2427,7 @@ class PartialMessageable(discord.abc.Messageable, Hashable):
     @property
     def guild(self) -> Optional[Guild]:
         """Optional[:class:`Guild`]: The guild this partial messageable is in."""
-        return self._state._get_guild(self.guild_id)
+        return self._state.get_guild(self.guild_id)
 
     @property
     def jump_url(self) -> str:

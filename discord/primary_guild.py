@@ -24,16 +24,18 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
 from datetime import datetime
+from typing import Optional, TYPE_CHECKING
 
 from .asset import Asset
-from .utils import snowflake_time, _get_as_snowflake
+from .utils import _get_as_snowflake, snowflake_time
 
 if TYPE_CHECKING:
-    from .state import ConnectionState
-    from .types.user import PrimaryGuild as PrimaryGuildPayload
     from typing_extensions import Self
+
+    from .state import BaseConnectionState
+    from .types.user import PrimaryGuild as PrimaryGuildPayload
+    
 
 
 class PrimaryGuild:
@@ -55,10 +57,16 @@ class PrimaryGuild:
             Users can have their primary guild publicly displayed while still having an :attr:`id` of ``None``. Be careful when checking this attribute!
     """
 
-    __slots__ = ('id', 'identity_enabled', 'tag', '_badge', '_state')
+    __slots__ = (
+        '_state',
+        'id',
+        'identity_enabled',
+        'tag',
+        '_badge',
+    )
 
-    def __init__(self, *, data: PrimaryGuildPayload, state: ConnectionState) -> None:
-        self._state = state
+    def __init__(self, *, data: PrimaryGuildPayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self._update(data)
 
     def _update(self, data: PrimaryGuildPayload):
@@ -82,7 +90,7 @@ class PrimaryGuild:
         return None
 
     @classmethod
-    def _default(cls, state: ConnectionState) -> Self:
+    def _default(cls, state: BaseConnectionState) -> Self:
         payload: PrimaryGuildPayload = {'identity_enabled': False}
         return cls(state=state, data=payload)
 

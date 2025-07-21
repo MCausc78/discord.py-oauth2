@@ -72,10 +72,10 @@ class Client(Dispatcher):
     async def setup_hook(self) -> None:
         """|coro|
 
-        A coroutine to be called to setup the bot, by default this is blank.
+        A coroutine to be called to setup the client, by default this is blank.
 
-        To perform asynchronous setup after the bot is logged in but before
-        it has connected to the Websocket, overwrite this coroutine.
+        To perform asynchronous setup after the client is logged in but before
+        it has connected to the IPC socket, overwrite this coroutine.
 
         This is only called once, in :meth:`login`, and will be called before
         any events are dispatched, making it a better solution than doing such
