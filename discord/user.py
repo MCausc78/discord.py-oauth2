@@ -494,13 +494,12 @@ class ClientUser(BaseUser):
 
     def __init__(self, *, data: UserPayload, state: BaseConnectionState) -> None:
         super().__init__(data=data, state=state)
-    
+
     def __repr__(self) -> str:
         return (
             f'<ClientUser id={self.id} name={self.name!r} global_name={self.global_name!r}'
             f' bot={self.bot} verified={self.verified} mfa_enabled={self.mfa_enabled}>'
         )
-
 
     def _update(self, data: UserPayload) -> None:
         super()._update(data)

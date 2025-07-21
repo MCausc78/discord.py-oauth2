@@ -182,7 +182,7 @@ class Client(Dispatcher):
         activity: Optional[Union[BaseActivity, Spotify]] = MISSING,
     ) -> None:
         """|coro|
-        
+
         Changes the current activity.
 
         All parameters are optional.
@@ -195,14 +195,14 @@ class Client(Dispatcher):
 
         if activity is MISSING:
             return
-        
+
         self._activity = activity
-        
+
         if self._activity is None:
             activity_data = None
         else:
             activity_data = self._activity.to_rpc_dict()
-        
+
         payload: SetActivityRequestPayload = {
             'pid': self.pid,
             'activity': activity_data,

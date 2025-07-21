@@ -53,5 +53,5 @@ class RPCConnectionState(BaseConnectionState):
         self.api_endpoint = config_data['api_endpoint']
         self.environment = config_data['environment']
         self.user = ClientUser._from_rpc(user_data, self) if user_data else None
-        
+
         self.dispatch('ready')

@@ -35,7 +35,6 @@ if TYPE_CHECKING:
 
     from .state import BaseConnectionState
     from .types.user import PrimaryGuild as PrimaryGuildPayload
-    
 
 
 class PrimaryGuild:

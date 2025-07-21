@@ -74,7 +74,6 @@ class IPCTransport:
                 client.loop.create_pipe_connection(lambda: rp, path),  # type: ignore
                 timeout,
             )
-            
 
         _log.debug('Connection is opened.')
         transport = cls(dispatch=dispatch, reader=reader, writer=writer)
@@ -90,7 +89,7 @@ class IPCTransport:
             data = await self._reader.read(length)
             _log.debug('For IPC event: %i %s', code, data)
             return code, data
-        
+
         raise StopAsyncIteration
 
     async def send(self, op: int, payload: Any, /) -> None:
@@ -184,4 +183,3 @@ class IPCTransport:
 
         await self.send(1, payload)
         return await future
-

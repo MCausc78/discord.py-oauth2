@@ -144,7 +144,7 @@ class BaseConnectionState:
 
     def game_relationship_map(self) -> Mapping[int, GameRelationship]:
         return {}
-    
+
     def get_game_relationship(self, id: Optional[int]) -> Optional[GameRelationship]:
         return None
 
@@ -153,7 +153,7 @@ class BaseConnectionState:
 
     def get_lobby(self, lobby_id: Optional[int]) -> Optional[Lobby]:
         return None
-        
+
     def get_relationship(self, id: Optional[int]) -> Optional[Relationship]:
         return None
 
@@ -207,6 +207,7 @@ class BaseConnectionState:
 
     def _voice_state_for(self, user_id: int) -> Optional[VoiceState]:
         return None
+
 
 class ConnectionState(BaseConnectionState, Generic[ClientT]):
     if TYPE_CHECKING:
@@ -492,7 +493,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
     @property
     def game_relationship_map(self) -> Mapping[int, GameRelationship]:
         return self._game_relationships
-    
+
     def get_game_relationship(self, id: Optional[int]) -> Optional[Relationship]:
         # The keys of self._game_relationships are ints
         return self._game_relationships.get(id)  # type: ignore

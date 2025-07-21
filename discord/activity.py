@@ -636,7 +636,7 @@ class Activity(BaseActivity):
         self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
     ) -> Optional[SendableActivityPayload]:
         payload: Dict[str, Any] = {}
-        
+
         if self.name is not None:
             payload['name'] = self.name
 
@@ -644,45 +644,45 @@ class Activity(BaseActivity):
 
         if self.url is not None:
             payload['url'] = self.url
-        
+
         if self.platform is not None:
             payload['platform'] = self.platform.value
-        
+
         if self._supported_platforms is not None:
             payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()
-        
+
         timestamps: ActivityTimestamps = {}
-        
+
         if self.start_timestamp is not None:
             timestamps['start'] = self.start_timestamp
-        
+
         if self.end_timestamp is not None:
             timestamps['end'] = self.end_timestamp
 
         if timestamps:
             payload['timestamps'] = timestamps
-        
+
         if self.application_id is not None:
             payload['application_id'] = self.application_id
-        
+
         if self.parent_application_id is not None:
             payload['parent_application_id'] = self.parent_application_id
-        
+
         if self.status_display_type is not None:
             payload['status_display_type'] = self.status_display_type.value
-        
+
         if self.details is not None:
             payload['details'] = self.details
-        
+
         if self.details_url is not None:
             payload['details_url'] = self.details_url
-        
+
         if self.state is not None:
             payload['state'] = self.state
-        
+
         if self.state_url is not None:
             payload['state_url'] = self.state_url
-        
+
         if self.sync_id is not None:
             payload['sync_id'] = self.sync_id
 
@@ -697,12 +697,12 @@ class Activity(BaseActivity):
             party = self.party.to_dict()
             if party:
                 payload['party'] = party
-        
+
         if self.assets is not None:
             assets = self.assets.to_dict()
             if assets:
                 payload['assets'] = assets
-        
+
         if self.metadata:
             payload['metadata'] = self.metadata
 
@@ -722,28 +722,28 @@ class Activity(BaseActivity):
 
         if self.details_url is not None:
             payload['details_url'] = self.details_url
-        
+
         timestamps: ActivityTimestamps = {}
-    
+
         if self.start_timestamp is not None:
             timestamps['start'] = self.start_timestamp
-        
+
         if self.end_timestamp is not None:
             timestamps['end'] = self.end_timestamp
-        
+
         if timestamps:
             payload['timestamps'] = timestamps
-        
+
         if self.assets is not None:
             assets = self.assets.to_dict()
             if assets:
                 payload['assets'] = assets
-        
+
         if self.party is not None:
             party = self.party.to_dict()
             if party:
                 payload['party'] = party
-        
+
         # secrets
         if self.button_labels:
             payload['buttons'] = [
@@ -756,10 +756,10 @@ class Activity(BaseActivity):
 
         # if self.instance:
         #     payload['instance'] = self.instance
-        
+
         if self._supported_platforms is not None:
             payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()  # type: ignore
-        
+
         payload['type'] = self.type.value  # type: ignore
         if self.status_display_type is not None:
             payload['status_display_type'] = self.status_display_type.value
@@ -1152,34 +1152,34 @@ class Game(BaseActivity):
 
         if self.details_url is not None:
             payload['details_url'] = self.details_url
-        
+
         timestamps: ActivityTimestamps = {}
-    
+
         if self.start_timestamp is not None:
             timestamps['start'] = self.start_timestamp
-        
+
         if self.end_timestamp is not None:
             timestamps['end'] = self.end_timestamp
-        
+
         if timestamps:
             payload['timestamps'] = timestamps
-        
+
         if self.assets is not None:
             assets = self.assets.to_dict()
             if assets:
                 payload['assets'] = assets
-        
+
         if self.party is not None:
             party = self.party.to_dict()
             if party:
                 payload['party'] = party
-        
+
         if self.secrets is not None:
             payload['secrets'] = self.secrets.to_dict()
 
         if self.button_labels:
             button_urls = self.metadata.get('button_urls', ())
-        
+
             payload['buttons'] = [
                 {
                     'label': label,
@@ -1190,10 +1190,10 @@ class Game(BaseActivity):
 
         if self.flags.instance:
             payload['instance'] = True
-        
+
         if self._supported_platforms is not None:
             payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()  # type: ignore
-        
+
         payload['type'] = self.type.value  # type: ignore
         if self.status_display_type is not None:
             payload['status_display_type'] = self.status_display_type.value
