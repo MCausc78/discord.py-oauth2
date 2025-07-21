@@ -265,7 +265,7 @@ class PartialGuild(Hashable):
         type: AppCommandType = ...,
     ) -> Union[SlashCommand, UserCommand, MessageCommand]:
         ...
-    
+
     async def create_command(
         self,
         name: str,
@@ -281,7 +281,7 @@ class PartialGuild(Hashable):
         type: AppCommandType = AppCommandType.chat_input,
     ) -> Union[SlashCommand, UserCommand, MessageCommand]:
         """|coro|
-        
+
         Creates an application command for the guild.
 
         .. versionadded:: 3.0
@@ -318,7 +318,7 @@ class PartialGuild(Hashable):
             The installation contexts that this command should be allowed to be installed in.
         type: :class:`AppCommandType`
             The type for the application command. Defaults to :attr:`~AppCommandType.chat_input`.
-        
+
         Raises
         ------
         Forbidden
@@ -331,7 +331,7 @@ class PartialGuild(Hashable):
         Union[:class:`SlashCommand`, :class:`UserCommand`, :class:`MessageCommand`]
             The application command created.
         """
-        
+
         payload: ApplicationCommandCreateRequestBodyPayload = {
             'name': name,
         }
@@ -340,62 +340,56 @@ class PartialGuild(Hashable):
             if name_localizations is None:
                 payload['name_localizations'] = None
             else:
-                payload['name_localizations'] = {
-                    k.value: v
-                    for k, v in name_localizations.items()
-                }
-        
+                payload['name_localizations'] = {k.value: v for k, v in name_localizations.items()}
+
         if description is not MISSING:
             payload['description'] = description
-        
+
         if description_localizations is not MISSING:
             if description_localizations is None:
                 payload['description_localizations'] = None
             else:
-                payload['description_localizations'] = {
-                    k.value: v
-                    for k, v in description_localizations.items()
-                }
-        
+                payload['description_localizations'] = {k.value: v for k, v in description_localizations.items()}
+
         if options is not MISSING:
             if options is None:
                 payload['options'] = None
             else:
                 payload['options'] = [o.to_dict() for o in options]
-        
+
         if default_member_permissions is not MISSING:
             if default_member_permissions is None:
                 payload['default_member_permissions'] = '0'
             else:
                 payload['default_member_permissions'] = str(default_member_permissions.value)
-        
+
         if dm_permission is not MISSING:
             payload['dm_permission'] = dm_permission
-        
+
         if allowed_contexts is not MISSING:
             if allowed_contexts is None:
                 payload['contexts'] = None
             else:
                 payload['contexts'] = allowed_contexts.to_array()  # type: ignore
-        
+
         if allowed_installs is not MISSING:
             if allowed_installs is None:
                 payload['integration_types'] = None
             else:
                 payload['integration_types'] = allowed_installs.to_array()  # type: ignore
-        
+
         if type is not MISSING:
             payload['type'] = type.value  # type: ignore
-        
+
         state = self._state
         application_id = state.application_id
-        
+
         if application_id is None:
             raise MissingApplicationID
-        
+
         data = await state.http.create_guild_application_command(application_id, self.id, payload)
         return _command_factory(data, state)  # type: ignore
-    
+
     async def create_message_command(
         self,
         name: str,
@@ -409,7 +403,7 @@ class PartialGuild(Hashable):
         allowed_installs: Optional[AppInstallationType] = MISSING,
     ) -> MessageCommand:
         """|coro|
-        
+
         Creates a message command for the guild.
 
         The parameters are same as :meth:`~PartialGuild.create_command` except ``options`` is removed.
@@ -454,7 +448,7 @@ class PartialGuild(Hashable):
         allowed_installs: Optional[AppInstallationType] = MISSING,
     ) -> SlashCommand:
         """|coro|
-        
+
         Creates a slash command for the guild.
 
         The parameters are same as :meth:`~PartialGuild.create_command`.
@@ -499,7 +493,7 @@ class PartialGuild(Hashable):
         allowed_installs: Optional[AppInstallationType] = MISSING,
     ) -> UserCommand:
         """|coro|
-        
+
         Creates an user command for the guild.
 
         The parameters are same as :meth:`~PartialGuild.create_command` except ``options`` is removed.
@@ -849,6 +843,7 @@ class PartialGuild(Hashable):
             'nsfw': False,
         }
         return MessageCommand(data=fake_payload, state=state)
+
 
 class UserGuild(PartialGuild):
     """Represents a Discord partial guild.

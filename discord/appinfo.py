@@ -445,9 +445,10 @@ class IntegrationTypeConfig:
         except KeyError:
             pass
 
+
 class ApplicationExecutable:
     """Represents an application executable.
-    
+
     Attributes
     ----------
     os: :class:`OperatingSystem`
@@ -472,6 +473,7 @@ class ApplicationExecutable:
         self.name: str = data['name']
         self.is_launcher: bool = data['is_launcher']
         self.arguments: str = data.get('arguments', '')
+
 
 class DetectableApplication(Hashable):
     """Represents an application that can be detected by desktop client.

@@ -3763,9 +3763,9 @@ class Client(Dispatcher):
 
     async def fetch_detectable_applications(self) -> List[DetectableApplication]:
         """|coro|
-        
+
         Retrieves applications detectable by desktop clients.
-        
+
         Raises
         ------
         HTTPException
@@ -3779,5 +3779,5 @@ class Client(Dispatcher):
 
         state = self._connection
         data = await state.http.get_detectable_applications()
-        
+
         return [DetectableApplication(data=d, state=state) for d in data]
