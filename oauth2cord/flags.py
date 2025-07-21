@@ -2817,6 +2817,7 @@ class MessageFlags(BaseFlags):
         """:class:`bool`: Whether the message is trigged by the social layer integration."""
         return 1 << 16
 
+
 @fill_with_flags()
 class OverlayMethodFlags(BaseFlags):
     """Wraps up the Discord Overlay method flags.

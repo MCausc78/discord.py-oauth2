@@ -87,11 +87,13 @@ class GatewayApplication(TypedDict):
     flags: int
     parent_id: NotRequired[Snowflake]
 
+
 class ApplicationExecutable(TypedDict):
     os: Literal['win32', 'darwin', 'linux']
     name: str
     is_launcher: bool
     arguments: NotRequired[str]
+
 
 class DetectableApplication(TypedDict):
     id: Snowflake
