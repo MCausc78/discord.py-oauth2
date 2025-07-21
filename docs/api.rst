@@ -5126,6 +5126,14 @@ Lobby
 .. autoclass:: Lobby()
     :members:
 
+PartialGuild
+~~~~~~~~~~~~
+
+.. attributetable:: PartialGuild
+
+.. autoclass:: PartialGuild()
+    :members:
+
 UserGuild
 ~~~~~~~~~
 

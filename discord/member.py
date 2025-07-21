@@ -60,7 +60,7 @@ if TYPE_CHECKING:
     from .channel import DMChannel, GroupChannel, VoiceChannel, StageChannel
     from .flags import PublicUserFlags
     from .game_relationship import GameRelationship
-    from .guild import UserGuild, Guild
+    from .guild import Guild
     from .message import Message
     from .presences import Presence
     from .relationship import Relationship
@@ -336,13 +336,15 @@ class Member(discord.abc.Messageable, _UserTag):
         send_friend_request: Callable[[], Awaitable[None]]
         send_game_friend_request: Callable[[], Awaitable[None]]
 
-    def __init__(self, *, data: MemberWithUserPayload, guild: Union[UserGuild, Guild], state: ConnectionState):
+    def __init__(self, *, data: MemberWithUserPayload, guild: Guild, state: ConnectionState):
         self._state: ConnectionState = state
+
         if 'user' in data:
             self._user: User = state.store_user(data['user'])
         elif 'user_id' in data:
             self._user: User = state._users[int(data['user_id'])]
-        self.guild: Union[UserGuild, Guild] = guild
+
+        self.guild: Guild = guild
         self.joined_at: Optional[datetime.datetime] = parse_time(data.get('joined_at'))
         self.premium_since: Optional[datetime.datetime] = parse_time(data.get('premium_since'))
         self._roles: SnowflakeList = SnowflakeList(map(int, data['roles']))
@@ -387,7 +389,7 @@ class Member(discord.abc.Messageable, _UserTag):
         return cls(data=data, guild=message.guild, state=message._state)  # type: ignore
 
     @classmethod
-    def _from_client_user(cls, *, user: ClientUser, guild: Union[UserGuild, Guild], state: ConnectionState) -> Self:
+    def _from_client_user(cls, *, user: ClientUser, guild: Guild, state: ConnectionState) -> Self:
         data = {
             'roles': [],
             'user': user._to_minimal_user_json(),
@@ -405,9 +407,7 @@ class Member(discord.abc.Messageable, _UserTag):
         self._flags = data.get('flags', 0)
 
     @classmethod
-    def _try_upgrade(
-        cls, *, data: UserWithMemberPayload, guild: Union[UserGuild, Guild], state: ConnectionState
-    ) -> Union[User, Self]:
+    def _try_upgrade(cls, *, data: UserWithMemberPayload, guild: Guild, state: ConnectionState) -> Union[User, Self]:
         # A User object with a 'member' key
         try:
             member_data = data.pop('member')

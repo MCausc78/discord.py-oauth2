@@ -119,15 +119,16 @@ class Emoji(_EmojiTag, AssetMixin):
         self._from_data(data)
 
     def _from_data(self, emoji: EmojiPayload) -> None:
-        self.require_colons: bool = emoji.get('require_colons', False)
-        self.managed: bool = emoji.get('managed', False)
+        user_data = emoji.get('user')
+
         self.id: int = int(emoji['id'])  # type: ignore # This won't be None for full emoji objects.
         self.name: str = emoji['name']  # type: ignore # This won't be None for full emoji objects.
+        self._roles: SnowflakeList = SnowflakeList(map(int, emoji.get('roles', ())))
+        self.user: Optional[User] = self._state.store_user(user_data) if user_data else None
+        self.require_colons: bool = emoji.get('require_colons', False)
+        self.managed: bool = emoji.get('managed', False)
         self.animated: bool = emoji.get('animated', False)
         self.available: bool = emoji.get('available', True)
-        self._roles: SnowflakeList = SnowflakeList(map(int, emoji.get('roles', ())))
-        user = emoji.get('user')
-        self.user: Optional[User] = User(state=self._state, data=user) if user else None
 
     def _to_partial(self) -> PartialEmoji:
         return PartialEmoji(name=self.name, animated=self.animated, id=self.id)
