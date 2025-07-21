@@ -31,6 +31,7 @@ from typing import (
     ClassVar,
     Dict,
     List,
+    Literal,
     NamedTuple,
     Optional,
     Sequence,
@@ -38,6 +39,7 @@ from typing import (
     TYPE_CHECKING,
     Tuple,
     Union,
+    overload,
 )
 
 from .asset import Asset
@@ -47,20 +49,23 @@ from .commands import (
     SlashCommand,
     UserCommand,
     MessageCommand,
+    Option,
+    SlashCommandGroup,
     _command_factory,
 )
 from .emoji import Emoji
 from .errors import MissingApplicationID
 from .enums import (
     try_enum,
-    VerificationLevel,
+    AppCommandType,
     ContentFilter,
-    NotificationLevel,
-    NSFWLevel,
     MFALevel,
+    NSFWLevel,
+    NotificationLevel,
     Locale,
+    VerificationLevel,
 )
-from .flags import SystemChannelFlags
+from .flags import AppCommandContext, AppInstallationType, SystemChannelFlags
 from .invite import Invite
 from .member import Member, VoiceState
 from .mixins import Hashable
@@ -84,7 +89,7 @@ from .widget import Widget
 
 
 __all__ = (
-    'GuildPreview',
+    'PartialGuild',
     'UserGuild',
     'Guild',
 )
@@ -94,15 +99,16 @@ MISSING = MISSING
 if TYPE_CHECKING:
     from .abc import Snowflake
     from .channel import VoiceChannel, StageChannel, TextChannel, ForumChannel, CategoryChannel
+    from .permissions import Permissions
     from .state import ConnectionState
     from .types.commands import (
         SlashCommand as SlashCommandPayload,
         UserCommand as UserCommandPayload,
         MessageCommand as MessageCommandPayload,
+        ApplicationCommandCreateRequestBody as ApplicationCommandCreateRequestBodyPayload,
     )
     from .types.guild import (
         Guild as GuildPayload,
-        GuildPreview as GuildPreviewPayload,
         GuildFeature,
         IncidentData,
     )
@@ -193,6 +199,336 @@ class PartialGuild(Hashable):
         if self._icon is None:
             return None
         return Asset._from_guild_icon(self._state, self.id, self._icon)
+
+    @overload
+    async def create_command(
+        self,
+        name: str,
+        *,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: Optional[str] = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        options: List[Union[Option, SlashCommandGroup]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: bool = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+        type: Literal[AppCommandType.chat_input],
+    ) -> SlashCommand:
+        ...
+
+    @overload
+    async def create_command(
+        self,
+        name: str,
+        *,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: Optional[str] = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: bool = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+        type: Literal[AppCommandType.user],
+    ) -> UserCommand:
+        ...
+
+    @overload
+    async def create_command(
+        self,
+        name: str,
+        *,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: Optional[str] = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: bool = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+        type: Literal[AppCommandType.message],
+    ) -> MessageCommand:
+        ...
+
+    @overload
+    async def create_command(
+        self,
+        name: str,
+        *,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: Optional[str] = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        options: List[Union[Option, SlashCommandGroup]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: bool = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+        type: AppCommandType = ...,
+    ) -> Union[SlashCommand, UserCommand, MessageCommand]:
+        ...
+    
+    async def create_command(
+        self,
+        name: str,
+        *,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: Optional[str] = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        options: List[Union[Option, SlashCommandGroup]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: bool = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+        type: AppCommandType = AppCommandType.chat_input,
+    ) -> Union[SlashCommand, UserCommand, MessageCommand]:
+        """|coro|
+        
+        Creates an application command for the guild.
+
+        .. versionadded:: 3.0
+
+        Parameters
+        ----------
+        name: :class:`str`
+            The name for the slash command. Must be between 1 and 32 characters long.
+        name_localizations: Optional[Dict[:class:`~oauth2cord.Locale`, :class:`str`]]
+            The name localizations for the slash command.
+
+            Each value must be between 1 and 32 characters.
+        description: Optional[:class:`str`]
+            The description for the slash command. Can be only up to 100 characters.
+        description_localizations: Optional[Dict[:class:`~oauth2cord.Locale`, :class:`str`]]
+            The description localizations for the slash command.
+
+            Each value can be only up to 100 characters.
+        options: List[Union[:class:`Option`, :class:`SlashCommandGroup`]]
+            The options for the slash command.
+        default_member_permissions: Optional[:class:`~oauth2cord.Permissions`]
+            The default permissions needed to use this application command.
+            Pass value of ``None`` to remove any permission requirements.
+        dm_permission: :class:`bool`
+            Indicates if the application command can be used in DMs.
+
+            .. deprecated:: 3.0
+
+                Edit ``allowed_contexts`` instead.
+        allowed_contexts: Optional[:class:`AppCommandContext`]
+            The contexts that this command should be allowed to be used in.
+            Overrides the ``dm_permission`` parameter.
+        allowed_installs: Optional[:class:`AppInstallationType`]
+            The installation contexts that this command should be allowed to be installed in.
+        type: :class:`AppCommandType`
+            The type for the application command. Defaults to :attr:`~AppCommandType.chat_input`.
+        
+        Raises
+        ------
+        Forbidden
+            You do not have permission to create application command.
+        HTTPException
+            Creating the application command failed.
+
+        Returns
+        --------
+        Union[:class:`SlashCommand`, :class:`UserCommand`, :class:`MessageCommand`]
+            The application command created.
+        """
+        
+        payload: ApplicationCommandCreateRequestBodyPayload = {
+            'name': name,
+        }
+
+        if name_localizations is not MISSING:
+            if name_localizations is None:
+                payload['name_localizations'] = None
+            else:
+                payload['name_localizations'] = {
+                    k.value: v
+                    for k, v in name_localizations.items()
+                }
+        
+        if description is not MISSING:
+            payload['description'] = description
+        
+        if description_localizations is not MISSING:
+            if description_localizations is None:
+                payload['description_localizations'] = None
+            else:
+                payload['description_localizations'] = {
+                    k.value: v
+                    for k, v in description_localizations.items()
+                }
+        
+        if options is not MISSING:
+            if options is None:
+                payload['options'] = None
+            else:
+                payload['options'] = [o.to_dict() for o in options]
+        
+        if default_member_permissions is not MISSING:
+            if default_member_permissions is None:
+                payload['default_member_permissions'] = '0'
+            else:
+                payload['default_member_permissions'] = str(default_member_permissions.value)
+        
+        if dm_permission is not MISSING:
+            payload['dm_permission'] = dm_permission
+        
+        if allowed_contexts is not MISSING:
+            if allowed_contexts is None:
+                payload['contexts'] = None
+            else:
+                payload['contexts'] = allowed_contexts.to_array()  # type: ignore
+        
+        if allowed_installs is not MISSING:
+            if allowed_installs is None:
+                payload['integration_types'] = None
+            else:
+                payload['integration_types'] = allowed_installs.to_array()  # type: ignore
+        
+        if type is not MISSING:
+            payload['type'] = type.value  # type: ignore
+        
+        state = self._state
+        application_id = state.application_id
+        
+        if application_id is None:
+            raise MissingApplicationID
+        
+        data = await state.http.create_guild_application_command(application_id, self.id, payload)
+        return _command_factory(data, state)  # type: ignore
+    
+    async def create_message_command(
+        self,
+        name: str,
+        *,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: Optional[str] = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: bool = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+    ) -> MessageCommand:
+        """|coro|
+        
+        Creates a message command for the guild.
+
+        The parameters are same as :meth:`~PartialGuild.create_command` except ``options`` is removed.
+
+        .. versionadded:: 3.0
+
+        Raises
+        ------
+        Forbidden
+            You do not have permission to create application command.
+        HTTPException
+            Creating the application command failed.
+
+        Returns
+        --------
+        :class:`MessageCommand`
+            The message command created.
+        """
+        return await self.create_command(
+            name=name,
+            name_localizations=name_localizations,
+            description=description,
+            description_localizations=description_localizations,
+            default_member_permissions=default_member_permissions,
+            dm_permission=dm_permission,
+            allowed_contexts=allowed_contexts,
+            allowed_installs=allowed_installs,
+            type=AppCommandType.message,
+        )
+
+    async def create_slash_command(
+        self,
+        name: str,
+        *,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: Optional[str] = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        options: List[Union[Option, SlashCommandGroup]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: bool = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+    ) -> SlashCommand:
+        """|coro|
+        
+        Creates a slash command for the guild.
+
+        The parameters are same as :meth:`~PartialGuild.create_command`.
+
+        .. versionadded:: 3.0
+
+        Raises
+        ------
+        Forbidden
+            You do not have permission to create application command.
+        HTTPException
+            Creating the application command failed.
+
+        Returns
+        --------
+        :class:`SlashCommand`
+            The slash command created.
+        """
+        return await self.create_command(
+            name=name,
+            name_localizations=name_localizations,
+            description=description,
+            description_localizations=description_localizations,
+            options=options,
+            default_member_permissions=default_member_permissions,
+            dm_permission=dm_permission,
+            allowed_contexts=allowed_contexts,
+            allowed_installs=allowed_installs,
+            type=AppCommandType.chat_input,
+        )
+
+    async def create_user_command(
+        self,
+        name: str,
+        *,
+        name_localizations: Optional[Dict[Locale, str]] = MISSING,
+        description: Optional[str] = MISSING,
+        description_localizations: Optional[Dict[Locale, str]] = MISSING,
+        default_member_permissions: Optional[Permissions] = MISSING,
+        dm_permission: bool = MISSING,
+        allowed_contexts: Optional[AppCommandContext] = MISSING,
+        allowed_installs: Optional[AppInstallationType] = MISSING,
+    ) -> UserCommand:
+        """|coro|
+        
+        Creates an user command for the guild.
+
+        The parameters are same as :meth:`~PartialGuild.create_command` except ``options`` is removed.
+
+        .. versionadded:: 3.0
+
+        Raises
+        ------
+        Forbidden
+            You do not have permission to create application command.
+        HTTPException
+            Creating the application command failed.
+
+        Returns
+        --------
+        :class:`UserCommand`
+            The user command created.
+        """
+        return await self.create_command(
+            name=name,
+            name_localizations=name_localizations,
+            description=description,
+            description_localizations=description_localizations,
+            default_member_permissions=default_member_permissions,
+            dm_permission=dm_permission,
+            allowed_contexts=allowed_contexts,
+            allowed_installs=allowed_installs,
+            type=AppCommandType.user,
+        )
 
     async def fetch_command(self, id: int, /) -> List[Union[SlashCommand, UserCommand, MessageCommand]]:
         """|coro|
@@ -513,117 +849,6 @@ class PartialGuild(Hashable):
             'nsfw': False,
         }
         return MessageCommand(data=fake_payload, state=state)
-
-
-class GuildPreview(PartialGuild):
-    """Represents a preview of a Discord guild.
-
-    This inherits from :class:`PartialGuild`.
-
-    .. versionadded:: 2.5
-
-    .. container:: operations
-
-        .. describe:: x == y
-
-            Checks if two guilds are equal.
-
-        .. describe:: x != y
-
-            Checks if two guilds are not equal.
-
-        .. describe:: hash(x)
-
-            Returns the guild's hash.
-
-        .. describe:: str(x)
-
-            Returns the guild's name.
-
-    Attributes
-    ----------
-    description: Optional[:class:`str`]
-        The guild preview's description.
-    emojis: Tuple[:class:`Emoji`, ...]
-        All emojis that the guild owns.
-    stickers: Tuple[:class:`GuildSticker`, ...]
-        All stickers that the guild owns.
-    approximate_member_count: :class:`int`
-        The approximate number of members in the guild.
-    approximate_presence_count: :class:`int`
-        The approximate number of members currently active in in the guild. Offline members are excluded.
-    """
-
-    __slots__ = (
-        '_splash',
-        '_discovery_splash',
-        'emojis',
-        'stickers',
-        'description',
-        "approximate_member_count",
-        "approximate_presence_count",
-    )
-
-    def __init__(self, *, data: GuildPreviewPayload, state: ConnectionState) -> None:
-        super().__init__(
-            id=int(data['id']),
-            name=data['name'],
-            icon_hash=data.get('icon'),
-            features=data['features'],
-            state=state,
-        )
-
-        self._splash: Optional[str] = data.get('splash')
-        self._discovery_splash: Optional[str] = data.get('discovery_splash')
-        self.emojis: Tuple[Emoji, ...] = tuple(
-            map(
-                lambda d: Emoji(guild=self, state=state, data=d),
-                data.get('emojis', ()),
-            )
-        )
-        self.stickers: Tuple[GuildSticker, ...] = tuple(
-            map(lambda d: GuildSticker(state=state, data=d), data.get('stickers', ()))
-        )
-        self.features: List[GuildFeature] = data.get('features', [])
-        self.description: Optional[str] = data.get('description')
-        self.approximate_member_count: int = data.get('approximate_member_count')
-        self.approximate_presence_count: int = data.get('approximate_presence_count')
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return (
-            f'<{self.__class__.__name__} id={self.id} name={self.name!r} description={self.description!r} '
-            f'features={self.features}>'
-        )
-
-    @property
-    def created_at(self) -> datetime.datetime:
-        """:class:`datetime.datetime`: Returns the guild's creation time in UTC."""
-        return snowflake_time(self.id)
-
-    @property
-    def icon(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the guild's icon asset, if available."""
-        if self._icon is None:
-            return None
-        return Asset._from_guild_icon(self._state, self.id, self._icon)
-
-    @property
-    def splash(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the guild's invite splash asset, if available."""
-        if self._splash is None:
-            return None
-        return Asset._from_guild_image(self._state, self.id, self._splash, path='splashes')
-
-    @property
-    def discovery_splash(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the guild's discovery splash asset, if available."""
-        if self._discovery_splash is None:
-            return None
-        return Asset._from_guild_image(self._state, self.id, self._discovery_splash, path='discovery-splashes')
-
 
 class UserGuild(PartialGuild):
     """Represents a Discord partial guild.

@@ -27,7 +27,9 @@ from __future__ import annotations
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING
 
 from .asset import Asset
-from .flags import ApplicationFlags
+from .enums import try_enum, OperatingSystem
+from .flags import ApplicationFlags, OverlayMethodFlags
+from .mixins import Hashable
 from .permissions import Permissions
 from .utils import _get_as_snowflake
 
@@ -40,6 +42,8 @@ if TYPE_CHECKING:
         Team as TeamPayload,
         InstallParams as InstallParamsPayload,
         AppIntegrationTypeConfig as AppIntegrationTypeConfigPayload,
+        ApplicationExecutable as ApplicationExecutablePayload,
+        DetectableApplication as DetectableApplicationPayload,
     )
     from .user import User
 
@@ -48,6 +52,8 @@ __all__ = (
     'PartialAppInfo',
     'AppInstallParams',
     'IntegrationTypeConfig',
+    'ApplicationExecutable',
+    'DetectableApplication',
 )
 
 
@@ -92,7 +98,7 @@ class AppInfo:
 
     primary_sku_id: Optional[:class:`int`]
         If this application is a game sold on Discord,
-        this field will be the id of the "Game SKU" that is created,
+        this field will be the ID of the "Game SKU" that is created,
         if it exists.
 
         .. versionadded:: 1.3
@@ -438,3 +444,89 @@ class IntegrationTypeConfig:
             self.oauth2_install_params = AppInstallParams(data['oauth2_install_params'])  # type: ignore # EAFP
         except KeyError:
             pass
+
+class ApplicationExecutable:
+    """Represents an application executable.
+    
+    Attributes
+    ----------
+    os: :class:`OperatingSystem`
+        The operating system the executable is for.
+    name: :class:`str`
+        The name of the executable file.
+    is_launcher: :class:`bool`
+        Indicates whether the executable is a launcher.
+    arguments: :class:`str`
+        The arguments for an executable.
+    """
+
+    __slots__ = (
+        'os',
+        'name',
+        'is_launcher',
+        'arguments',
+    )
+
+    def __init__(self, data: ApplicationExecutablePayload) -> None:
+        self.os: OperatingSystem = try_enum(OperatingSystem, data['os'])
+        self.name: str = data['name']
+        self.is_launcher: bool = data['is_launcher']
+        self.arguments: str = data.get('arguments', '')
+
+class DetectableApplication(Hashable):
+    """Represents an application that can be detected by desktop client.
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The application's ID.
+    name: :class:`str`
+        The application's name.
+    aliases: List[:class:`str`]
+        A list of other names the application's game is associated with.
+    executables: List[:class:`ApplicationExecutable`]
+        A list of unique executables of the application's game.
+    themes: List[:class:`str`]
+        The themes of the application's game.
+    hook: :class:`bool`
+        Indicates whether the Discord client is allowed to hook into the application's game directly.
+    overlay: :class:`bool`
+        Whether the application's game supports the `Discord overlay <https://support.discord.com/hc/en-us/articles/217659737-Game-Overlay-101>`_.
+    overlay_warn: :class:`bool`
+        Whether the Discord overlay is known to be problematic with this application's game.
+    overlay_compatibility_hook: :class:`bool`
+        Indicates whether to use the compatibility hook for the overlay.
+    """
+
+    __slots__ = (
+        '_state',
+        'id',
+        'name',
+        'aliases',
+        'executables',
+        'themes',
+        'hook',
+        'overlay',
+        '_overlay_methods',
+        'overlay_warn',
+        'overlay_compatibility_hook',
+    )
+
+    def __init__(self, *, data: DetectableApplicationPayload, state: ConnectionState) -> None:
+        self._state: ConnectionState = state
+
+        self.id: int = int(data['id'])
+        self.name: str = data['name']
+        self.aliases: List[str] = data['aliases']
+        self.executables: List[ApplicationExecutable] = list(map(ApplicationExecutable, data['executables']))
+        self.themes: List[str] = data['themes']
+        self.hook: bool = data['hook']
+        self.overlay: bool = data['overlay']
+        self._overlay_methods: Optional[int] = data.get('overlay_methods')
+        self.overlay_warn: bool = data['overlay_warn']
+        self.overlay_compatibility_hook: bool = data['overlay_compatibility_hook']
+
+    @property
+    def overlay_methods(self) -> OverlayMethodFlags:
+        """:class:`OverlayMethodFlags`: The methods of overlaying that the application's game supports."""
+        return OverlayMethodFlags._from_value(self._overlay_methods or 0)

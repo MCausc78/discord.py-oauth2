@@ -372,7 +372,7 @@ class SlashCommand(BaseCommand):
         default_member_permissions: Optional[:class:`~oauth2cord.Permissions`]
             The new default permissions needed to use this slash command.
             Pass value of ``None`` to remove any permission requirements.
-        dm_permission: Optional[:class:`~oauth2cord.Permissions`]
+        dm_permission: :class:`bool`
             Indicates if the application command can be used in DMs.
 
             .. deprecated:: 3.0
@@ -523,7 +523,7 @@ class UserCommand(BaseCommand):
         default_member_permissions: Optional[:class:`~oauth2cord.Permissions`]
             The new default permissions needed to use this user command.
             Pass value of ``None`` to remove any permission requirements.
-        dm_permission: Optional[:class:`~oauth2cord.Permissions`]
+        dm_permission: :class:`bool`
             Indicates if the application command can be used in DMs.
 
             .. deprecated:: 3.0
@@ -671,7 +671,7 @@ class MessageCommand(BaseCommand):
         default_member_permissions: Optional[:class:`~oauth2cord.Permissions`]
             The new default permissions needed to use this message command.
             Pass value of ``None`` to remove any permission requirements.
-        dm_permission: Optional[:class:`~oauth2cord.Permissions`]
+        dm_permission: :class:`bool`
             Indicates if the application command can be used in DMs.
 
             .. deprecated:: 3.0

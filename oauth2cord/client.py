@@ -50,7 +50,7 @@ import aiohttp
 from yarl import URL
 
 from .activity import BaseActivity, Spotify, ActivityTypes, Session, HeadlessSession, create_activity
-from .appinfo import AppInfo
+from .appinfo import AppInfo, DetectableApplication
 from .backoff import ExponentialBackoff
 from .channel import PartialMessageable
 from .dispatcher import _loop, Dispatcher
@@ -3760,3 +3760,24 @@ class Client(Dispatcher):
         state = self._connection
         data = await state.http.get_presences_for_xbox()
         return Presences(data=data, state=state)
+
+    async def fetch_detectable_applications(self) -> List[DetectableApplication]:
+        """|coro|
+        
+        Retrieves applications detectable by desktop clients.
+        
+        Raises
+        ------
+        HTTPException
+            Retrieving detectable applications failed.
+
+        Returns
+        -------
+        List[:class:`~oauth2cord.DetectableApplication`]
+            The detectable applications.
+        """
+
+        state = self._connection
+        data = await state.http.get_detectable_applications()
+        
+        return [DetectableApplication(data=d, state=state) for d in data]

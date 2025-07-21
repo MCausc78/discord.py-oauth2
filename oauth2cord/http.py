@@ -79,6 +79,7 @@ if TYPE_CHECKING:
     from .poll import Poll
 
     from .types import (
+        appinfo,
         billing,
         channel,
         commands,
@@ -1822,3 +1823,6 @@ class HTTPClient:
             raise GatewayNotFound() from exc
 
         return data['url']
+
+    def get_detectable_applications(self) -> Response[List[appinfo.DetectableApplication]]:
+        return self.request(Route('GET', '/applications/detectable'))
