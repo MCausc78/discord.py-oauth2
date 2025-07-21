@@ -85,6 +85,7 @@ class _BaseActivity(TypedDict, total=False):
     supported_platforms: List[ActivityPlatformType]
     timestamps: ActivityTimestamps
     application_id: Snowflake
+    parent_application_id: Optional[Snowflake]
     status_display_type: StatusDisplayType
     details: Optional[str]
     details_url: Optional[str]

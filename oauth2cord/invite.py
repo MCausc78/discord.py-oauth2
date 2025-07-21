@@ -452,7 +452,7 @@ class Invite(Hashable):
             guild = None
         else:
             guild_id = int(guild_data['id'])
-            guild = state._get_guild(guild_id)
+            guild = state.get_guild(guild_id)
             if guild is None:
                 # If it's not cached, then it has to be a partial guild
                 guild = PartialInviteGuild(state, guild_data, guild_id)
@@ -469,12 +469,14 @@ class Invite(Hashable):
     @classmethod
     def from_gateway(cls, *, state: ConnectionState, data: GatewayInvitePayload) -> Self:
         guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
-        guild: Optional[Union[Guild, Object]] = state._get_guild(guild_id)
+        guild: Optional[Guild] = state.get_guild(guild_id)
         channel_id = int(data['channel_id'])
-        if guild is not None:
-            channel = guild.get_channel(channel_id) or Object(id=channel_id)
+        if guild is None:
+            channel = Object(id=channel_id)
+        elif guild_id is None:
+            channel = None
         else:
-            guild = state._get_or_create_unavailable_guild(guild_id) if guild_id is not None else None
+            guild = state._get_or_create_unavailable_guild(guild_id)
             channel = Object(id=channel_id)
 
         return cls(state=state, data=data, guild=guild, channel=channel)  # type: ignore

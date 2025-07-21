@@ -103,7 +103,7 @@ class GuildFolder:
 
         guilds = []
         for guild_id in self.guild_ids:
-            guild = state._get_guild(guild_id)
+            guild = state.get_guild(guild_id)
             if guild is not None:
                 guilds.append(guild)
 

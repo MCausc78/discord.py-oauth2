@@ -635,32 +635,136 @@ class Activity(BaseActivity):
     def to_dict(
         self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
     ) -> Optional[SendableActivityPayload]:
-        ret: Dict[str, Any] = {}
-        for attr in self.__slots__:
-            value = getattr(self, attr, None)
-            if value is None:
-                continue
+        payload: Dict[str, Any] = {}
 
-            if isinstance(value, dict) and len(value) == 0:
-                continue
+        if self.name is not None:
+            payload['name'] = self.name
 
-            if attr.startswith('_'):
-                attr = attr[1:]
+        payload['type'] = int(self.type)
 
-            if hasattr(value, 'to_dict'):
-                value = value.to_dict()  # type: ignore
-            elif hasattr(value, 'value'):
-                value = value.value  # type: ignore
-            else:
-                continue
+        if self.url is not None:
+            payload['url'] = self.url
 
-            ret[attr] = value
+        if self.platform is not None:
+            payload['platform'] = self.platform.value
 
-        ret['type'] = int(self.type)
+        if self._supported_platforms is not None:
+            payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()
+
+        timestamps: ActivityTimestamps = {}
+
+        if self.start_timestamp is not None:
+            timestamps['start'] = self.start_timestamp
+
+        if self.end_timestamp is not None:
+            timestamps['end'] = self.end_timestamp
+
+        if timestamps:
+            payload['timestamps'] = timestamps
+
+        if self.application_id is not None:
+            payload['application_id'] = self.application_id
+
+        if self.parent_application_id is not None:
+            payload['parent_application_id'] = self.parent_application_id
+
+        if self.status_display_type is not None:
+            payload['status_display_type'] = self.status_display_type.value
+
+        if self.details is not None:
+            payload['details'] = self.details
+
+        if self.details_url is not None:
+            payload['details_url'] = self.details_url
+
+        if self.state is not None:
+            payload['state'] = self.state
+
+        if self.state_url is not None:
+            payload['state_url'] = self.state_url
+
+        if self.sync_id is not None:
+            payload['sync_id'] = self.sync_id
+
+        payload['flags'] = self._flags
+        if self.button_labels:
+            payload['buttons'] = self.button_labels
+
         if self.emoji:
-            ret['emoji'] = self.emoji.to_dict()
+            payload['emoji'] = self.emoji.to_dict()
 
-        return ret  # type: ignore
+        if self.party is not None:
+            party = self.party.to_dict()
+            if party:
+                payload['party'] = party
+
+        if self.assets is not None:
+            assets = self.assets.to_dict()
+            if assets:
+                payload['assets'] = assets
+
+        if self.metadata:
+            payload['metadata'] = self.metadata
+
+        return payload  # type: ignore
+
+    def to_rpc_dict(self) -> RPCActivityPayload:
+        payload: RPCActivityPayload = {}
+
+        if self.state is not None:
+            payload['state'] = self.state
+
+        if self.state_url is not None:
+            payload['state_url'] = self.state_url
+
+        if self.details is not None:
+            payload['details'] = self.details
+
+        if self.details_url is not None:
+            payload['details_url'] = self.details_url
+
+        timestamps: ActivityTimestamps = {}
+
+        if self.start_timestamp is not None:
+            timestamps['start'] = self.start_timestamp
+
+        if self.end_timestamp is not None:
+            timestamps['end'] = self.end_timestamp
+
+        if timestamps:
+            payload['timestamps'] = timestamps
+
+        if self.assets is not None:
+            assets = self.assets.to_dict()
+            if assets:
+                payload['assets'] = assets
+
+        if self.party is not None:
+            party = self.party.to_dict()
+            if party:
+                payload['party'] = party
+
+        # secrets
+        if self.button_labels:
+            payload['buttons'] = [
+                {
+                    'label': label,
+                    'url': url,
+                }
+                for label, url in zip(self.button_labels, self.metadata.get('button_urls', ()))
+            ]
+
+        # if self.instance:
+        #     payload['instance'] = self.instance
+
+        if self._supported_platforms is not None:
+            payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()  # type: ignore
+
+        payload['type'] = self.type.value  # type: ignore
+        if self.status_display_type is not None:
+            payload['status_display_type'] = self.status_display_type.value
+
+        return payload
 
     @property
     def start(self) -> Optional[datetime]:
@@ -1033,6 +1137,69 @@ class Game(BaseActivity):
         payload['type'] = self.type.value
         return payload  # type: ignore
 
+    def to_rpc_dict(self) -> RPCActivityPayload:
+        payload: RPCActivityPayload = {}
+        flags = self.flags
+
+        if self.state is not None:
+            payload['state'] = self.state
+
+        if self.state_url is not None:
+            payload['state_url'] = self.state_url
+
+        if self.details is not None:
+            payload['details'] = self.details
+
+        if self.details_url is not None:
+            payload['details_url'] = self.details_url
+
+        timestamps: ActivityTimestamps = {}
+
+        if self.start_timestamp is not None:
+            timestamps['start'] = self.start_timestamp
+
+        if self.end_timestamp is not None:
+            timestamps['end'] = self.end_timestamp
+
+        if timestamps:
+            payload['timestamps'] = timestamps
+
+        if self.assets is not None:
+            assets = self.assets.to_dict()
+            if assets:
+                payload['assets'] = assets
+
+        if self.party is not None:
+            party = self.party.to_dict()
+            if party:
+                payload['party'] = party
+
+        if self.secrets is not None:
+            payload['secrets'] = self.secrets.to_dict()
+
+        if self.button_labels:
+            button_urls = self.metadata.get('button_urls', ())
+
+            payload['buttons'] = [
+                {
+                    'label': label,
+                    'url': button_urls[i] if i < len(button_urls) else '',
+                }
+                for i, label in enumerate(self.button_labels)
+            ]
+
+        if self.flags.instance:
+            payload['instance'] = True
+
+        if self._supported_platforms is not None:
+            payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()  # type: ignore
+
+        payload['type'] = self.type.value  # type: ignore
+        if self.status_display_type is not None:
+            payload['status_display_type'] = self.status_display_type.value
+
+        return payload
+
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Game) and other.name == self.name
 
@@ -1166,6 +1333,9 @@ class Streaming(BaseActivity):
 
         return payload  # type: ignore
 
+    def to_rpc_dict(self) -> RPCActivityPayload:
+        return self.to_dict(state=MISSING)  # type: ignore
+
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Streaming) and other.name == self.name and other.url == self.url
 
@@ -1266,6 +1436,9 @@ class Spotify:
             #   'button_urls': [],
             # },
         }
+
+    def to_rpc_dict(self) -> RPCActivityPayload:
+        return self.to_dict(state=MISSING)  # type: ignore
 
     @property
     def name(self) -> str:

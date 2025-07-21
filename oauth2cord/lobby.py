@@ -91,7 +91,7 @@ class LinkedLobby:
     @property
     def lobby(self) -> Optional[Lobby]:
         """Optional[:class:`Lobby`]: The lobby the channel was linked to."""
-        return self._state._get_lobby(self.lobby_id)
+        return self._state.get_lobby(self.lobby_id)
 
     @property
     def linker(self) -> Optional[User]:
@@ -335,7 +335,7 @@ class Lobby(Hashable, Messageable):
         if 'voice_states' in data:
             for voice_state_data in data['voice_states']:
                 channel_id = _get_as_snowflake(voice_state_data, 'channel_id')
-                self._update_voice_state(voice_state_data, state._get_lobby(channel_id))
+                self._update_voice_state(voice_state_data, state.get_lobby(channel_id))
 
     def __repr__(self) -> str:
         return f'<Lobby id={self.id} application_id={self.application_id} members={self.members!r}>'

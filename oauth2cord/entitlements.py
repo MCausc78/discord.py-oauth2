@@ -209,7 +209,7 @@ class Entitlement(Hashable):
     @property
     def guild(self) -> Optional[Guild]:
         """Optional[:class:`Guild`]: The guild that is granted access to the entitlement."""
-        return self._state._get_guild(self.guild_id)
+        return self._state.get_guild(self.guild_id)
 
     @property
     def created_at(self) -> datetime:

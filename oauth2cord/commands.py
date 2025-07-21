@@ -235,7 +235,7 @@ class BaseCommand(Hashable):
         """Optional[:class:`~oauth2cord.Guild`]: Returns the guild this command is registered to
         if it exists.
         """
-        return self._state._get_guild(self.guild_id)
+        return self._state.get_guild(self.guild_id)
 
     @property
     def mention(self) -> str:

@@ -59,5 +59,5 @@ class Activity(TypedDict, total=False):
     buttons: List[ActivityButton]  # 1-2 elements (0 elements aren't permitted; omit this if you want no buttons)
     instance: bool
     supported_platforms: List[str]  # 1-32 characters, 1-3 elements
-    type: Literal[0, 2, 3, 5]
+    type: Literal[0, 2, 3, 5]  # PLAYING, LISTENING, WATCHING, COMPETING
     status_display_type: StatusDisplayType

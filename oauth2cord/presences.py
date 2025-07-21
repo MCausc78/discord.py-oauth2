@@ -201,7 +201,7 @@ class Presence(_RawReprMixin):
             create_activity(d, state) for d in data.get('hidden_activities', ())
         )
         self.guild_id: Optional[int] = _get_as_snowflake(data, 'guild_id')
-        self.guild: Optional[Guild] = state._get_guild(self.guild_id)
+        self.guild: Optional[Guild] = state.get_guild(self.guild_id)
         self.pair: Optional[
             Union[Tuple[Member, Member], Tuple[Relationship, Relationship], Tuple[GameRelationship, GameRelationship]]
         ] = None

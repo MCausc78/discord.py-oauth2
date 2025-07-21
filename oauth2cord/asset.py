@@ -44,10 +44,10 @@ __all__ = (
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .webhook.async_ import _WebhookState
 
-    _State = Union[ConnectionState, _WebhookState]
+    _State = Union[BaseConnectionState, _WebhookState]
 
     ValidStaticFormatTypes = Literal['webp', 'jpeg', 'jpg', 'png']
     ValidAssetFormatTypes = Literal['webp', 'jpeg', 'jpg', 'png', 'gif']

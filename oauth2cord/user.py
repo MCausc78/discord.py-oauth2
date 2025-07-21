@@ -46,7 +46,8 @@ if TYPE_CHECKING:
     from .member import VoiceState
     from .message import Message
     from .relationship import Relationship
-    from .state import ConnectionState
+    from .rpc.types.user import User as RPCUserPayload
+    from .state import BaseConnectionState
     from .types.channel import DMChannel as DMChannelPayload
     from .types.user import (
         PartialUser as PartialUserPayload,
@@ -92,7 +93,7 @@ class BaseUser(_UserTag):
         global_name: Optional[str]
         bot: bool
         system: bool
-        _state: ConnectionState
+        _state: BaseConnectionState
         _avatar: Optional[str]
         _banner: Optional[str]
         _accent_color: Optional[int]
@@ -100,8 +101,8 @@ class BaseUser(_UserTag):
         _avatar_decoration_data: Optional[AvatarDecorationDataPayload]
         _primary_guild: Optional[PrimaryGuildPayload]
 
-    def __init__(self, *, state: ConnectionState, data: Union[UserPayload, PartialUserPayload]) -> None:
-        self._state = state
+    def __init__(self, *, state: BaseConnectionState, data: Union[UserPayload, PartialUserPayload]) -> None:
+        self._state: BaseConnectionState = state
         self._update(data)
 
     def __repr__(self) -> str:
@@ -171,6 +172,31 @@ class BaseUser(_UserTag):
             'primary_guild': self._primary_guild,
         }
         return payload
+
+    @classmethod
+    def _from_rpc(cls, data: RPCUserPayload, state: BaseConnectionState) -> Self:
+        avatar_decoration_data = data.get('avatar_decoration_data')
+        if avatar_decoration_data is None:
+            add: Optional[AvatarDecorationDataPayload] = None
+        else:
+            add: Optional[AvatarDecorationDataPayload] = {
+                'asset': avatar_decoration_data['asset'],
+                'sku_id': avatar_decoration_data['skuId'],
+            }
+
+        transformed_payload: UserPayload = {
+            'id': data['id'],
+            'username': data['username'],
+            'discriminator': data['discriminator'],
+            'avatar': data.get('avatar'),
+            'global_name': data.get('global_name'),
+            'avatar_decoration_data': add,
+            'primary_guild': None,
+            'bot': data['bot'],
+            'flags': data['flags'],
+            'premium_type': data['premium_type'],  # type: ignore
+        }
+        return cls(data=transformed_payload, state=state)
 
     @property
     def voice(self) -> Optional[VoiceState]:
@@ -359,12 +385,12 @@ class BaseUser(_UserTag):
     @property
     def game_relationship(self) -> Optional[GameRelationship]:
         """Optional[:class:`GameRelationship`]: Returns the :class:`GameRelationship` with this user if applicable, ``None`` otherwise."""
-        return self._state._game_relationships.get(self.id)
+        return self._state.get_game_relationship(self.id)
 
     @property
     def relationship(self) -> Optional[Relationship]:
         """Optional[:class:`Relationship`]: Returns the :class:`Relationship` with this user if applicable, ``None`` otherwise."""
-        return self._state._relationships.get(self.id)
+        return self._state.get_relationship(self.id)
 
     def is_friend(self) -> bool:
         """:class:`bool`: Checks if the user is your friend."""
@@ -466,8 +492,8 @@ class ClientUser(BaseUser):
         premium_type: PremiumType
         _flags: int
 
-    def __init__(self, *, state: ConnectionState, data: UserPayload) -> None:
-        super().__init__(state=state, data=data)
+    def __init__(self, *, data: UserPayload, state: BaseConnectionState) -> None:
+        super().__init__(data=data, state=state)
 
     def __repr__(self) -> str:
         return (
@@ -517,7 +543,7 @@ class ClientUser(BaseUser):
             payload['global_name'] = global_name
 
         data: UserPayload = await self._state.http.edit_profile(payload)
-        return ClientUser(state=self._state, data=data)
+        return ClientUser(data=data, state=self._state)
 
     @property
     def mutual_guilds(self) -> List[Guild]:
@@ -603,7 +629,7 @@ class User(BaseUser, oauth2cord.abc.Messageable):
         from .channel import GroupChannel
 
         return [
-            ch for ch in self._state._private_channels.values() if isinstance(ch, GroupChannel) and self in ch.recipients
+            ch for ch in self._state.private_channel_map.values() if isinstance(ch, GroupChannel) and self in ch.recipients
         ]
 
     @property
@@ -617,7 +643,7 @@ class User(BaseUser, oauth2cord.abc.Messageable):
         .. versionadded:: 1.7
         """
         user_id = self.id
-        return [guild for guild in self._state._guilds.values() if user_id in guild._members]
+        return [guild for guild in self._state.guild_map.values() if user_id in guild._members]
 
     async def create_dm(self) -> Union[DMChannel, EphemeralDMChannel]:
         """|coro|

@@ -1654,7 +1654,7 @@ class Message(PartialMessage, Hashable):
             # if the channel doesn't have a guild attribute, we handle that
             self.guild = channel.guild
         except AttributeError:
-            self.guild = state._get_guild(_get_as_snowflake(data, 'guild_id'))
+            self.guild = state.get_guild(_get_as_snowflake(data, 'guild_id'))
 
         self._thread: Optional[Thread] = None
 
@@ -2553,4 +2553,4 @@ class LobbyMessage(Message):
     def lobby(self) -> Optional[Lobby]:
         """Optional[:class:`Lobby`]: The lobby that the message was sent from, or ``None`` if lobby is not in cache."""
 
-        return self._state._get_lobby(self.lobby_id)
+        return self._state.get_lobby(self.lobby_id)

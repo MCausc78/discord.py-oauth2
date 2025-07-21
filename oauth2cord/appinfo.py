@@ -253,11 +253,11 @@ class AppInfo:
     @property
     def guild(self) -> Optional[Guild]:
         """Optional[:class:`Guild`]: If this application is a game sold on Discord,
-        this field will be the guild to which it has been linked
+        this field will be the guild to which it has been linked.
 
         .. versionadded:: 1.3
         """
-        return self._state._get_guild(self.guild_id)
+        return self._state.get_guild(self.guild_id)
 
     @property
     def flags(self) -> ApplicationFlags:

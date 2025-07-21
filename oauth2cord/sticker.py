@@ -389,7 +389,7 @@ class GuildSticker(Sticker):
 
         .. versionadded:: 2.0
         """
-        return self._state._get_guild(self.guild_id)
+        return self._state.get_guild(self.guild_id)
 
 
 def _sticker_factory(sticker_type: Literal[1, 2]) -> Tuple[Type[Union[StandardSticker, GuildSticker, Sticker]], StickerType]:

@@ -34,7 +34,7 @@ from .presence import RelationshipPresence
 
 class AvatarDecorationData(TypedDict):
     asset: str
-    skuId: NotRequired[Snowflake]
+    skuId: Snowflake
     expiresAt: NotRequired[int]
 
 

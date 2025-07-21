@@ -735,9 +735,9 @@ class _WebhookState:
 
         self._thread: Snowflake = thread
 
-    def _get_guild(self, guild_id: Optional[int]) -> Optional[Guild]:
+    def get_guild(self, guild_id: Optional[int]) -> Optional[Guild]:
         if self._parent is not None:
-            return self._parent._get_guild(guild_id)
+            return self._parent.get_guild(guild_id)
         return None
 
     def store_user(self, data: Union[UserPayload, PartialUserPayload], *, cache: bool = True) -> BaseUser:
@@ -1033,7 +1033,7 @@ class BaseWebhook(Hashable):
 
         If this is a partial webhook, then this will always return ``None``.
         """
-        return self._state and self._state._get_guild(self.guild_id)
+        return self._state and self._state.get_guild(self.guild_id)
 
     @property
     def channel(self) -> Optional[Union[ForumChannel, VoiceChannel, TextChannel]]:
