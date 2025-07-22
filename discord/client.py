@@ -136,6 +136,7 @@ if TYPE_CHECKING:
     )
     from .reaction import Reaction
     from .role import Role
+    from .rpc.client import Client as RPCClient
     from .settings import UserSettings, AudioSettingsManager
     from .scheduled_event import ScheduledEvent
     from .subscription import Subscription
@@ -288,25 +289,30 @@ class Client(Dispatcher):
         if impersonate is None:
             impersonate = DefaultImpersonate()
 
-        connector: Optional[aiohttp.BaseConnector] = options.get('connector', None)
-        proxy: Optional[str] = options.pop('proxy', None)
-        proxy_auth: Optional[aiohttp.BasicAuth] = options.pop('proxy_auth', None)
-        unsync_clock: bool = options.pop('assume_unsync_clock', True)
-        http_trace: Optional[aiohttp.TraceConfig] = options.pop('http_trace', None)
-        max_ratelimit_timeout: Optional[float] = options.pop('max_ratelimit_timeout', None)
+        try:
+            rpc: RPCClient = options.pop('_rpc_client')
+        except KeyError:
+            connector: Optional[aiohttp.BaseConnector] = options.get('connector', None)
+            proxy: Optional[str] = options.pop('proxy', None)
+            proxy_auth: Optional[aiohttp.BasicAuth] = options.pop('proxy_auth', None)
+            unsync_clock: bool = options.pop('assume_unsync_clock', True)
+            http_trace: Optional[aiohttp.TraceConfig] = options.pop('http_trace', None)
+            max_ratelimit_timeout: Optional[float] = options.pop('max_ratelimit_timeout', None)
 
-        self.http: HTTPClient = HTTPClient(
-            self.loop,
-            connector,
-            impersonate=impersonate,
-            proxy=proxy,
-            proxy_auth=proxy_auth,
-            unsync_clock=unsync_clock,
-            http_trace=http_trace,
-            max_ratelimit_timeout=max_ratelimit_timeout,
-        )
-        self.impersonate: Impersonate = impersonate
-        self.resume: Optional[Tuple[int, str]] = options.pop('resume', None)
+            self.http: HTTPClient = HTTPClient(
+                self.loop,
+                connector,
+                impersonate=impersonate,
+                proxy=proxy,
+                proxy_auth=proxy_auth,
+                unsync_clock=unsync_clock,
+                http_trace=http_trace,
+                max_ratelimit_timeout=max_ratelimit_timeout,
+            )
+            self.impersonate: Impersonate = impersonate
+        else:
+            self.http = rpc.http
+            self.impersonate = rpc.http.impersonate
 
         self._handlers: Dict[str, Callable[..., None]] = {
             'ready': self._handle_ready,

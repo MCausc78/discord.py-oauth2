@@ -35,7 +35,7 @@ from .utils import _get_as_snowflake
 
 if TYPE_CHECKING:
     from .guild import Guild
-    from .state import ConnectionState
+    from .state import BaseConnectionState, ConnectionState
     from .types.appinfo import (
         Application as ApplicationPayload,
         PartialApplication as PartialApplicationPayload,
@@ -358,8 +358,8 @@ class PartialAppInfo:
         'role_connections_verification_url',
     )
 
-    def __init__(self, *, data: PartialApplicationPayload, state: ConnectionState):
-        self._state: ConnectionState = state
+    def __init__(self, *, data: PartialApplicationPayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self.id: int = int(data['id'])
         self.name: str = data['name']
         self._icon: Optional[str] = data.get('icon')

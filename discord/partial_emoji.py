@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from datetime import datetime
     from typing_extensions import Self
 
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.emoji import Emoji as EmojiPayload, PartialEmoji as PartialEmojiPayload
     from .types.presences import ActivityEmoji
 
@@ -106,7 +106,7 @@ class PartialEmoji(_EmojiTag, AssetMixin):
         self.animated: bool = animated
         self.name: str = name
         self.id: Optional[int] = id
-        self._state: Optional[ConnectionState] = None
+        self._state: Optional[BaseConnectionState] = None
 
     @classmethod
     def from_dict(cls, data: Union[PartialEmojiPayload, ActivityEmoji, Dict[str, Any]]) -> Self:
@@ -173,7 +173,7 @@ class PartialEmoji(_EmojiTag, AssetMixin):
     @classmethod
     def with_state(
         cls,
-        state: ConnectionState,
+        state: BaseConnectionState,
         *,
         name: str,
         animated: bool = False,

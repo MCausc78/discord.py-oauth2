@@ -46,17 +46,17 @@ from .user import User, Relationship
 from .voice_state import Pan
 
 
-class SetConfigCommandRequest(TypedDict):
+class SetConfigRequest(TypedDict):
     use_interactive_pip: bool
 
 
-class SetConfigCommandResponse(TypedDict):
+class SetConfigResponse(TypedDict):
     use_interactive_pip: bool
 
 
-class AuthorizeCommandRequest(TypedDict, total=False):
+class AuthorizeRequest(TypedDict, total=False):
     client_id: Required[Snowflake]
-    response_type: str
+    response_type: Literal['code', 'token'] # While the API accepts 'token' here, the client rejects it
     scopes: List[str]  # This takes priority over scope
     scope: List[str]  # Deprecated I think?
 
@@ -70,6 +70,7 @@ class AuthorizeCommandRequest(TypedDict, total=False):
     prompt: Literal['none', 'consent']  # Defaults to consent
     disable_guild_select: bool  # Defaults to false
     integration_type: InteractionInstallationType
+    pid: int
 
     # {
     #   client_id: u,
@@ -91,16 +92,17 @@ class AuthorizeCommandRequest(TypedDict, total=False):
     # }
 
 
-class AuthorizeCommandResponse(TypedDict):
+class AuthorizeResponse(TypedDict):
     code: str
 
 
-class AuthenticateCommandRequest(TypedDict):
+class AuthenticateRequest(TypedDict):
     access_token: str
 
 
-class AuthenticateCommandResponse(GetCurrentAuthorizationInformationResponseBody):
+class AuthenticateResponse(GetCurrentAuthorizationInformationResponseBody):
     access_token: str
+
 
 
 class GetGuildRequest(TypedDict):
@@ -206,7 +208,6 @@ class PushToTalkRequest(TypedDict):
 
 
 PushToTalkResponse = None
-
 
 class SelectVoiceChannelRequest(TypedDict):
     channel_id: Optional[Snowflake]

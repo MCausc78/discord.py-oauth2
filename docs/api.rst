@@ -3621,6 +3621,25 @@ of :class:`enum.Enum`.
 
         The payment source is a Cash App account.
 
+.. class:: OAuth2CodeChallengeMethod
+
+    Represents a method used to generate code challenge.
+
+    .. attribute:: sha256
+
+        The code challenge is hashed using SHA256.
+
+.. class:: OAuth2ResponseType
+
+    Represents what should be retrieved when authorizing application.
+
+    .. attribute:: code
+        
+        Retrieve the code for exchanging.
+
+    .. attribute:: token
+        
+        Retrieve the access token directly.
 
 .. class:: OperatingSystem
 
