@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from .enums import ExternalAuthenticationProviderType
-    from .state import ConnectionState
+    from .state import BaseConnectionState, ConnectionState
     from .types.oauth2 import (
         OAuth2AccessToken as OAuth2AccessTokenPayload,
         GetCurrentAuthorizationInformationResponseBody as GetCurrentAuthorizationInformationResponseBodyPayload,
@@ -78,10 +78,10 @@ class OAuth2Authorization:
         'user',
     )
 
-    def __init__(self, *, data: GetCurrentAuthorizationInformationResponseBodyPayload, state: ConnectionState) -> None:
+    def __init__(self, *, data: GetCurrentAuthorizationInformationResponseBodyPayload, state: BaseConnectionState) -> None:
         raw_user = data.get('user')
 
-        self._state: ConnectionState = state
+        self._state: BaseConnectionState = state
         self.application: PartialAppInfo = PartialAppInfo(data=data['application'], state=state)
         self.scopes: List[str] = data['scopes']
         self.expires_at: datetime = parse_time(data['expires'])

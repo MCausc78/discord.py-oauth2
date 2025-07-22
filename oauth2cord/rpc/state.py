@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import logging
 from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
 
 from ..state import BaseConnectionState
@@ -11,6 +12,8 @@ if TYPE_CHECKING:
     from .types.events import (
         ReadyEvent as ReadyEventPayload,
     )
+
+_log = logging.getLogger(__name__)
 
 
 class RPCConnectionState(BaseConnectionState):
@@ -53,5 +56,8 @@ class RPCConnectionState(BaseConnectionState):
         self.api_endpoint = config_data['api_endpoint']
         self.environment = config_data['environment']
         self.user = ClientUser._from_rpc(user_data, self) if user_data else None
+
+        if self.user is not None and self.user.id == 1045800378228281345:
+            _log.warning('Detected arRPC. Most of functions will not work!')
 
         self.dispatch('ready')

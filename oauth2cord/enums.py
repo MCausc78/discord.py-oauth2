@@ -74,7 +74,7 @@ __all__ = (
     'HarvestBackendType',
     'HarvestState',
     'HarvestStatus',
-    'InteractionResponseType',
+    'InstallationType',
     'InteractionType',
     'InviteTarget',
     'InviteType',
@@ -85,6 +85,8 @@ __all__ = (
     'MessageType',
     'NSFWLevel',
     'NotificationLevel',
+    'OAuth2CodeChallengeMethod',
+    'OAuth2ResponseType',
     'OperatingSystem',
     'PaymentSourceType',
     'PollLayoutType',
@@ -850,6 +852,11 @@ class HarvestStatus(Enum):
     canceled = 4
 
 
+class InstallationType(Enum):
+    guild = 0
+    user = 1
+
+
 class InteractionResponseType(Enum):
     pong = 1
     # ack = 2 (deprecated)
@@ -1008,6 +1015,15 @@ class NotificationLevel(Enum, comparable=True):
     only_mentions = 1
     no_messages = 2
     inherit = 3
+
+
+class OAuth2CodeChallengeMethod(Enum):
+    sha256 = 'S256'
+
+
+class OAuth2ResponseType(Enum):
+    code = 'code'
+    token = 'token'
 
 
 # There are tons of different operating system/client enums in the API,

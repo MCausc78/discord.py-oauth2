@@ -71,8 +71,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .message import MessageApplication, Message
-    from .rpc.types.presence import Activity as RPCActivityPayload
-    from .state import ConnectionState
+    from .rpc.types.presence import (
+        ActivityButton as ActivityButtonPayload,
+        Activity as RPCActivityPayload,
+    )
+    from .state import BaseConnectionState, ConnectionState
     from .types.presences import (
         SendableActivity as SendableActivityPayload,
         ReceivableActivity as ReceivableActivityPayload,
@@ -296,6 +299,21 @@ class ActivityButton:
     def __init__(self, *, label: str, url: str) -> None:
         self.label: str = label
         self.url: str = url
+
+    @classmethod
+    def from_dict(cls, data: ActivityButtonPayload) -> Self:
+        self = cls(
+            label=data['label'],
+            url=data['url'],
+        )
+        return self
+
+    def to_dict(self) -> ActivityButtonPayload:
+        payload: ActivityButtonPayload = {
+            'label': self.label,
+            'url': self.url,
+        }
+        return payload
 
 
 class ActivityParty:
@@ -725,10 +743,10 @@ class Activity(BaseActivity):
 
         timestamps: ActivityTimestamps = {}
 
-        if self.start_timestamp is not None:
+        if self.start_timestamp:
             timestamps['start'] = self.start_timestamp
 
-        if self.end_timestamp is not None:
+        if self.end_timestamp:
             timestamps['end'] = self.end_timestamp
 
         if timestamps:
@@ -1053,10 +1071,6 @@ class Game(BaseActivity):
     def to_dict(
         self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
     ) -> Optional[SendableActivityPayload]:
-        # {"d":{"activities":[{
-        #   "application_id":1169421761859833997,"flags":0,"name":"Hackplug",
-        #   "session_id":"e7a6641eb5889041e7618e6b76111620","type":0}],"afk":false,"since":"0","status":"idle"},"op":3}
-
         if application_id is MISSING:
             if self.application_id is None:
                 application_id = state.application_id
@@ -1155,10 +1169,10 @@ class Game(BaseActivity):
 
         timestamps: ActivityTimestamps = {}
 
-        if self.start_timestamp is not None:
+        if self.start_timestamp:
             timestamps['start'] = self.start_timestamp
 
-        if self.end_timestamp is not None:
+        if self.end_timestamp:
             timestamps['end'] = self.end_timestamp
 
         if timestamps:
@@ -2108,26 +2122,32 @@ ActivityTypes = Union[Activity, Game, CustomActivity, Streaming, Spotify]
 
 @overload
 def create_activity(
-    data: Union[ReceivableActivityPayload, SendableActivityPayload], state: ConnectionState
+    data: Union[ReceivableActivityPayload, SendableActivityPayload], state: BaseConnectionState
 ) -> ActivityTypes:
     ...
 
 
 @overload
-def create_activity(data: None, state: ConnectionState) -> None:
+def create_activity(data: None, state: BaseConnectionState) -> None:
     ...
 
 
 def create_activity(
-    data: Optional[Union[ReceivableActivityPayload, SendableActivityPayload]], state: ConnectionState
+    data: Optional[Union[ReceivableActivityPayload, SendableActivityPayload]], state: BaseConnectionState
 ) -> Optional[ActivityTypes]:
     if not data:
         return None
 
-    game_type = try_enum(ActivityType, data.get('type', -1))
-    if game_type is ActivityType.playing and 'application_id' not in data and 'session_id' not in data:
+    raw_application_id = data.get('application_id')
+    session_id = data.get('session_id')
+    name = data.get('name')
+    url = data.get('url')
+    sync_id = data.get('sync_id')
+
+    activity_type = try_enum(ActivityType, data.get('type', -1))
+    if activity_type is ActivityType.playing and raw_application_id is None and session_id is None:
         cls = Game
-    elif game_type is ActivityType.custom and 'name' in data:
+    elif activity_type is ActivityType.custom and name is not None:
         details = data.get('details')
         if details is None:
             ret = CustomActivity(**data)  # type: ignore
@@ -2136,11 +2156,12 @@ def create_activity(
 
         if isinstance(ret.emoji, PartialEmoji):
             ret.emoji._state = state
+
         return ret
-    elif game_type is ActivityType.streaming and 'url' in data:
+    elif activity_type is ActivityType.streaming and url is not None:
         # The URL won't be None here
         return Streaming(**data)  # type: ignore
-    elif game_type is ActivityType.listening and 'sync_id' in data and 'session_id' in data:
+    elif activity_type is ActivityType.listening and sync_id is not None and session_id is not None:
         return Spotify(**data)
     else:
         cls = Activity
@@ -2201,5 +2222,134 @@ def create_activity(
 
     if hasattr(ret, 'emoji') and isinstance(ret.emoji, PartialEmoji):  # type: ignore
         ret.emoji._state = state  # type: ignore
+
+    return ret
+
+
+@overload
+def create_activity_from_rpc(data: RPCActivityPayload, state: Optional[BaseConnectionState]) -> ActivityTypes:
+    ...
+
+
+@overload
+def create_activity_from_rpc(data: None, state: Optional[BaseConnectionState]) -> None:
+    ...
+
+
+def create_activity_from_rpc(
+    data: Optional[RPCActivityPayload], state: Optional[BaseConnectionState]
+) -> Optional[ActivityTypes]:
+    if not data:
+        return None
+
+    raw_application_id = data.get('application_id')
+    session_id = data.get('session_id')
+    name = data.get('name')
+    url = data.get('url')
+    sync_id = data.get('sync_id')
+
+    activity_type = try_enum(ActivityType, data.get('type', -1))
+    if activity_type is ActivityType.playing and raw_application_id is None and session_id is None:
+        cls = Game
+    elif activity_type is ActivityType.custom and name is not None:
+        details = data.get('details')
+        if details is None:
+            ret = CustomActivity(**data)  # type: ignore
+        else:
+            ret = CustomActivity(**data, label=try_enum(CustomStatusLabel, details))  # type: ignore
+
+        if isinstance(ret.emoji, PartialEmoji) and state is not None:
+            ret.emoji._state = state
+
+        return ret
+    elif activity_type is ActivityType.streaming and url is not None:
+        # The URL won't be None here
+        return Streaming(**data)  # type: ignore
+    elif activity_type is ActivityType.listening and sync_id is not None and session_id is not None:
+        return Spotify(**data)
+    else:
+        cls = Activity
+
+    transformed_kwargs: Optional[Dict[str, Any]] = None
+
+    raw_assets = data.get('assets')
+    raw_party = data.get('party')
+    raw_secrets = data.get('secrets')
+    raw_buttons = data.get('buttons')
+    raw_instance = data.get('instance')
+    raw_supported_platforms = data.get('supported_platforms')
+    raw_status_display_type = data.get('status_display_type')
+
+    if raw_assets is not None:
+        assets = ActivityAssets.from_dict(raw_assets)
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'assets': assets}
+        else:
+            transformed_kwargs['assets'] = assets
+
+    if raw_party is not None:
+        party = ActivityParty.from_dict(raw_party)
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'party': party}
+        else:
+            transformed_kwargs['party'] = party
+
+    if raw_secrets is not None:
+        secrets = ActivitySecrets.from_dict(raw_secrets)
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'secrets': secrets}
+        else:
+            transformed_kwargs['secrets'] = secrets
+
+    if raw_buttons is not None:
+        buttons = list(map(ActivityButton.from_dict, raw_buttons))
+
+        button_labels = [button.label for button in buttons]
+        metadata = {'button_urls': [button.url for button in buttons]}
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {
+                'buttons': button_labels,
+                'metadata': metadata,
+            }
+        else:
+            transformed_kwargs['buttons'] = button_labels
+            transformed_kwargs['metadata'] = metadata
+
+    if raw_instance is not None:
+        flags = 0
+
+        if raw_instance:
+            flags |= ActivityFlags.instance.flag
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'flags': flags}
+        else:
+            transformed_kwargs['flags'] = flags
+
+    if raw_supported_platforms is not None:
+        supported_platforms = ActivityPlatforms.from_string_array(raw_supported_platforms).value  # type: ignore
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'supported_platforms': supported_platforms}
+        else:
+            transformed_kwargs['supported_platforms'] = supported_platforms
+
+    if raw_status_display_type is not None:
+        status_display_type = try_enum(StatusDisplayType, raw_status_display_type)
+
+        if transformed_kwargs is None:
+            transformed_kwargs = {'status_display_type': status_display_type}
+        else:
+            transformed_kwargs['status_display_type'] = status_display_type
+
+    if transformed_kwargs:
+        transformed_kwargs = {**data, **transformed_kwargs}
+        ret = cls(**transformed_kwargs)
+    else:
+        ret = cls(**data)
 
     return ret

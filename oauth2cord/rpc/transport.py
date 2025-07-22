@@ -94,6 +94,7 @@ class IPCTransport:
 
     async def send(self, op: int, payload: Any, /) -> None:
         raw = _to_json(payload)
+        _log.debug('Sending IPC event: %s', raw)
 
         self._writer.write(_SEND_STRUCT.pack(op, len(raw)) + raw.encode('utf-8'))
 
