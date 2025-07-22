@@ -2236,7 +2236,9 @@ def create_activity_from_rpc(data: None, state: Optional[BaseConnectionState]) -
     ...
 
 
-def create_activity_from_rpc(data: Optional[RPCActivityPayload], state: Optional[BaseConnectionState]) -> Optional[ActivityTypes]:
+def create_activity_from_rpc(
+    data: Optional[RPCActivityPayload], state: Optional[BaseConnectionState]
+) -> Optional[ActivityTypes]:
     if not data:
         return None
 
@@ -2293,7 +2295,7 @@ def create_activity_from_rpc(data: Optional[RPCActivityPayload], state: Optional
             transformed_kwargs = {'party': party}
         else:
             transformed_kwargs['party'] = party
-    
+
     if raw_secrets is not None:
         secrets = ActivitySecrets.from_dict(raw_secrets)
 
@@ -2306,9 +2308,7 @@ def create_activity_from_rpc(data: Optional[RPCActivityPayload], state: Optional
         buttons = list(map(ActivityButton.from_dict, raw_buttons))
 
         button_labels = [button.label for button in buttons]
-        metadata = {
-            'button_urls': [button.url for button in buttons]
-        }
+        metadata = {'button_urls': [button.url for button in buttons]}
 
         if transformed_kwargs is None:
             transformed_kwargs = {
@@ -2324,7 +2324,7 @@ def create_activity_from_rpc(data: Optional[RPCActivityPayload], state: Optional
 
         if raw_instance:
             flags |= ActivityFlags.instance.flag
-        
+
         if transformed_kwargs is None:
             transformed_kwargs = {'flags': flags}
         else:
@@ -2353,4 +2353,3 @@ def create_activity_from_rpc(data: Optional[RPCActivityPayload], state: Optional
         ret = cls(**data)
 
     return ret
-

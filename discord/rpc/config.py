@@ -24,9 +24,7 @@ class EmbeddedActivityConfig:
         Whether the picture-in-picture is interactive.
     """
 
-    __slots__ = (
-        'use_interactive_pip',
-    )
+    __slots__ = ('use_interactive_pip',)
 
     def __init__(self, data: Union[SetConfigRequestPayload, SetConfigResponsePayload]) -> None:
         self.use_interactive_pip: bool = data['use_interactive_pip']

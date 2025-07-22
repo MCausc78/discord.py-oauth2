@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 _log = logging.getLogger(__name__)
 
+
 class RPCConnectionState(BaseConnectionState):
     __slots__ = (
         'dispatch',

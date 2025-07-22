@@ -8,6 +8,8 @@ An extension module to communicate with Discord Desktop client.
 :license: MIT, see LICENSE for more details.
 """
 
+from . import utils
 from .client import *
+from .config import *
 from .enums import *
 from .errors import *

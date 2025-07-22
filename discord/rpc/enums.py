@@ -15,6 +15,7 @@ class Opcode(Enum):
     ping = 3
     pong = 4
 
+
 class PromptBehavior(Enum):
     none = 'none'
     consent = 'consent'

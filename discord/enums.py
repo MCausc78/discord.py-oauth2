@@ -851,9 +851,11 @@ class HarvestStatus(Enum):
     completed = 3
     canceled = 4
 
+
 class InstallationType(Enum):
     guild = 0
     user = 1
+
 
 class InteractionResponseType(Enum):
     pong = 1
@@ -1014,12 +1016,15 @@ class NotificationLevel(Enum, comparable=True):
     no_messages = 2
     inherit = 3
 
+
 class OAuth2CodeChallengeMethod(Enum):
     sha256 = 'S256'
+
 
 class OAuth2ResponseType(Enum):
     code = 'code'
     token = 'token'
+
 
 # There are tons of different operating system/client enums in the API,
 # so we try to unify them here

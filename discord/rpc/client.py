@@ -211,14 +211,14 @@ class Client(Dispatcher):
 
     async def edit_embedded_activity_config(self, *, use_interactive_pip: bool) -> EmbeddedActivityConfig:
         """|coro|
-        
+
         Edits the configuration for current embedded activity.
 
         Parameters
         ----------
         use_interactive_pip: :class:`bool`
             Whether the picture-in-picture should be interactive.
-        
+
         Raises
         ------
         RPCException
@@ -235,7 +235,7 @@ class Client(Dispatcher):
 
         data: SetConfigResponsePayload = await self._transport.send_command('SET_CONFIG', payload)
         return EmbeddedActivityConfig(data)
-    
+
     async def authorize(
         self,
         client_id: int,
@@ -255,7 +255,7 @@ class Client(Dispatcher):
         pid: Optional[int] = MISSING,
     ) -> str:
         """|coro|
-        
+
         Opens OAuth2 authorization modal in the Discord client.
 
         Parameters
@@ -300,12 +300,12 @@ class Client(Dispatcher):
             The ID of the process to open the authorization modal in. If ``None`` wasn't explicitly passed, this defaults to result of :func:`os.getpid`.
 
             If ``None`` is explicitly passed, then the modal will be open in existing Discord client instead.
-        
+
         Raises
         ------
         RPCException
             Authorizing the application failed.
-        
+
         Returns
         -------
         :class:`str`
@@ -313,11 +313,11 @@ class Client(Dispatcher):
         """
         if pid is MISSING:
             pid = self.pid
-        
+
         payload: AuthorizeRequestPayload = {
             'client_id': str(client_id),
         }
-        
+
         if response_type is not None:
             payload['response_type'] = response_type.value
         if scopes is not None:
@@ -344,13 +344,13 @@ class Client(Dispatcher):
             payload['integration_type'] = install_type.value
         if pid is not None:
             payload['pid'] = pid
-        
+
         data: AuthorizeResponsePayload = await self._transport.send_command('AUTHORIZE', payload)
         return data['code']
 
     async def authenticate(self, token: str) -> Tuple[OAuth2Authorization, str]:
         """|coro|
-        
+
         Authenticates with the provided access token.
 
         Note that you need to connect to IPC socket first using :meth:`start`.
@@ -359,7 +359,7 @@ class Client(Dispatcher):
         ----------
         token: :class:`str`
             The authentication token.
-        
+
         Parameters
         ----------
         RPCException
@@ -373,7 +373,7 @@ class Client(Dispatcher):
         payload: AuthenticateRequestPayload = {'access_token': token}
         data: AuthenticateResponsePayload = await self._transport.send_command('AUTHENTICATE', payload)
         return (OAuth2Authorization(data=data, state=self._connection), data['access_token'])
-    
+
     # Remaining:
     # - GET_GUILD
     # - GET_GUILDS
@@ -411,7 +411,7 @@ class Client(Dispatcher):
         ----------
         activity: Optional[Union[:class:`~discord.BaseActivity`, :class:`~discord.Spotify`]]
             The activity. Passing ``None`` denotes the activity will be removed.
-        
+
         Raises
         ------
         RPCException
@@ -437,14 +437,14 @@ class Client(Dispatcher):
 
     async def send_activity_join_invite(self, to: Snowflake) -> None:
         """|coro|
-        
+
         Sends an activity join invite to target user.
 
         Parameters
         ----------
         to: :class:`~discord.abc.Snowflake`
             The user to send invite to.
-        
+
         Raises
         ------
         RPCException
