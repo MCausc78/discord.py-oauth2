@@ -35,7 +35,7 @@ from .user import User
 OriginalMatch = TypedDict(
     'OriginalMatch',
     {
-        'index': NotRequired[int],
+        'index': Required[int],
         '0': str,
         '1': str,
         '2': str,
@@ -49,18 +49,24 @@ OriginalMatch = TypedDict(
         '10': str,
         # 10 matches should be enough :clueless:
     },
+    total=False,
 )
 
 
 class TextComponent(TypedDict):
     type: Literal['text']
     content: str
-    originalMatch: OriginalMatch
+    originalMatch: NotRequired[OriginalMatch]
 
 
-class SubTextComponent(TypedDict):
-    type: Literal['subtext']
-    content: str
+class StrikethroughComponent(TypedDict):
+    type: Literal['s']
+    content: List[ContentComponent]
+
+
+class UnderlineComponent(TypedDict):
+    type: Literal['u']
+    content: List[ContentComponent]
 
 
 class StrongComponent(TypedDict):
@@ -73,18 +79,7 @@ class ItailcComponent(TypedDict):
     content: List[ContentComponent]
 
 
-class UnderlineComponent(TypedDict):
-    type: Literal['u']
-    content: List[ContentComponent]
-
-
-class StrikethroughComponent(TypedDict):
-    type: Literal['s']
-    content: List[ContentComponent]
-
-
-class BreakComponent(TypedDict):
-    type: Literal['br']
+# e.IMAGE = "image",
 
 
 class EmojiComponent(TypedDict, total=False):
@@ -99,6 +94,59 @@ class EmojiComponent(TypedDict, total=False):
     # Custom
     animated: bool
     emojiId: Snowflake
+
+
+# e.CUSTOM_EMOJI = "customEmoji", # ???
+
+
+class LinkComponent(TypedDict):
+    type: Literal['link']
+    content: List[ContentComponent]
+    target: str
+    title: NotRequired[str]
+
+
+# e.URL = "url",
+# e.AUTOLINK = "autolink",
+
+
+class HighlightComponent(TypedDict):
+    type: Literal['highlight']
+    content: List[ContentComponent]
+
+
+# e.PARAGRAPH = "paragraph",
+
+
+class BreakComponent(TypedDict):
+    type: Literal['br']
+
+
+# e.NEWLINE = "newline",
+# e.ESCAPE = "escape",
+
+
+class SpoilerComponent(TypedDict):
+    type: Literal['spoiler']
+    channelId: Snowflake
+    content: List[ContentComponent]
+
+
+class BlockQuoteComponent(TypedDict):
+    type: Literal['blockQuote']
+    content: List[ContentComponent]
+
+
+class InlineCodeComponent(TypedDict):
+    type: Literal['inlineCode']
+    content: str
+
+
+class CodeBlockComponent(TypedDict):
+    type: Literal['codeBlock']
+    lang: str
+    content: str
+    inQuote: bool  # True if in blockQuote
 
 
 class MentionComponent(TypedDict, total=False):
@@ -124,16 +172,36 @@ class MentionComponent(TypedDict, total=False):
     viewingChannelId: Snowflake  # idk what thats for
 
 
-class InlineCodeComponent(TypedDict):
-    type: Literal['inlineCode']
-    content: str
-
-
-class CodeBlockComponent(TypedDict):
-    type: Literal['codeBlock']
-    lang: str
-    content: str
-    inQuote: bool  # ???
+# {
+# "type": "channelMention",
+# "channelId": "YYY",
+# "guildId": "XXX",
+# "messageId": "ZZZ",
+# "originalLink": "https://canary.discord.com/channels/XXX/YYY/ZZZ",
+# "inContent": [{
+#  "type": "channel",
+#  "content": [{
+#   "type": "text",
+#   "content": "garbage-collector-1"
+#  }],
+#  "channelType": 0,
+#  "iconType": "text"
+# }],
+# "content": [{
+#  "type": "channel",
+#  "content": [{
+#   "type": "text",
+#   "content": ""
+#  }],
+#  "iconType": "message"
+# }]
+class ChannelMentionComponent(TypedDict):
+    type: Literal['channelMention']
+    channelId: Snowflake
+    guildId: NotRequired[Optional[Union[Snowflake, Literal['@me']]]]  # Always provided actually
+    messageId: Optional[Snowflake]
+    inContent: Optional[List[ChannelComponent]]  # idk
+    content: List[ChannelComponent]
 
 
 class ChannelComponent(TypedDict):
@@ -153,27 +221,108 @@ class ChannelComponent(TypedDict):
     ]
 
 
-class ChannelMentionComponent(TypedDict):
-    type: Literal['channelMention']
-    channelId: Snowflake
-    messageId: Optional[Snowflake]
-    inContent: None  # idk
-    content: List[ChannelComponent]
+class GuildComponent(TypedDict):
+    type: Literal['guild']
+    guildId: Snowflake
+    content: str
+    icon: NotRequired[str]
 
+
+class AttachmentLinkComponent(TypedDict):
+    type: Literal['attachmentLink']
+    content: List[TextComponent]
+    attachmentUrl: str
+    attachmentName: str
+
+
+class ShopLinkComponent(TypedDict):
+    type: Literal['shopLink']
+    content: List[TextComponent]
+    shopLink: str
+    skuId: Snowflake
+
+
+class SoundboardComponent(TypedDict):
+    type: Literal['soundboard']
+    guildId: Snowflake
+    soundId: Snowflake
+
+
+class StaticRouteLinkComponent(TypedDict):
+    type: Literal['staticRouteLink']
+    content: List[TextComponent]
+    mainContent: List[TextComponent]
+    itemContent: Optional[List[TextComponent]]
+    itemId: NotRequired[Snowflake]  # only applicable if id is linked-roles
+    id: str  # GuildNavigationType
+    gulidId: Snowflake
+    channelId: str  # GuildNavigationType
+
+
+class RoleMentionComponent(TypedDict):
+    type: Literal['roleMention']
+    id: Snowflake
+
+
+class CommandMentionComponent(TypedDict):
+    type: Literal['commandMention']
+    channelId: Snowflake
+    commandId: Snowflake
+    commandName: str
+    commandKey: str  # {id}\x00{name}
+    content: List[ContentComponent]
+
+
+class TimestampComponent(TypedDict):
+    type: Literal['timestamp']
+    timestamp: str  # unix timestamp
+    format: NotRequired[str]  # single char, one of tTdDfFR
+    parsed: str  # ISO8601 timestamp
+    full: str
+    formatted: str  # How it's rendered in client
+
+
+# e.LIST = "list",
+# e.HEADING = "heading",
+class SubTextComponent(TypedDict):
+    type: Literal['subtext']
+    content: str
+
+
+class SilentPrefixComponent(TypedDict):
+    type: Literal['silentPrefix']
+    content: str  # Literal['@silent'] # lol
+
+
+# ...
 
 ContentComponent = Union[
     TextComponent,
-    SubTextComponent,
+    StrikethroughComponent,
+    UnderlineComponent,
     StrongComponent,
     ItailcComponent,
-    UnderlineComponent,
-    StrikethroughComponent,
-    BreakComponent,
     EmojiComponent,
-    MentionComponent,
+    LinkComponent,
+    HighlightComponent,
+    BreakComponent,
+    SpoilerComponent,
+    BlockQuoteComponent,
     InlineCodeComponent,
     CodeBlockComponent,
+    MentionComponent,
     ChannelMentionComponent,
+    ChannelComponent,
+    GuildComponent,
+    AttachmentLinkComponent,
+    ShopLinkComponent,
+    SoundboardComponent,
+    StaticRouteLinkComponent,
+    RoleMentionComponent,
+    CommandMentionComponent,
+    TimestampComponent,
+    SubTextComponent,
+    SilentPrefixComponent,
 ]
 
 

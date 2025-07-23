@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from .guild import Guild
     from .message import Message
     from .presences import Presence
+    from .primary_guild import PrimaryGuild
     from .relationship import Relationship
     from .role import Role
     from .state import ConnectionState
@@ -74,7 +75,7 @@ if TYPE_CHECKING:
     )
     from .types.user import User as UserPayload, AvatarDecorationData
     from .types.voice import BaseVoiceState as VoiceStatePayload
-    from .user import PrimaryGuild
+    from .user import DisplayNameStyle
 
     VocalGuildChannel = Union[VoiceChannel, StageChannel]
     ConnectableChannel = Union[VocalGuildChannel, DMChannel, GroupChannel]
@@ -148,11 +149,11 @@ class VoiceState:
         *,
         data: VoiceStatePayload,
         channel: Optional[ConnectableChannel] = None,
-    ):
+    ) -> None:
         self.session_id: Optional[str] = data.get('session_id')
         self._update(data, channel)
 
-    def _update(self, data: VoiceStatePayload, channel: Optional[ConnectableChannel]):
+    def _update(self, data: VoiceStatePayload, channel: Optional[ConnectableChannel]) -> None:
         self.self_mute: bool = data.get('self_mute', False)
         self.self_deaf: bool = data.get('self_deaf', False)
         self.self_stream: bool = data.get('self_stream', False)
@@ -322,6 +323,7 @@ class Member(oauth2cord.abc.Messageable, _UserTag):
         avatar_decoration: Optional[Asset]
         avatar_decoration_sku_id: Optional[int]
         primary_guild: PrimaryGuild
+        display_name_style: Optional[DisplayNameStyle]
 
         game_relationship: Optional[GameRelationship]
         relationship: Optional[Relationship]

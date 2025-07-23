@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from typing import Literal, Optional, TypedDict
+from typing import List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
 from .snowflake import Snowflake
@@ -40,6 +40,12 @@ class PrimaryGuild(TypedDict, total=False):
     identity_enabled: Optional[bool]
 
 
+class DisplayNameStyle(TypedDict):
+    font_id: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    effect_id: Literal[1, 2, 3, 4, 5]
+    colors: List[int]
+
+
 class PartialUser(TypedDict):
     id: Snowflake
     username: str
@@ -48,6 +54,7 @@ class PartialUser(TypedDict):
     global_name: Optional[str]
     avatar_decoration_data: NotRequired[Optional[AvatarDecorationData]]
     primary_guild: NotRequired[Optional[PrimaryGuild]]
+    display_name_styles: NotRequired[Optional[DisplayNameStyle]]
 
 
 PremiumType = Literal[0, 1, 2, 3]
