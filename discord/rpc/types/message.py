@@ -58,13 +58,16 @@ class TextComponent(TypedDict):
     content: str
     originalMatch: NotRequired[OriginalMatch]
 
+
 class StrikethroughComponent(TypedDict):
     type: Literal['s']
     content: List[ContentComponent]
 
+
 class UnderlineComponent(TypedDict):
     type: Literal['u']
     content: List[ContentComponent]
+
 
 class StrongComponent(TypedDict):
     type: Literal['strong']
@@ -75,7 +78,9 @@ class ItailcComponent(TypedDict):
     type: Literal['em']
     content: List[ContentComponent]
 
+
 # e.IMAGE = "image",
+
 
 class EmojiComponent(TypedDict, total=False):
     type: Required[Literal['emoji']]
@@ -90,7 +95,9 @@ class EmojiComponent(TypedDict, total=False):
     animated: bool
     emojiId: Snowflake
 
+
 # e.CUSTOM_EMOJI = "customEmoji", # ???
+
 
 class LinkComponent(TypedDict):
     type: Literal['link']
@@ -98,14 +105,18 @@ class LinkComponent(TypedDict):
     target: str
     title: NotRequired[str]
 
+
 # e.URL = "url",
 # e.AUTOLINK = "autolink",
+
 
 class HighlightComponent(TypedDict):
     type: Literal['highlight']
     content: List[ContentComponent]
 
+
 # e.PARAGRAPH = "paragraph",
+
 
 class BreakComponent(TypedDict):
     type: Literal['br']
@@ -114,14 +125,17 @@ class BreakComponent(TypedDict):
 # e.NEWLINE = "newline",
 # e.ESCAPE = "escape",
 
+
 class SpoilerComponent(TypedDict):
     type: Literal['spoiler']
     channelId: Snowflake
     content: List[ContentComponent]
 
+
 class BlockQuoteComponent(TypedDict):
     type: Literal['blockQuote']
     content: List[ContentComponent]
+
 
 class InlineCodeComponent(TypedDict):
     type: Literal['inlineCode']
@@ -132,7 +146,7 @@ class CodeBlockComponent(TypedDict):
     type: Literal['codeBlock']
     lang: str
     content: str
-    inQuote: bool # True if in blockQuote
+    inQuote: bool  # True if in blockQuote
 
 
 class MentionComponent(TypedDict, total=False):
@@ -184,10 +198,11 @@ class MentionComponent(TypedDict, total=False):
 class ChannelMentionComponent(TypedDict):
     type: Literal['channelMention']
     channelId: Snowflake
-    guildId: NotRequired[Optional[Union[Snowflake, Literal['@me']]]] # Always provided actually
+    guildId: NotRequired[Optional[Union[Snowflake, Literal['@me']]]]  # Always provided actually
     messageId: Optional[Snowflake]
     inContent: Optional[List[ChannelComponent]]  # idk
     content: List[ChannelComponent]
+
 
 class ChannelComponent(TypedDict):
     type: Literal['channel']
@@ -205,11 +220,13 @@ class ChannelComponent(TypedDict):
         'forum',
     ]
 
+
 class GuildComponent(TypedDict):
     type: Literal['guild']
     guildId: Snowflake
     content: str
     icon: NotRequired[str]
+
 
 class AttachmentLinkComponent(TypedDict):
     type: Literal['attachmentLink']
@@ -217,46 +234,53 @@ class AttachmentLinkComponent(TypedDict):
     attachmentUrl: str
     attachmentName: str
 
+
 class ShopLinkComponent(TypedDict):
     type: Literal['shopLink']
     content: List[TextComponent]
     shopLink: str
     skuId: Snowflake
 
+
 class SoundboardComponent(TypedDict):
     type: Literal['soundboard']
     guildId: Snowflake
     soundId: Snowflake
+
 
 class StaticRouteLinkComponent(TypedDict):
     type: Literal['staticRouteLink']
     content: List[TextComponent]
     mainContent: List[TextComponent]
     itemContent: Optional[List[TextComponent]]
-    itemId: NotRequired[Snowflake] # only applicable if id is linked-roles
-    id: str # GuildNavigationType
+    itemId: NotRequired[Snowflake]  # only applicable if id is linked-roles
+    id: str  # GuildNavigationType
     gulidId: Snowflake
-    channelId: str # GuildNavigationType
+    channelId: str  # GuildNavigationType
+
 
 class RoleMentionComponent(TypedDict):
     type: Literal['roleMention']
     id: Snowflake
+
 
 class CommandMentionComponent(TypedDict):
     type: Literal['commandMention']
     channelId: Snowflake
     commandId: Snowflake
     commandName: str
-    commandKey: str # {id}\x00{name}
+    commandKey: str  # {id}\x00{name}
     content: List[ContentComponent]
+
 
 class TimestampComponent(TypedDict):
     type: Literal['timestamp']
-    timestamp: str # unix timestamp
-    format: NotRequired[str] # single char, one of tTdDfFR
-    parsed: str # ISO8601 timestamp
+    timestamp: str  # unix timestamp
+    format: NotRequired[str]  # single char, one of tTdDfFR
+    parsed: str  # ISO8601 timestamp
     full: str
-    formatted: str # How it's rendered in client
+    formatted: str  # How it's rendered in client
+
 
 # e.LIST = "list",
 # e.HEADING = "heading",
@@ -267,9 +291,10 @@ class SubTextComponent(TypedDict):
 
 class SilentPrefixComponent(TypedDict):
     type: Literal['silentPrefix']
-    content: str # Literal['@silent'] # lol
+    content: str  # Literal['@silent'] # lol
 
-#...
+
+# ...
 
 ContentComponent = Union[
     TextComponent,

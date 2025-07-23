@@ -39,10 +39,12 @@ class PrimaryGuild(TypedDict, total=False):
     identity_guild_id: Optional[Snowflake]
     identity_enabled: Optional[bool]
 
+
 class DisplayNameStyle(TypedDict):
     font_id: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     effect_id: Literal[1, 2, 3, 4, 5]
     colors: List[int]
+
 
 class PartialUser(TypedDict):
     id: Snowflake
@@ -53,6 +55,7 @@ class PartialUser(TypedDict):
     avatar_decoration_data: NotRequired[Optional[AvatarDecorationData]]
     primary_guild: NotRequired[Optional[PrimaryGuild]]
     display_name_styles: NotRequired[Optional[DisplayNameStyle]]
+
 
 PremiumType = Literal[0, 1, 2, 3]
 

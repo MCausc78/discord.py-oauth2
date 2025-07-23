@@ -77,6 +77,7 @@ class _UserTag:
 
     id: int
 
+
 class DisplayNameStyle:
     """Represents how an user's name gets displayed, such as font, colors, gradient, glow.
 
@@ -123,6 +124,7 @@ class DisplayNameStyle:
         This is an alias of :attr:`colors`.
         """
         return self.colors
+
 
 class BaseUser(_UserTag):
     __slots__ = (

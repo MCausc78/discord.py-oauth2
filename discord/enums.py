@@ -691,27 +691,27 @@ class DefaultAvatar(Enum):
     def __str__(self) -> str:
         return self.name
 
+
 class DisplayNameEffect(Enum):
-	solid = 1
-	gradient = 2
-	neon = 3
-	toon = 4
-	pop = 5
+    solid = 1
+    gradient = 2
+    neon = 3
+    toon = 4
+    pop = 5
 
 
 class DisplayNameFont(Enum):
-	bangers = 1
-	bio_rhyme = 2
-	cherry_bomb = 3
-	chicle = 4
-	compagnon = 5
-	museo_moderno = 6
-	neo_castel = 7
-	pixelify = 8
-	ribes = 9
-	sinistre = 10
-	default = 11
-
+    bangers = 1
+    bio_rhyme = 2
+    cherry_bomb = 3
+    chicle = 4
+    compagnon = 5
+    museo_moderno = 6
+    neo_castel = 7
+    pixelify = 8
+    ribes = 9
+    sinistre = 10
+    default = 11
 
 
 class EntitlementFulfillmentStatus(Enum):

@@ -210,7 +210,7 @@ class User(Snowflake, Protocol):
     @property
     def primary_guild(self) -> PrimaryGuild:
         """:class:`~discord.PrimaryGuild`: Returns the user's primary guild.
-        
+
         .. versionadded:: 3.0
         """
         raise NotImplementedError
