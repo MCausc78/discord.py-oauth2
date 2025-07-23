@@ -87,13 +87,14 @@ if TYPE_CHECKING:
     from .guild import Guild
     from .member import Member
     from .message import Message
+    from .primary_guild import PrimaryGuild
     from .state import ConnectionState
     from .types.channel import (
         PermissionOverwrite as PermissionOverwritePayload,
         GuildChannel as GuildChannelPayload,
         OverwriteType,
     )
-    from .user import ClientUser
+    from .user import DisplayNameStyle, ClientUser
 
     PartialMessageableChannel = Union[TextChannel, DMChannel, EphemeralDMChannel, PartialMessageable]
     MessageableChannel = PartialMessageableChannel
@@ -147,6 +148,10 @@ class User(Snowflake, Protocol):
         If the user is a bot account.
     system: :class:`bool`
         If the user is a system account.
+    display_name_style: Optional[:class:`DisplayNameStyle`]
+        The style for the display name.
+
+        .. versionadded:: 3.0
     """
 
     name: str
@@ -154,6 +159,7 @@ class User(Snowflake, Protocol):
     global_name: Optional[str]
     bot: bool
     system: bool
+    display_name_style: Optional[DisplayNameStyle]
 
     @property
     def display_name(self) -> str:
@@ -198,6 +204,14 @@ class User(Snowflake, Protocol):
         For regular users this is just their default avatar or uploaded avatar.
 
         .. versionadded:: 2.0
+        """
+        raise NotImplementedError
+
+    @property
+    def primary_guild(self) -> PrimaryGuild:
+        """:class:`~discord.PrimaryGuild`: Returns the user's primary guild.
+        
+        .. versionadded:: 3.0
         """
         raise NotImplementedError
 

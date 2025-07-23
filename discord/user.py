@@ -30,7 +30,14 @@ import discord.abc
 
 from .asset import Asset
 from .color import Color
-from .enums import try_enum, DefaultAvatar, PremiumType, RelationshipType
+from .enums import (
+    try_enum,
+    DefaultAvatar,
+    DisplayNameEffect,
+    DisplayNameFont,
+    PremiumType,
+    RelationshipType,
+)
 from .flags import PublicUserFlags
 from .primary_guild import PrimaryGuild
 from .utils import MISSING, _get_as_snowflake, snowflake_time
@@ -54,10 +61,12 @@ if TYPE_CHECKING:
         User as UserPayload,
         AvatarDecorationData as AvatarDecorationDataPayload,
         PrimaryGuild as PrimaryGuildPayload,
+        DisplayNameStyle as DisplayNameStylePayload,
     )
 
 
 __all__ = (
+    'DisplayNameStyle',
     'User',
     'ClientUser',
 )
@@ -68,6 +77,52 @@ class _UserTag:
 
     id: int
 
+class DisplayNameStyle:
+    """Represents how an user's name gets displayed, such as font, colors, gradient, glow.
+
+    Attributes
+    ----------
+    font: :class:`DisplayNameFont`
+        The font for the display name.
+    effect: :class:`DisplayNameEffect`
+        The effect for the display name.
+    raw_colors: List[:class:`int`]
+        A list of colors encoded in hexdecimal format.
+    """
+
+    __slots__ = (
+        'font',
+        'effect',
+        'raw_colors',
+    )
+
+    def __init__(self, data: DisplayNameStylePayload) -> None:
+        self.font: DisplayNameFont = try_enum(DisplayNameFont, data['font_id'])
+        self.effect: DisplayNameEffect = try_enum(DisplayNameEffect, data['effect_id'])
+        self.raw_colors: List[int] = data['colors']
+
+    def to_dict(self) -> DisplayNameStylePayload:
+        return {
+            'font_id': self.font.value,
+            'effect_id': self.effect.value,
+            'colors': self.raw_colors,
+        }
+
+    @property
+    def colors(self) -> List[Color]:
+        """List[:class:`Color`]: A list of colors.
+
+        There is an alias for this named :attr:`colours`.
+        """
+        return list(map(Color, self.raw_colors))
+
+    @property
+    def colours(self) -> List[Color]:
+        """List[:class:`Colour`]: A list of colours.
+
+        This is an alias of :attr:`colors`.
+        """
+        return self.colors
 
 class BaseUser(_UserTag):
     __slots__ = (
@@ -84,6 +139,7 @@ class BaseUser(_UserTag):
         '_state',
         '_avatar_decoration_data',
         '_primary_guild',
+        'display_name_style',
     )
 
     if TYPE_CHECKING:
@@ -100,6 +156,7 @@ class BaseUser(_UserTag):
         _public_flags: int
         _avatar_decoration_data: Optional[AvatarDecorationDataPayload]
         _primary_guild: Optional[PrimaryGuildPayload]
+        display_name_style: Optional[DisplayNameStyle]
 
     def __init__(self, *, state: BaseConnectionState, data: Union[UserPayload, PartialUserPayload]) -> None:
         self._state: BaseConnectionState = state
@@ -126,6 +183,8 @@ class BaseUser(_UserTag):
         return self.id >> 22
 
     def _update(self, data: Union[UserPayload, PartialUserPayload]) -> None:
+        display_name_style_data = data.get('display_name_styles')
+
         self.id = int(data['id'])
         self.name = data['username']
         self.discriminator = data['discriminator']
@@ -138,6 +197,7 @@ class BaseUser(_UserTag):
         self.system = data.get('system', False)
         self._avatar_decoration_data = data.get('avatar_decoration_data')
         self._primary_guild = data.get('primary_guild')
+        self.display_name_style = None if display_name_style_data is None else DisplayNameStyle(display_name_style_data)
 
     @classmethod
     def _copy(cls, user: Self) -> Self:
@@ -155,6 +215,7 @@ class BaseUser(_UserTag):
         self._public_flags = user._public_flags
         self._avatar_decoration_data = user._avatar_decoration_data
         self._primary_guild = user._primary_guild
+        self.display_name_style = user.display_name_style
 
         return self
 
@@ -170,6 +231,7 @@ class BaseUser(_UserTag):
             'bot': self.bot,
             'avatar_decoration_data': self._avatar_decoration_data,
             'primary_guild': self._primary_guild,
+            'display_name_style': None if self.display_name_style is None else self.display_name_style.to_dict(),
         }
         return payload
 
@@ -303,7 +365,7 @@ class BaseUser(_UserTag):
         A user's accent colour is only shown if they do not have a banner.
         This will only be available if the user explicitly sets a colour.
 
-        There is an alias for this named :attr:`accent_color`.
+        This is an alias of :attr:`accent_color`.
 
         .. versionadded:: 2.0
 
@@ -460,8 +522,10 @@ class ClientUser(BaseUser):
         Specifies if the user is a system user (i.e. represents Discord officially).
 
         .. versionadded:: 1.3
-    primary_guild: Optional[:class:`PrimaryUserGuild`]
-        The primary guild the user is frequently participates in.
+    display_name_style: Optional[:class:`DisplayNameStyle`]
+        The style for the display name.
+
+        .. versionadded:: 3.0
     verified: :class:`bool`
         Specifies if the user's email is verified.
     email: Optional[:class:`str`]
@@ -595,8 +659,10 @@ class User(BaseUser, discord.abc.Messageable):
         Specifies if the user is a bot account.
     system: :class:`bool`
         Specifies if the user is a system user (i.e. represents Discord officially).
-    primary_guild: Optional[:class:`PrimaryUserGuild`]
-        The primary guild the user is frequently participates in.
+    display_name_style: Optional[:class:`DisplayNameStyle`]
+        The style for the display name.
+
+        .. versionadded:: 3.0
     """
 
     __slots__ = ('__weakref__',)
