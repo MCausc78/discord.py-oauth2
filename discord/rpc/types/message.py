@@ -200,7 +200,7 @@ class ChannelMentionComponent(TypedDict):
     channelId: Snowflake
     guildId: NotRequired[Optional[Union[Snowflake, Literal['@me']]]]  # Always provided actually
     messageId: Optional[Snowflake]
-    inContent: Optional[List[ChannelComponent]]  # idk
+    inContent: Optional[List[ChannelComponent]]
     content: List[ChannelComponent]
 
 
