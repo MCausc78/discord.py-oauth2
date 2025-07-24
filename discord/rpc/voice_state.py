@@ -19,9 +19,10 @@ __all__ = (
     'VoiceState',
 )
 
+
 class Pan:
     """Represents a left and right pan for user.
-    
+
     .. versionadded:: 3.0
 
     Attributes
@@ -50,6 +51,7 @@ class Pan:
             'left': self.left,
             'right': self.right,
         }
+
 
 class VoiceState:
     """Represents a Discord user's voice state.

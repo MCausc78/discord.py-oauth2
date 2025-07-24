@@ -35,9 +35,10 @@ __all__ = (
     'VoiceSettings',
 )
 
+
 class UserVoiceSettings:
     """Represents voice settings for a specific user.
-    
+
     .. versionadded:: 3.0
 
     Attributes
@@ -67,6 +68,7 @@ class UserVoiceSettings:
         self.volume: float = data['volume']
         self.mute: bool = data['mute']
 
+
 class AvailableDevice:
     __slots__ = (
         'id',
@@ -76,7 +78,7 @@ class AvailableDevice:
     def __init__(self, *, id: str, name: str) -> None:
         self.id: str = id
         self.name: str = name
-    
+
     @classmethod
     def from_dict(cls, data: AvailableDevicePayload) -> Self:
         return cls(id=data['id'], name=data['name'])
@@ -84,9 +86,10 @@ class AvailableDevice:
     def to_dict(self) -> AvailableDevicePayload:
         return {'id': self.id, 'name': self.name}
 
+
 class VoiceIOSettings:
     """Represents I/O voice settings.
-    
+
     .. versionadded:: 3.0
 
     Attributes
@@ -110,11 +113,11 @@ class VoiceIOSettings:
     def __init__(self, *, available_devices: Optional[List[AvailableDevice]] = None, device_id: str, volume: float) -> None:
         if available_devices is None:
             available_devices = []
-        
+
         self.available_devices: List[AvailableDevice] = available_devices
         self.device_id: str = device_id
         self.volume: float = volume
-    
+
     @classmethod
     def from_dict(cls, data: VoiceIOSettingsPayload) -> Self:
         return cls(
@@ -132,7 +135,7 @@ class VoiceIOSettings:
             'device_id': self.device_id,
             'volume': self.volume,
         }
-    
+
 
 class ShortcutKeyCombo:
     """Represents a shortcut key combo for PTT (Push-To-Talk).
@@ -157,7 +160,7 @@ class ShortcutKeyCombo:
         self.type: ShortcutKeyComboType = type
         self.code: int = code
         self.name: Optional[str] = name
-    
+
     @classmethod
     def from_dict(cls, data: Union[PartialShortcutKeyComboPayload, ShortcutKeyComboPayload]) -> Self:
         return cls(
@@ -182,6 +185,7 @@ class ShortcutKeyCombo:
             'name': self.name or '',
         }
 
+
 class PartialVoiceSettingsMode:
     """Represents a modification of voice settings mode.
 
@@ -202,7 +206,7 @@ class PartialVoiceSettingsMode:
     delay: :class:`int`
         The new PTT release delay in milliseconds. Must be between 0 and 2000.
     """
-    
+
     __slots__ = (
         'type',
         'auto_threshold',
@@ -228,26 +232,27 @@ class PartialVoiceSettingsMode:
 
     def to_dict(self) -> SetVoiceSettingsRequestModePayload:
         payload: SetVoiceSettingsRequestModePayload = {'type': self.type.value}
-        
+
         if self.auto_threshold is not MISSING:
             payload['auto_threshold'] = self.auto_threshold
-        
+
         if self.threshold is not MISSING:
             payload['threshold'] = self.threshold
-        
+
         if self.shortcut is not MISSING:
             payload['shortcut'] = [s.to_partial_dict() for s in self.shortcut]
-        
+
         if self.delay is not MISSING:
             payload['delay'] = self.delay
-        
+
         return payload
-        
+
+
 class VoiceSettingsMode:
     """Represents the voice settings mode.
 
     .. versionadded:: 3.0
-    
+
     Attributes
     ----------
     type: :class:`VoiceSettingsModeType`
@@ -261,7 +266,7 @@ class VoiceSettingsMode:
     delay: :class:`int`
         The PTT release delay in milliseconds. Must be between 0 and 2000.
     """
-    
+
     __slots__ = (
         'type',
         'auto_threshold',
@@ -286,6 +291,7 @@ class VoiceSettingsMode:
             'delay': self.delay,
         }
         return payload
+
 
 class VoiceSettings:
     """Represents voice settings.

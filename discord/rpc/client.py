@@ -682,7 +682,7 @@ class Client(Dispatcher):
         mute: bool = MISSING,
     ) -> UserVoiceSettings:
         """|coro|
-        
+
         Edits the voice settings for specified user.
 
         You must have ``rpc`` or ``rpc.voice.write`` OAuth2 scope.
@@ -699,7 +699,7 @@ class Client(Dispatcher):
             The new local volume. Must be between 0 and 200.
         mute: :class:`bool`
             Whether the user should be muted.
-        
+
         Raises
         ------
         RPCException
@@ -731,7 +731,7 @@ class Client(Dispatcher):
         mute: bool = MISSING,
     ) -> None:
         """|coro|
-        
+
         Edits the voice settings for specified user.
 
         All parameters are optional.
@@ -891,7 +891,7 @@ class Client(Dispatcher):
 
     async def fetch_voice_settings(self) -> VoiceSettings:
         """|coro|
-        
+
         Retrieve your voice settings.
 
         Raises
@@ -918,9 +918,9 @@ class Client(Dispatcher):
         self_deaf: bool = MISSING,
     ) -> None:
         """|coro|
-        
+
         Edits the voice settings.
-        
+
         All parameters are optional.
 
         Parameters
@@ -933,33 +933,33 @@ class Client(Dispatcher):
             Indicates if you should be deafened by your accord.
         mute: :class:`bool`
             Indicates if you should be muted by your accord.
-        
+
         Raises
         ------
         RPCException
             Editing the voice settings failed.
         """
         payload: SetVoiceSettings2RequestPayload = {}
-        
+
         input_mode: Dict[str, Any] = {}
 
         if input_mode_type is not MISSING:
             input_mode['type'] = input_mode_type.value
-        
+
         if input_mode_shortcut is not MISSING:
             input_mode['shortcut'] = input_mode_shortcut
 
         if input_mode:
             payload['input_mode'] = input_mode  # type: ignore
-        
+
         if self_mute is not MISSING:
             payload['self_mute'] = self_mute
-        
+
         if self_deaf is not MISSING:
             payload['self_deaf'] = self_deaf
 
         await self._transport.send_command('SET_VOICE_SETTINGS_2', payload)
-    
+
     async def edit_voice_settings(
         self,
         *,
@@ -975,7 +975,7 @@ class Client(Dispatcher):
         mute: bool = MISSING,
     ) -> VoiceSettings:
         """|coro|
-        
+
         Edits the voice settings.
 
         All parameters are optional.
@@ -1002,7 +1002,7 @@ class Client(Dispatcher):
             Indicates if the user is deafened by their accord.
         mute: :class:`bool`
             Indicates if the user is muted by their accord.
-        
+
         Raises
         ------
         RPCException
@@ -1036,7 +1036,7 @@ class Client(Dispatcher):
             payload['deaf'] = deaf
         if mute is not MISSING:
             payload['mute'] = mute
-        
+
         data: SetVoiceSettingsResponsePayload = await self._transport.send_command('SET_VOICE_SETTINGS', payload)
         return VoiceSettings(data=data, state=self._connection)
 
