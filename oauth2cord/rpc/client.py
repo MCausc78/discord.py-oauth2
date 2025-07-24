@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any, List, Literal, Optional, TYPE_CHECKING, Tuple, Type, Union
+from typing import Any, Dict, List, Literal, Optional, TYPE_CHECKING, Tuple, Type, Union
 
 from ..activity import create_activity_from_rpc
 from ..dispatcher import _loop, Dispatcher
@@ -21,8 +21,14 @@ from ..user import User
 from ..utils import MISSING
 from .channel import PartialGuildChannel, GuildChannel
 from .config import EmbeddedActivityConfig
-from .enums import Opcode, PromptBehavior
+from .enums import Opcode, PromptBehavior, VoiceSettingsModeType
 from .guild import PartialGuild, Guild
+from .settings import (
+    UserVoiceSettings,
+    VoiceIOSettings,
+    PartialVoiceSettingsMode,
+    VoiceSettings,
+)
 from .state import RPCConnectionState
 from .transport import IPCTransport
 
@@ -64,8 +70,10 @@ if TYPE_CHECKING:
         SubscribeResponse as SubscribeResponsePayload,
         UnsubscribeRequest as UnsubscribeRequestPayload,
         UnsubscribeResponse as UnsubscribeResponsePayload,
-        # SET_USER_VOICE_SETTINGS
-        # SET_USER_VOICE_SETTINGS_2
+        SetUserVoiceSettingsRequest as SetUserVoiceSettingsRequestPayload,
+        SetUserVoiceSettingsResponse as SetUserVoiceSettingsResponsePayload,
+        SetUserVoiceSettings2Request as SetUserVoiceSettings2RequestPayload,
+        # SetUserVoiceSettings2Response as SetUserVoiceSettings2ResponsePayload,
         PushToTalkRequest as PushToTalkRequestPayload,
         # PushToTalkResponse as PushToTalkResponsePayload,
         SelectVoiceChannelRequest as SelectVoiceChannelRequestPayload,
@@ -74,13 +82,18 @@ if TYPE_CHECKING:
         GetSelectedVoiceChannelResponse as GetSelectedVoiceChannelResponsePayload,
         SelectTextChannelRequest as SelectTextChannelRequestPayload,
         SelectTextChannelResponse as SelectTextChannelResponsePayload,
-        # GET_VOICE_SETTINGS
-        # SET_VOICE_SETTINGS_2
+        GetVoiceSettingsRequest as GetVoiceSettingsRequestPayload,
+        GetVoiceSettingsResponse as GetVoiceSettingsResponsePayload,
+        SetVoiceSettings2Request as SetVoiceSettings2RequestPayload,
+        # SetVoiceSettings2Response as SetVoiceSettings2ResponsePayload,
+        SetVoiceSettingsRequest as SetVoiceSettingsRequestPayload,
+        SetVoiceSettingsResponse as SetVoiceSettingsResponsePayload,
         SetActivityRequest as SetActivityRequestPayload,
         SetActivityResponse as SetActivityResponsePayload,
         SendActivityJoinInviteRequest as SendActivityJoinInviteRequestPayload,
         CloseActivityJoinRequest as CloseActivityJoinRequestPayload,
     )
+    from .voice_state import Pan
 
 TransportType = Literal[
     'ipc',
@@ -660,9 +673,93 @@ class Client(Dispatcher):
         )
         return data['evt']
 
-    # Remaining:
-    # 1. SET_USER_VOICE_SETTINGS
-    # 2. SET_USER_VOICE_SETTINGS_2
+    async def edit_user_voice_settings(
+        self,
+        user_id: int,
+        *,
+        pan: Pan = MISSING,
+        volume: float = MISSING,
+        mute: bool = MISSING,
+    ) -> UserVoiceSettings:
+        """|coro|
+
+        Edits the voice settings for specified user.
+
+        You must have ``rpc`` or ``rpc.voice.write`` OAuth2 scope.
+
+        All parameters are optional.
+
+        Parameters
+        ----------
+        user_id: :class:`int`
+            The target user's ID.
+        pan: :class:`Pan`
+            The new pan values for the target user.
+        volume: :class:`float`
+            The new local volume. Must be between 0 and 200.
+        mute: :class:`bool`
+            Whether the user should be muted.
+
+        Raises
+        ------
+        RPCException
+            Editing the user voice settings failed.
+
+        Returns
+        -------
+        :class:`UserVoiceSettings`
+            The newly updated user voice settings.
+        """
+        payload: SetUserVoiceSettingsRequestPayload = {
+            'user_id': str(user_id),
+        }
+        if pan is not MISSING:
+            payload['pan'] = pan.to_dict()
+        if volume is not MISSING:
+            payload['volume'] = volume
+        if mute is not MISSING:
+            payload['mute'] = mute
+
+        data: SetUserVoiceSettingsResponsePayload = await self._transport.send_command('SET_USER_VOICE_SETTINGS', payload)
+        return UserVoiceSettings(data=data, state=self._connection)
+
+    async def edit_user_voice_settings_2(
+        self,
+        user_id: int,
+        *,
+        volume: float = MISSING,
+        mute: bool = MISSING,
+    ) -> None:
+        """|coro|
+
+        Edits the voice settings for specified user.
+
+        All parameters are optional.
+
+        Parameters
+        ----------
+        user_id: :class:`int`
+            The target user's ID.
+        volume: :class:`float`
+            The new local volume. Must be between 0 and 200.
+        mute: :class:`bool`
+            Whether the user should be muted.
+
+        Raises
+        ------
+        RPCException
+            Editing the user voice settings failed.
+        """
+        payload: SetUserVoiceSettings2RequestPayload = {
+            'user_id': str(user_id),
+        }
+        if volume is not MISSING:
+            payload['volume'] = volume
+        if mute is not MISSING:
+            payload['mute'] = mute
+
+        # Needs RPC_LOCAL_SCOPE (?)
+        await self._transport.send_command('SET_USER_VOICE_SETTINGS_2', payload)
 
     async def push_to_talk(self, *, active: Optional[bool] = None) -> None:
         """|coro|
@@ -792,9 +889,156 @@ class Client(Dispatcher):
 
         return GuildChannel(data=data, state=self._connection)
 
-    # 3. GET_VOICE_SETTINGS
-    # 4. SET_VOICE_SETTINGS_2
-    # 5. SET_VOICE_SETTINGS
+    async def fetch_voice_settings(self) -> VoiceSettings:
+        """|coro|
+
+        Retrieve your voice settings.
+
+        Raises
+        ------
+        RPCException
+            Retrieving voice settings failed.
+
+        Returns
+        -------
+        :class:`VoiceSettings`
+            The voice settings.
+        """
+        payload: GetVoiceSettingsRequestPayload = {}
+
+        data: GetVoiceSettingsResponsePayload = await self._transport.send_command('GET_VOICE_SETTINGS', payload)
+        return VoiceSettings(data=data, state=self._connection)
+
+    async def edit_voice_settings_2(
+        self,
+        *,
+        input_mode_type: VoiceSettingsModeType = MISSING,
+        input_mode_shortcut: str = MISSING,
+        self_mute: bool = MISSING,
+        self_deaf: bool = MISSING,
+    ) -> None:
+        """|coro|
+
+        Edits the voice settings.
+
+        All parameters are optional.
+
+        Parameters
+        ----------
+        input_mode_type: :class:`VoiceSettingsModeType`
+            The new type of input mode.
+        input_mode_shortcut: :class:`str`
+            The new shortcut of input mode.
+        deaf: :class:`bool`
+            Indicates if you should be deafened by your accord.
+        mute: :class:`bool`
+            Indicates if you should be muted by your accord.
+
+        Raises
+        ------
+        RPCException
+            Editing the voice settings failed.
+        """
+        payload: SetVoiceSettings2RequestPayload = {}
+
+        input_mode: Dict[str, Any] = {}
+
+        if input_mode_type is not MISSING:
+            input_mode['type'] = input_mode_type.value
+
+        if input_mode_shortcut is not MISSING:
+            input_mode['shortcut'] = input_mode_shortcut
+
+        if input_mode:
+            payload['input_mode'] = input_mode  # type: ignore
+
+        if self_mute is not MISSING:
+            payload['self_mute'] = self_mute
+
+        if self_deaf is not MISSING:
+            payload['self_deaf'] = self_deaf
+
+        await self._transport.send_command('SET_VOICE_SETTINGS_2', payload)
+
+    async def edit_voice_settings(
+        self,
+        *,
+        input: VoiceIOSettings = MISSING,
+        output: VoiceIOSettings = MISSING,
+        mode: PartialVoiceSettingsMode = MISSING,
+        automatic_gain_control: bool = MISSING,
+        echo_cancellation: bool = MISSING,
+        noise_suppression: bool = MISSING,
+        qos: bool = MISSING,
+        silence_warning: bool = MISSING,
+        deaf: bool = MISSING,
+        mute: bool = MISSING,
+    ) -> VoiceSettings:
+        """|coro|
+
+        Edits the voice settings.
+
+        All parameters are optional.
+
+        Parameters
+        ----------
+        input: :class:`VoiceIOSettings`
+            The new input settings.
+        output: :class:`VoiceIOSettings`
+            The new output settings.
+        mode: :class:`VoiceSettingsMode`
+            The new voice mode settings.
+        automatic_gain_control: :class:`bool`
+            Indicates if automatic gain control is enabled.
+        echo_cancellation: :class:`bool`
+            Indicates if echo cancellation is enabled.
+        noise_suppression: :class:`bool`
+            Indicates if the background noise is being suppressed.
+        qos: :class:`bool`
+            Indicates if Voice Quality of Service (QoS) is enabled.
+        silence_warning: :class:`bool`
+            Indicates if the silence warning notice is disabled.
+        deaf: :class:`bool`
+            Indicates if the user is deafened by their accord.
+        mute: :class:`bool`
+            Indicates if the user is muted by their accord.
+
+        Raises
+        ------
+        RPCException
+            Editing the voice settings failed.
+
+        Returns
+        -------
+        :class:`VoiceSettings`
+            The newly updated voice settings.
+        """
+
+        payload: SetVoiceSettingsRequestPayload = {}
+
+        if input is not MISSING:
+            payload['input'] = input.to_partial_dict()
+        if output is not MISSING:
+            payload['output'] = output.to_partial_dict()
+        if mode is not MISSING:
+            payload['mode'] = mode.to_dict()
+        if automatic_gain_control is not MISSING:
+            payload['automatic_gain_control'] = automatic_gain_control
+        if echo_cancellation is not MISSING:
+            payload['echo_cancellation'] = echo_cancellation
+        if noise_suppression is not MISSING:
+            payload['noise_suppression'] = noise_suppression
+        if qos is not MISSING:
+            payload['qos'] = qos
+        if silence_warning is not MISSING:
+            payload['silence_warning'] = silence_warning
+        if deaf is not MISSING:
+            payload['deaf'] = deaf
+        if mute is not MISSING:
+            payload['mute'] = mute
+
+        data: SetVoiceSettingsResponsePayload = await self._transport.send_command('SET_VOICE_SETTINGS', payload)
+        return VoiceSettings(data=data, state=self._connection)
 
     async def change_presence(
         self,
@@ -834,6 +1078,8 @@ class Client(Dispatcher):
         }
         data: SetActivityResponsePayload = await self._transport.send_command('SET_ACTIVITY', payload)
         return create_activity_from_rpc(data, self._connection)
+
+    # TODO: Add more below
 
     async def send_activity_join_invite(self, to: Snowflake) -> None:
         """|coro|

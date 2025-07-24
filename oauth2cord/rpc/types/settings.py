@@ -94,24 +94,24 @@ ShortcutKeyComboType = Literal[
 
 class PartialShortcutKeyCombo(TypedDict):
     type: ShortcutKeyComboType
-    code: str
+    code: int
     name: NotRequired[str]
 
 
 class ShortcutKeyCombo(TypedDict):
     type: ShortcutKeyComboType
-    code: str
+    code: int
     name: str
 
 
-VoiceSettingsModeType = Literal['PUSH_TO_TALK', 'ACTIVITY']
+VoiceSettingsModeType = Literal['PUSH_TO_TALK', 'VOICE_ACTIVITY']
 
 
 class VoiceSettingsMode(TypedDict):
     type: VoiceSettingsModeType
     auto_threshold: bool
     threshold: int
-    shortcut: ShortcutKeyCombo
+    shortcut: List[ShortcutKeyCombo]
     delay: int
 
 

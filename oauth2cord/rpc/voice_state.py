@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 from ..user import User
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from .state import RPCConnectionState
     from .types.voice_state import (
         InnerVoiceState as InnerVoiceStatePayload,
@@ -12,7 +14,43 @@ if TYPE_CHECKING:
         VoiceState as VoiceStatePayload,
     )
 
-__all__ = ('VoiceState',)
+__all__ = (
+    'Pan',
+    'VoiceState',
+)
+
+
+class Pan:
+    """Represents a left and right pan for user.
+
+    .. versionadded:: 3.0
+
+    Attributes
+    ----------
+    left: :class:`float`
+        The left pan of user. Can be only between ``0.0`` and ``1.0``.
+    right: :class:`float`
+        The right pan of user. Can be only between ``0.0`` and ``1.0``.
+    """
+
+    __slots__ = (
+        'left',
+        'right',
+    )
+
+    def __init__(self, *, left: float, right: float) -> None:
+        self.left: float = left
+        self.right: float = right
+
+    @classmethod
+    def from_dict(cls, data: PanPayload) -> Self:
+        return cls(left=data['left'], right=data['right'])
+
+    def to_dict(self) -> PanPayload:
+        return {
+            'left': self.left,
+            'right': self.right,
+        }
 
 
 class VoiceState:
@@ -44,10 +82,8 @@ class VoiceState:
         Indicates if the user is currently muted locally in the Discord client.
     local_volume: :class:`float`
         The user's volume, set locally.
-    left_pan: :class:`float`
-        The left pan of user, set locally. Can be only between ``0.0`` and ``1.0``.
-    right_pan: :class:`float`
-        The right pan of user, set locally. Can be only between ``0.0`` and ``1.0``.
+    pan: :class:`Pan`
+        The pan of user, set locally.
     """
 
     __slots__ = (
@@ -61,8 +97,7 @@ class VoiceState:
         'nick',
         'local_mute',
         'local_volume',
-        'left_pan',
-        'right_pan',
+        'pan',
     )
 
     if TYPE_CHECKING:
@@ -76,16 +111,11 @@ class VoiceState:
         nick: str
         local_mute: bool
         local_volume: float
-        left_pan: float
-        right_pan: float
+        pan: Pan
 
     def __init__(self, *, data: VoiceStatePayload, state: RPCConnectionState) -> None:
         self._state = state
         self._update(data)
-
-    def _update_pan(self, data: PanPayload) -> None:
-        self.left_pan = data['left']
-        self.right_pan = data['right']
 
     def _update_inner(self, data: InnerVoiceStatePayload) -> None:
         self.mute = data['mute']
@@ -95,7 +125,7 @@ class VoiceState:
         self.suppress = data['suppress']
 
     def _update(self, data: VoiceStatePayload) -> None:
-        self._update_pan(data['pan'])
+        self.pan = Pan.from_dict(data['pan'])
         self._update_inner(data['voice_state'])
 
         self.user = User._from_rpc(data['user'], self._state)

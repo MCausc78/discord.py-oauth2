@@ -826,7 +826,11 @@ class Client(Dispatcher):
         #         nonce = 0
         #         for region in regions:
         #           for ip in region.ips:
-        #             await udp(b'\x13\x37\xCA\xFE' + nonce.to_bytes(length=4, byteorder='little', signed=False), host=ip, port=???,
+        #             await udp(
+        #               b'\x13\x37\xCA\xFE' + nonce.to_bytes(length=4, byteorder='little', signed=False),
+        #               host=ip,
+        #               port=???,
+        #             )
         #             # The response will be 8 bytes and contain 1337F00D + <little-endian nonce>
         #             nonce += 1
         # Step 6) http.post("/science", blahblah)
