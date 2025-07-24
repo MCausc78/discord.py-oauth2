@@ -20,11 +20,12 @@ __all__ = (
     'GuildChannel',
 )
 
+
 class PartialGuildChannel(Hashable):
     """Represents a partial Discord guild channel.
 
     Unlike :class:`oauth2cord.abc.GuildChannel`, these are received from RPC.
-    
+
     .. versionadded:: 3.0
 
     Attributes
@@ -47,24 +48,27 @@ class PartialGuildChannel(Hashable):
         'name',
     )
 
-    def __init__(self, *, data: Union[PartialGuildChannelPayload, GuildChannelPayload], guild_id: int, state: RPCConnectionState) -> None:
+    def __init__(
+        self, *, data: Union[PartialGuildChannelPayload, GuildChannelPayload], guild_id: int, state: RPCConnectionState
+    ) -> None:
         self._state: RPCConnectionState = state
         self.id = int(data['id'])
         self.guild_id: int = guild_id
         self._update(data)
-    
+
     def _update(self, data: Union[PartialGuildChannelPayload, GuildChannelPayload]) -> None:
         self.type: ChannelType = try_enum(ChannelType, data['type'])
         self.name: str = data['name']
-    
+
     @property
     def guild(self) -> Optional[Guild]:
         """Optional[:class:`Guild`]: The guild that this channel belongs to."""
         return self._state.get_rpc_guild(self.guild_id)
 
+
 class GuildChannel(PartialGuildChannel):
     """Represents a Discord guild channel.
-    
+
     This inherits from :class:`PartialGuildChannel`.
 
     .. versionadded:: 3.0
@@ -98,7 +102,9 @@ class GuildChannel(PartialGuildChannel):
         'voice_states',
     )
 
-    def __init__(self, *, data: Union[PartialGuildChannelPayload, GuildChannelPayload], guild_id: int = 0, state: RPCConnectionState) -> None:
+    def __init__(
+        self, *, data: Union[PartialGuildChannelPayload, GuildChannelPayload], guild_id: int = 0, state: RPCConnectionState
+    ) -> None:
         super().__init__(data=data, guild_id=int(data.get('guild_id', guild_id)), state=state)
 
     def _update(self, data: GuildChannelPayload) -> None:

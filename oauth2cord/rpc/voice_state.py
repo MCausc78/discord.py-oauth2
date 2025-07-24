@@ -12,15 +12,14 @@ if TYPE_CHECKING:
         VoiceState as VoiceStatePayload,
     )
 
-__all__ = (
-    'VoiceState',
-)
+__all__ = ('VoiceState',)
+
 
 class VoiceState:
     """Represents a Discord user's voice state.
 
     Unlike :class:`oauth2cord.VoiceState`, these are received from RPC.
-    
+
     .. versionadded:: 3.0
 
     Attributes
@@ -48,7 +47,7 @@ class VoiceState:
     left_pan: :class:`float`
         The left pan of user, set locally. Can be only between ``0.0`` and ``1.0``.
     right_pan: :class:`float`
-        The right pan of user, set locally. Can be only between ``0.0`` and ``1.0``.    
+        The right pan of user, set locally. Can be only between ``0.0`` and ``1.0``.
     """
 
     __slots__ = (
@@ -63,7 +62,7 @@ class VoiceState:
         'local_mute',
         'local_volume',
         'left_pan',
-        'right_pan'
+        'right_pan',
     )
 
     if TYPE_CHECKING:
@@ -83,7 +82,7 @@ class VoiceState:
     def __init__(self, *, data: VoiceStatePayload, state: RPCConnectionState) -> None:
         self._state = state
         self._update(data)
-    
+
     def _update_pan(self, data: PanPayload) -> None:
         self.left_pan = data['left']
         self.right_pan = data['right']

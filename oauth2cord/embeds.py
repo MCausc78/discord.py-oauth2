@@ -59,14 +59,14 @@ class EmbedProxy:
 class EmbedMediaProxy(EmbedProxy):
     def __init__(self, layer: Dict[str, Any]):
         super().__init__(layer)
-        
+
         raw_content_scan_metadata = self.__dict__.pop('content_scan_metadata', None)
 
         self._flags = self.__dict__.pop('flags', 0)
         self._animated = self.__dict__.pop('_animated', None)
         self.description = self.__dict__.pop('description', '')
         self.content_type = self.__dict__.pop('content_type', '')
-        
+
         if raw_content_scan_metadata is None:
             self.content_scan_version = None
             self._content_scan_flags = 0
@@ -90,6 +90,7 @@ class EmbedMediaProxy(EmbedProxy):
     @property
     def content_scan_flags(self) -> MediaScanFlags:
         return MediaScanFlags._from_value(self._content_scan_flags)
+
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -138,6 +139,7 @@ if TYPE_CHECKING:
         icon_url: Optional[str]
         proxy_icon_url: Optional[str]
 
+
 def _transform_rpc_embed_media_to_api(data: RPCEmbedMediaPayload) -> Tuple[bool, EmbedMediaPayload]:
     transformed_data: EmbedMediaPayload = {
         'url': data['url'],
@@ -156,6 +158,7 @@ def _transform_rpc_embed_media_to_api(data: RPCEmbedMediaPayload) -> Tuple[bool,
     if 'description' in data:
         transformed_data['description'] = data['description']
     return data['srcIsAnimated'], transformed_data
+
 
 class Embed:
     """Represents a Discord embed.
@@ -190,7 +193,7 @@ class Embed:
     id: :class:`str`
         The ID of the embed.
         This attribute won't be empty if received from RPC.
-        
+
         .. versionadded:: 3.0
     title: Optional[:class:`str`]
         The title of the embed.
@@ -329,7 +332,7 @@ class Embed:
             self._color = Color(value=data['color'])
         except KeyError:
             pass
-            
+
         self.css_color = None
 
         try:
@@ -353,25 +356,25 @@ class Embed:
 
         if 'url' in data:
             transformed_data['url'] = data['url']
-        
+
         if 'rawTitle' in data:
             transformed_data['title'] = data['rawTitle']
-        
+
         if 'rawDescription' in data:
             transformed_data['description'] = data['rawDescription']
-        
+
         if 'referenceId' in data:
             transformed_data['reference_id'] = data['referenceId']
 
         if 'flags' in data:
             transformed_data['flags'] = data['flags']
-        
+
         if 'contentScanVersion' in data:
             transformed_data['content_scan_version'] = data['contentScanVersion']
-        
+
         if 'timestamp' in data:
             transformed_data['timestamp'] = data['timestamp']
-        
+
         raw_image = data.get('image')
         raw_thumbnail = data.get('thumbnail')
         raw_video = data.get('video')

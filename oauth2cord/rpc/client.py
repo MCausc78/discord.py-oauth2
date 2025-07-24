@@ -413,19 +413,19 @@ class Client(Dispatcher):
 
     async def fetch_guild(self, guild_id: int, *, timeout: Optional[int] = None) -> Guild:
         """|coro|
-        
+
         Retrieves a :class:`Guild` with specified ID.
 
         Parameters
         ----------
         guild_id: :class:`int`
             The guild's ID to request.
-        
+
         Parameters
         ----------
         RPCException
             Retrieving the guild failed.
-        
+
         Returns
         -------
         :class:`Guild`
@@ -434,7 +434,7 @@ class Client(Dispatcher):
 
         if timeout is None:
             timeout = 30
-        
+
         payload: GetGuildRequestPayload = {
             'guild_id': str(guild_id),
             'timeout': timeout,
@@ -445,7 +445,7 @@ class Client(Dispatcher):
 
     async def fetch_guilds(self) -> List[PartialGuild]:
         """|coro|
-        
+
         Retrieves a list of guilds you're in.
 
         Raises
@@ -465,7 +465,7 @@ class Client(Dispatcher):
 
     async def fetch_channel(self, channel_id: int) -> GuildChannel:
         """|coro|
-        
+
         Retrieves a :class:`GuildChannel` from specified ID.
 
         Parameters
@@ -477,7 +477,7 @@ class Client(Dispatcher):
         ------
         RPCException
             Retrieving the channel failed.
-        
+
         Returns
         -------
         :class:`GuildChanenl`
@@ -490,7 +490,7 @@ class Client(Dispatcher):
 
     async def fetch_guild_channels(self, guild_id: int) -> List[PartialGuildChannel]:
         """|coro|
-        
+
         Retrieves a list of channels the guild has.
 
         Parameters
@@ -515,14 +515,14 @@ class Client(Dispatcher):
 
     async def fetch_current_channel_permissions(self) -> Permissions:
         """|coro|
-        
+
         Compute your permissions in the selected guild channel.
 
         Raises
         ------
         RPCException
             Computing permissions failed.
-        
+
         Returns
         -------
         :class:`~oauth2cord.Permissions`
@@ -531,17 +531,17 @@ class Client(Dispatcher):
         payload: GetChannelPermissionsRequestPayload = {}
         data: GetChannelPermissionsResponsePayload = await self._transport.send_command('GET_CHANNEL_PERMISSIONS', payload)
         return Permissions._from_value(int(data['permissions']))
-    
+
     async def create_channel_invite(self, channel_id: int) -> Invite:
         """|coro|
 
         Creates a invite in the specified channel.
-        
+
         Parameters
         ----------
         channel_id: :class:`int`
             The channel's ID to create the invite for.
-        
+
         Raises
         ------
         RPCException
@@ -559,7 +559,7 @@ class Client(Dispatcher):
 
     async def fetch_relationships(self) -> List[Relationship]:
         """|coro|
-        
+
         Retrieve all of your relationships and their presence.
 
         Note that you will receive only overall status
@@ -570,7 +570,7 @@ class Client(Dispatcher):
         ------
         RPCException
             Retrieving relationships failed.
-        
+
         Returns
         -------
         List[:class:`~oauth2cord.Relationship`]
@@ -584,19 +584,19 @@ class Client(Dispatcher):
 
     async def fetch_user(self, user_id: int) -> Optional[User]:
         """|coro|
-        
+
         Retrieve the specified user.
 
         Parameters
         ----------
         user_id: :class:`int`
             The user's ID to request.
-        
+
         Raises
         ------
         RPCException
             Retrieving the user failed.
-        
+
         Returns
         -------
         Optional[:class:`~oauth2cord.User`]
@@ -607,10 +607,10 @@ class Client(Dispatcher):
         if data is None:
             return None
         return User._from_rpc(data, self._connection)
-    
+
     async def add_subscription(self, subscription: EventSubscription) -> str:
         """|coro|
-        
+
         Adds an event subscription.
 
         Parameters
@@ -622,19 +622,21 @@ class Client(Dispatcher):
         ------
         RPCException
             Adding an event subscription failed.
-        
+
         Returns
         -------
         :class:`str`
             The event that the subscription just added.
         """
         payload: SubscribeRequestPayload = subscription.get_data()
-        data: SubscribeResponsePayload = await self._transport.send_command('SUBSCRIBE', payload, event=subscription.get_type())
+        data: SubscribeResponsePayload = await self._transport.send_command(
+            'SUBSCRIBE', payload, event=subscription.get_type()
+        )
         return data['evt']
-    
+
     async def remove_subscription(self, subscription: EventSubscription) -> str:
         """|coro|
-        
+
         Removes an event subscription.
 
         Parameters
@@ -646,30 +648,32 @@ class Client(Dispatcher):
         ------
         RPCException
             Removing an event subscription failed.
-        
+
         Returns
         -------
         :class:`str`
             The event that the subscription just removed.
         """
         payload: UnsubscribeRequestPayload = subscription.get_data()
-        data: UnsubscribeResponsePayload = await self._transport.send_command('UNSUBSCRIBE', payload, event=subscription.get_type())
+        data: UnsubscribeResponsePayload = await self._transport.send_command(
+            'UNSUBSCRIBE', payload, event=subscription.get_type()
+        )
         return data['evt']
 
     # Remaining:
     # 1. SET_USER_VOICE_SETTINGS
     # 2. SET_USER_VOICE_SETTINGS_2
-    
+
     async def push_to_talk(self, *, active: Optional[bool] = None) -> None:
         """|coro|
 
         Sets whether Push-To-Talk feature should be active.
-        
+
         Parameters
         ----------
         active: Optional[:class:`bool`]
             Whether the Push-To-Talk feature should be active.
-        
+
         Raises
         ------
         RPCException
@@ -689,7 +693,7 @@ class Client(Dispatcher):
         navigate: Optional[bool] = None,
     ) -> Optional[GuildChannel]:
         """|coro|
-        
+
         Joins or leaves a voice channel.
 
         Parameters
@@ -703,12 +707,12 @@ class Client(Dispatcher):
             Whether to forcefully join/leave voice channel. Defaults to ``False``.
         navigate: Optional[:class:`bool`]
             Whether to navigate to the voice channel after joining. Defaults to ``False``.
-        
+
         Raises
         ------
         RPCException
             Joining/leaving the voice channel failed.
-        
+
         Returns
         -------
         Optional[:class:`GuildChannel`]
@@ -722,38 +726,42 @@ class Client(Dispatcher):
             payload['force'] = force
         if navigate is not None:
             payload['navigate'] = navigate
-        
+
         data: SelectVoiceChannelResponsePayload = await self._transport.send_command('SELECT_VOICE_CHANNEL', payload)
         if data is None:
             return None
-        
+
         return GuildChannel(data=data, state=self._connection)
 
     async def fetch_selected_voice_channel(self) -> Optional[GuildChannel]:
         """|coro|
-        
+
         Retrieve the voice channel you're currently in.
 
         Raises
         ------
         RPCException
             Retrieving the current voice channel failed.
-        
+
         Returns
         -------
         Optional[:class:`GuildChannel`]
             The voice channel you're currently in, if any.
         """
         payload: GetSelectedVoiceChannelRequestPayload = {}
-        data: GetSelectedVoiceChannelResponsePayload = await self._transport.send_command('GET_SELECTED_VOICE_CHANNEL', payload)
+        data: GetSelectedVoiceChannelResponsePayload = await self._transport.send_command(
+            'GET_SELECTED_VOICE_CHANNEL', payload
+        )
         if data is None:
             return None
 
         return GuildChannel(data=data, state=self._connection)
-    
-    async def select_text_channel(self, channel_id: Optional[int], *, timeout: Optional[int] = None) -> Optional[GuildChannel]:
+
+    async def select_text_channel(
+        self, channel_id: Optional[int], *, timeout: Optional[int] = None
+    ) -> Optional[GuildChannel]:
         """|coro|
-        
+
         Navigates to a text channel.
 
         Parameters
@@ -763,12 +771,12 @@ class Client(Dispatcher):
             Pass ``None`` to leave the current text channel.
         timeout: Optional[:class:`float`]
             A timeout for navigating text channel in milliseconds.
-        
+
         Raises
         ------
         RPCException
             Navigating to text channel failed.
-        
+
         Returns
         -------
         Optional[:class:`GuildChannel`]
@@ -777,11 +785,11 @@ class Client(Dispatcher):
         payload: SelectTextChannelRequestPayload = {'channel_id': None if channel_id is None else str(channel_id)}
         if timeout is not None:
             payload['timeout'] = timeout
-        
+
         data: SelectTextChannelResponsePayload = await self._transport.send_command('SELECT_TEXT_CHANNEL', payload)
         if data is None:
             return None
-        
+
         return GuildChannel(data=data, state=self._connection)
 
     # 3. GET_VOICE_SETTINGS

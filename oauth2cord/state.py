@@ -141,14 +141,14 @@ class BaseConnectionState:
     ) -> None:
         def get_websocket() -> DiscordWebSocket:
             raise TypeError('WebSocket is unavailable')
-        
+
         # Set later, after Client.login
         self.loop: asyncio.AbstractEventLoop = MISSING
         self.http: HTTPClient = http
         self.dispatch: Callable[..., Any] = dispatch
         self.application_id: Optional[int] = _get_as_snowflake(options, 'application_id')
         self.get_websocket = get_websocket
-        
+
         cache_flags = options.get('member_cache_flags')
         if cache_flags is None:
             intents = options.get('intents')
@@ -161,7 +161,7 @@ class BaseConnectionState:
         # else: cache_flags._verify_intents(intents)
 
         self.member_cache_flags: MemberCacheFlags = cache_flags
-    
+
     def create_user(self, data: Union[UserPayload, PartialUserPayload]) -> User:
         return User(data=data, state=self)
 
@@ -252,10 +252,10 @@ class BaseConnectionState:
         channel = cls(data=data, me=self.user, state=self)  # type: ignore
         self._add_private_channel(channel)
         return channel
-    
+
     def store_emoji(self, guild: Guild, data: EmojiPayload) -> Emoji:
         return Emoji(guild=guild, state=self, data=data)
-        
+
     def store_sticker(self, guild: Guild, data: GuildStickerPayload) -> GuildSticker:
         return GuildSticker(data=data, state=self)
 
@@ -287,7 +287,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
             if not intents.guilds:
                 _log.warning('Guilds intent seems to be disabled. This may cause state related issues.')
-        
+
         BaseConnectionState.__init__(self, dispatch=dispatch, http=http, intents=intents)
         self.max_messages: Optional[int] = options.get('max_messages', 1000)
         if self.max_messages is not None and self.max_messages <= 0:
@@ -328,8 +328,6 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
                 status = 'invisible'
             else:
                 status = str(status)
-
-
 
         self._activities: List[SendableActivityPayload] = activities
         self._status: Optional[str] = status
@@ -498,7 +496,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
     def get_message(self, msg_id: Optional[int]) -> Optional[Message]:
         if msg_id is None:
             return None
-        
+
         return find(lambda m: m.id == msg_id, reversed(self._messages)) if self._messages else None
 
     def get_lobby(self, lobby_id: Optional[int]) -> Optional[Lobby]:
@@ -588,7 +586,6 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
                     if dispatch:
                         self.dispatch('user_update', before, user)
             return user
-
 
     # ...
     def _add_guild(self, guild: Guild) -> None:

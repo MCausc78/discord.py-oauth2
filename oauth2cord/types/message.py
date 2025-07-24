@@ -69,9 +69,11 @@ class Reaction(TypedDict):
     count_details: ReactionCountDetails
     burst_colors: List[str]
 
+
 class MediaScanMetadata(TypedDict):
     version: int
     flags: int  # EXPLICIT = 1 << 0, GORE = 1 << 1
+
 
 class Attachment(TypedDict):
     id: Snowflake
