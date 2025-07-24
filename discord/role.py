@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
     from .guild import Guild
     from .member import Member
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.role import (
         Role as RolePayload,
         RoleTags as RoleTagsPayload,
@@ -236,9 +236,9 @@ class Role(Hashable):
         'tags',
     )
 
-    def __init__(self, *, guild: Guild, state: ConnectionState, data: RolePayload):
+    def __init__(self, *, data: RolePayload, guild: Guild, state: BaseConnectionState):
+        self._state: BaseConnectionState = state
         self.guild: Guild = guild
-        self._state: ConnectionState = state
         self.id: int = int(data['id'])
         self._update(data)
 
@@ -290,7 +290,7 @@ class Role(Hashable):
         self.name: str = data['name']
         self._permissions: int = int(data.get('permissions', 0))
         self.position: int = data.get('position', 0)
-        self._color: int = data.get('color', 0)
+        self._color: int = colors['primary_color']
         self.hoist: bool = data.get('hoist', False)
         self._icon: Optional[str] = data.get('icon')
         self.unicode_emoji: Optional[str] = data.get('unicode_emoji')

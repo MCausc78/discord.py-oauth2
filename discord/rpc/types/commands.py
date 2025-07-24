@@ -109,10 +109,7 @@ class GetGuildRequest(TypedDict):
     timeout: int  # min 0, max 60
 
 
-class GetGuildResponse(TypedDict):
-    id: Snowflake
-    name: str
-    icon_url: Optional[str]  # If not none, then its https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.png?size=128
+class GetGuildResponse(PartialGuild):
     members: List[Any]
     vanity_url_code: Optional[str]
 

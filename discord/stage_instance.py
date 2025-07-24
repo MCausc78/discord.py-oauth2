@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from .channel import StageChannel
     from .guild import Guild
     from .scheduled_event import ScheduledEvent
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.channel import StageInstance as StageInstancePayload
 
 
@@ -96,8 +96,8 @@ class StageInstance(Hashable):
         '_cs_scheduled_event',
     )
 
-    def __init__(self, *, state: ConnectionState, guild: Guild, data: StageInstancePayload) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, data: StageInstancePayload, guild: Guild, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self.guild: Guild = guild
         self._update(data)
 

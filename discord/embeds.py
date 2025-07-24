@@ -25,11 +25,11 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import datetime
-from typing import Any, Dict, List, Mapping, Optional, Protocol, TYPE_CHECKING, TypeVar, Union
+from typing import Any, Dict, List, Mapping, Optional, Protocol, TYPE_CHECKING, Tuple, TypeVar, Union
 
 from .color import Color
-from .flags import AttachmentFlags, EmbedFlags
-from .utils import parse_time
+from .flags import AttachmentFlags, EmbedFlags, MediaScanFlags
+from .utils import _get_as_snowflake, parse_time
 
 # fmt: off
 __all__ = (
@@ -59,17 +59,50 @@ class EmbedProxy:
 class EmbedMediaProxy(EmbedProxy):
     def __init__(self, layer: Dict[str, Any]):
         super().__init__(layer)
+        
+        raw_content_scan_metadata = self.__dict__.pop('content_scan_metadata', None)
+
         self._flags = self.__dict__.pop('flags', 0)
+        self._animated = self.__dict__.pop('_animated', None)
+        self.description = self.__dict__.pop('description', '')
+        self.content_type = self.__dict__.pop('content_type', '')
+        
+        if raw_content_scan_metadata is None:
+            self.content_scan_version = None
+            self._content_scan_flags = 0
+        else:
+            self.content_scan_version = raw_content_scan_metadata['version']
+            self._content_scan_flags = raw_content_scan_metadata['flags']
+
+        self.placeholder_version = self.__dict__.pop('placeholder_version', None)
+        self.placeholder = self.__dict__.pop('placeholder', '')
 
     @property
     def flags(self) -> AttachmentFlags:
         return AttachmentFlags._from_value(self._flags or 0)
 
+    @property
+    def animated(self) -> bool:
+        if self._animated is None:
+            return bool(self._flags & AttachmentFlags.animated.flag)
+        return self._animated
+
+    @property
+    def content_scan_flags(self) -> MediaScanFlags:
+        return MediaScanFlags._from_value(self._content_scan_flags)
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from .types.embed import Embed as EmbedData, EmbedType
+    from .rpc.types.embed import (
+        EmbedMedia as RPCEmbedMediaPayload,
+        Embed as RPCEmbedPayload,
+    )
+    from .types.embed import (
+        EmbedMedia as EmbedMediaPayload,
+        Embed as EmbedData,
+        EmbedType,
+    )
 
     T = TypeVar('T')
 
@@ -88,6 +121,12 @@ if TYPE_CHECKING:
         height: Optional[int]
         width: Optional[int]
         flags: AttachmentFlags
+        description: str
+        content_type: str
+        content_scan_version: Optional[int]
+        content_scan_flags: int
+        placeholder_version: Optional[int]
+        placeholder: str
 
     class _EmbedProviderProxy(Protocol):
         name: Optional[str]
@@ -99,6 +138,24 @@ if TYPE_CHECKING:
         icon_url: Optional[str]
         proxy_icon_url: Optional[str]
 
+def _transform_rpc_embed_media_to_api(data: RPCEmbedMediaPayload) -> Tuple[bool, EmbedMediaPayload]:
+    transformed_data: EmbedMediaPayload = {
+        'url': data['url'],
+        'flags': data['flags'],
+    }
+    if 'proxyURL' in data:
+        transformed_data['proxy_url'] = data['proxyURL']
+    if 'width' in data:
+        transformed_data['width'] = data['width']
+    if 'height' in data:
+        transformed_data['height'] = data['height']
+    if 'placeholder' in data:
+        transformed_data['placeholder'] = data['placeholder']
+    if 'placeholderVersion' in data:
+        transformed_data['placeholder_version'] = data['placeholderVersion']
+    if 'description' in data:
+        transformed_data['description'] = data['description']
+    return data['srcIsAnimated'], transformed_data
 
 class Embed:
     """Represents a Discord embed.
@@ -130,37 +187,60 @@ class Embed:
 
     Attributes
     ----------
+    id: :class:`str`
+        The ID of the embed.
+        This attribute won't be empty if received from RPC.
+        
+        .. versionadded:: 3.0
     title: Optional[:class:`str`]
         The title of the embed.
-        This can be set during initialisation.
+        This can be set during initialization.
         Can only be up to 256 characters.
     type: :class:`str`
         The type of embed. Usually "rich".
-        This can be set during initialisation.
+        This can be set during initialization.
         Possible strings for embed types can be found on discord's
         :ddocs:`api docs <resources/message#embed-object-embed-types>`
     description: Optional[:class:`str`]
         The description of the embed.
-        This can be set during initialisation.
+        This can be set during initialization.
         Can only be up to 4096 characters.
     url: Optional[:class:`str`]
         The URL of the embed.
-        This can be set during initialisation.
+        This can be set during initialization.
     timestamp: Optional[:class:`datetime.datetime`]
         The timestamp of the embed content. This is an aware datetime.
         If a naive datetime is passed, it is converted to an aware
         datetime with the local timezone.
     color: Optional[Union[:class:`Color`, :class:`int`]]
         The color code of the embed. Aliased to ``colour`` as well.
-        This can be set during initialisation.
+        This can be set during initialization.
+
+        .. note::
+
+            If the embed was received over RPC, :attr:`css_color` should be used instead.
+    css_color: Optional[:class:`str`]
+        The CSS color of the embed. Aliased to ``css_colour`` as well.
+
+        .. versionadded:: 3.0
+    reference_id: Optional[:class:`int`]
+        The message's ID this embed was generated from.
+
+        .. versionadded:: 3.0
+    content_scan_version: Optional[:class:`int`]
+        The version of the explicit content scan filter this embed was scanned with.
+
+        .. versionadded:: 3.0
     """
 
     __slots__ = (
+        'id',
         'title',
         'url',
         'type',
         '_timestamp',
         '_color',
+        'css_color',
         '_footer',
         '_image',
         '_thumbnail',
@@ -169,6 +249,8 @@ class Embed:
         '_author',
         '_fields',
         'description',
+        'reference_id',
+        'content_scan_version',
         '_flags',
     )
 
@@ -183,11 +265,15 @@ class Embed:
         description: Optional[Any] = None,
         timestamp: Optional[datetime.datetime] = None,
     ) -> None:
+        self.id: str = ''
         self.color = colour if color is None else color
+        self.css_color: Optional[str] = None
         self.title: Optional[str] = title
         self.type: EmbedType = type
         self.url: Optional[str] = url
         self.description: Optional[str] = description
+        self.reference_id: Optional[int] = None
+        self.content_scan_version: Optional[int] = None
         self._flags: int = 0
 
         if self.title is not None:
@@ -219,10 +305,13 @@ class Embed:
 
         # fill in the basic fields
 
-        self.title = data.get('title', None)
-        self.type = data.get('type', None)
+        self.id = ''
+        self.title = data.get('title')
+        self.type = data.get('type', 'rich')
         self.description = data.get('description', None)
-        self.url = data.get('url', None)
+        self.url = data.get('url')
+        self.reference_id = _get_as_snowflake(data, 'reference_id')
+        self.content_scan_version = data.get('content_scan_version')
         self._flags = data.get('flags', 0)
 
         if self.title is not None:
@@ -240,6 +329,8 @@ class Embed:
             self._color = Color(value=data['color'])
         except KeyError:
             pass
+            
+        self.css_color = None
 
         try:
             self._timestamp = parse_time(data['timestamp'])
@@ -253,6 +344,68 @@ class Embed:
                 continue
             else:
                 setattr(self, '_' + attr, value)
+
+        return self
+
+    @classmethod
+    def _from_rpc(cls, data: RPCEmbedPayload) -> Self:
+        transformed_data: EmbedData = {'type': data['type']}
+
+        if 'url' in data:
+            transformed_data['url'] = data['url']
+        
+        if 'rawTitle' in data:
+            transformed_data['title'] = data['rawTitle']
+        
+        if 'rawDescription' in data:
+            transformed_data['description'] = data['rawDescription']
+        
+        if 'referenceId' in data:
+            transformed_data['reference_id'] = data['referenceId']
+
+        if 'flags' in data:
+            transformed_data['flags'] = data['flags']
+        
+        if 'contentScanVersion' in data:
+            transformed_data['content_scan_version'] = data['contentScanVersion']
+        
+        if 'timestamp' in data:
+            transformed_data['timestamp'] = data['timestamp']
+        
+        raw_image = data.get('image')
+        raw_thumbnail = data.get('thumbnail')
+        raw_video = data.get('video')
+
+        if raw_image is None:
+            raw_image_animated = None
+        else:
+            raw_image_animated, transformed_image = _transform_rpc_embed_media_to_api(raw_image)
+            transformed_data['image'] = transformed_image
+
+        if raw_thumbnail is None:
+            raw_thumbnail_animated = None
+        else:
+            raw_thumbnail_animated, transformed_thumbnail = _transform_rpc_embed_media_to_api(raw_thumbnail)
+            transformed_data['thumbnail'] = transformed_thumbnail
+
+        if raw_video is None:
+            raw_video_animated = None
+        else:
+            raw_video_animated, transformed_video = _transform_rpc_embed_media_to_api(raw_video)
+            transformed_data['video'] = transformed_video
+
+        self = cls.from_dict(transformed_data)
+        self.id = data['id']
+        self.css_color = data.get('color')
+
+        if raw_image_animated is not None and getattr(self, '_image', None) is not None:
+            self._image['_animated'] = raw_image_animated  # type: ignore
+
+        if raw_thumbnail_animated is not None and getattr(self, '_thumbnail', None) is not None:
+            self._thumbnail['_animated'] = raw_thumbnail_animated  # type: ignore
+
+        if raw_video_animated is not None and getattr(self, '_video', None) is not None:
+            self._video['_animated'] = raw_video_animated
 
         return self
 
@@ -296,6 +449,8 @@ class Embed:
                 self.image,
                 self.provider,
                 self.video,
+                self.reference_id,
+                self.content_scan_version,
             )
         )
 
@@ -314,6 +469,8 @@ class Embed:
             and self.image == other.image
             and self.provider == other.provider
             and self.video == other.video
+            and self.reference_id == other.reference_id
+            and self.content_scan_version == other.content_scan_version
             and self._flags == other._flags
         )
 
@@ -341,6 +498,10 @@ class Embed:
             raise TypeError(f'Expected discord.Color, int, or None but received {value.__class__.__name__} instead.')
 
     colour = color
+
+    @property
+    def css_colour(self) -> Optional[str]:
+        return self.css_color
 
     @property
     def timestamp(self) -> Optional[datetime.datetime]:
@@ -444,7 +605,7 @@ class Embed:
             except AttributeError:
                 pass
         else:
-            self._image = {
+            self._image: EmbedMediaPayload = {
                 'url': str(url),
             }
 
@@ -487,7 +648,7 @@ class Embed:
             except AttributeError:
                 pass
         else:
-            self._thumbnail = {
+            self._thumbnail: EmbedMediaPayload = {
                 'url': str(url),
             }
 
@@ -774,5 +935,11 @@ class Embed:
 
         if self.title:
             result['title'] = self.title
+
+        if self.reference_id:
+            result['reference_id'] = str(self.reference_id)
+
+        if self.content_scan_version is not None:
+            result['content_scan_version'] = self.content_scan_version
 
         return result  # type: ignore # This payload is equivalent to the EmbedData type

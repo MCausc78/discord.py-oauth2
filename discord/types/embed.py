@@ -25,6 +25,8 @@ DEALINGS IN THE SOFTWARE.
 from typing import List, Literal, TypedDict
 from typing_extensions import NotRequired, Required
 
+from .message import MediaScanMetadata
+from .snowflake import Snowflake
 
 class EmbedFooter(TypedDict):
     text: str
@@ -44,7 +46,11 @@ class EmbedMedia(TypedDict, total=False):
     height: int
     width: int
     flags: int
-
+    description: str
+    content_type: str
+    content_scan_metadata: MediaScanMetadata
+    placeholder_version: int
+    placeholder: str
 
 class EmbedProvider(TypedDict, total=False):
     name: str
@@ -75,4 +81,6 @@ class Embed(TypedDict, total=False):
     provider: EmbedProvider
     author: EmbedAuthor
     fields: List[EmbedField]
+    reference_id: Snowflake
+    content_scan_version: int
     flags: int

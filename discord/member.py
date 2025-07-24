@@ -124,6 +124,8 @@ class VoiceState:
         .. versionadded:: 1.7
     volume: Optional[:class:`float`]
         The user's volume.
+
+        .. versionadded:: 3.0
     channel: Optional[Union[:class:`VoiceChannel`, :class:`StageChannel`, :class:`DMChannel`, :class:`GroupChannel`]]
         The voice channel that the user is currently connected to. ``None`` if the user
         is not currently in a voice channel.

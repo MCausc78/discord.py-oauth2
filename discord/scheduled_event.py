@@ -35,7 +35,7 @@ from .utils import _get_as_snowflake, parse_time
 if TYPE_CHECKING:
     from .guild import Guild
     from .channel import VoiceChannel, StageChannel
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.scheduled_event import (
         GuildScheduledEvent as BaseGuildScheduledEventPayload,
         GuildScheduledEventWithUserCount as GuildScheduledEventWithUserCountPayload,
@@ -124,7 +124,7 @@ class ScheduledEvent(Hashable):
         'location',
     )
 
-    def __init__(self, *, state: ConnectionState, data: GuildScheduledEventPayload) -> None:
+    def __init__(self, *, data: GuildScheduledEventPayload, state: BaseConnectionState) -> None:
         self._state = state
         self._users: Dict[int, User] = {}
         self._update(data)

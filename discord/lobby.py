@@ -326,7 +326,7 @@ class Lobby(Hashable, Messageable):
             cls, _ = _guild_channel_factory(linked_channel_data['type'])
             if cls is not None:
                 guild_id = int(linked_channel_data['guild_id'])
-                guild = state._get_or_create_unavailable_guild(guild_id)
+                guild = state.get_or_create_unavailable_guild(guild_id)
                 if guild is not None:
                     self.linked_channel = cls(data=linked_channel_data, guild=guild, state=state)  # type: ignore
 

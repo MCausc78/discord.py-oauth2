@@ -529,7 +529,7 @@ class TextChannel(discord.abc.Messageable, discord.abc.GuildChannel, Hashable):
         Optional[:class:`Message`]
             The last message in this channel or ``None`` if not found.
         """
-        return self._state._get_message(self.last_message_id) if self.last_message_id else None
+        return self._state.get_message(self.last_message_id) if self.last_message_id else None
 
     def get_partial_message(self, message_id: int, /) -> PartialMessage:
         """Creates a :class:`PartialMessage` from the message ID.
@@ -720,7 +720,7 @@ class VocalGuildChannel(
         Optional[:class:`Message`]
             The last message in this channel or ``None`` if not found.
         """
-        return self._state._get_message(self.last_message_id) if self.last_message_id else None
+        return self._state.get_message(self.last_message_id) if self.last_message_id else None
 
     def get_partial_message(self, message_id: int, /) -> PartialMessage:
         """Creates a :class:`PartialMessage` from the message ID.

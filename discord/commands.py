@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .guild import Guild
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.commands import (
         SlashCommand as SlashCommandPayload,
         UserCommand as UserCommandPayload,
@@ -159,7 +159,7 @@ class BaseCommand(Hashable):
     )
 
     if TYPE_CHECKING:
-        _state: ConnectionState
+        _state: BaseConnectionState
 
         id: int
         application_id: int
@@ -180,8 +180,8 @@ class BaseCommand(Hashable):
         # handler: AppCommandHandler
         nsfw: bool
 
-    def __init__(self, *, data: ApplicationCommandPayload, state: ConnectionState) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, *, data: ApplicationCommandPayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self.id: int = int(data['id'])
         self.application_id: int = int(data['application_id'])
         self._update(data)
@@ -924,7 +924,7 @@ class Option:
         max_length: Optional[int] = None,
         autocomplete: bool = False,
     ) -> None:
-        self._state: Optional[ConnectionState] = None
+        self._state: Optional[BaseConnectionState] = None
         self._parent: ApplicationCommandParent = MISSING
 
         self.type: AppCommandOptionType = type
@@ -947,7 +947,7 @@ class Option:
 
     @classmethod
     def from_dict(
-        cls, data: ApplicationCommandOptionPayload, *, parent: ApplicationCommandParent, state: ConnectionState
+        cls, data: ApplicationCommandOptionPayload, *, parent: ApplicationCommandParent, state: BaseConnectionState
     ) -> Self:
         self = cls(
             type=try_enum(AppCommandOptionType, data['type']),
@@ -1054,7 +1054,7 @@ class SlashCommandGroup:
         name_localizations: Optional[Dict[Locale, str]] = None,
         description_localizations: Optional[Dict[Locale, str]] = None,
     ) -> None:
-        self._state: Optional[ConnectionState] = None
+        self._state: Optional[BaseConnectionState] = None
         self._parent: ApplicationCommandParent = MISSING
 
         self.type: AppCommandOptionType = type
@@ -1069,7 +1069,7 @@ class SlashCommandGroup:
 
     @classmethod
     def from_dict(
-        cls, data: ApplicationCommandOptionPayload, *, parent: ApplicationCommandParent, state: ConnectionState
+        cls, data: ApplicationCommandOptionPayload, *, parent: ApplicationCommandParent, state: BaseConnectionState
     ) -> Self:
         self = cls(
             type=try_enum(AppCommandOptionType, data['type']),
@@ -1258,7 +1258,7 @@ def app_command_option_factory(
     data: ApplicationCommandOptionPayload,
     parent: ApplicationCommandParent,
     *,
-    state: ConnectionState,
+    state: BaseConnectionState,
 ) -> Union[Option, SlashCommandGroup]:
     if data['type'] in (1, 2):
         return SlashCommandGroup.from_dict(data, parent=parent, state=state)
@@ -1266,31 +1266,31 @@ def app_command_option_factory(
 
 
 @overload
-def _command_factory(data: SlashCommandPayload, state: ConnectionState) -> SlashCommand:
+def _command_factory(data: SlashCommandPayload, state: BaseConnectionState) -> SlashCommand:
     ...
 
 
 @overload
-def _command_factory(data: UserCommandPayload, state: ConnectionState) -> UserCommand:
+def _command_factory(data: UserCommandPayload, state: BaseConnectionState) -> UserCommand:
     ...
 
 
 @overload
-def _command_factory(data: MessageCommandPayload, state: ConnectionState) -> MessageCommand:
+def _command_factory(data: MessageCommandPayload, state: BaseConnectionState) -> MessageCommand:
     ...
 
 
 @overload
-def _command_factory(data: PrimaryEntryPointCommandPayload, state: ConnectionState) -> PrimaryEntryPointCommand:
+def _command_factory(data: PrimaryEntryPointCommandPayload, state: BaseConnectionState) -> PrimaryEntryPointCommand:
     ...
 
 
 @overload
-def _command_factory(data: ApplicationCommandPayload, state: ConnectionState) -> ApplicationCommand:
+def _command_factory(data: ApplicationCommandPayload, state: BaseConnectionState) -> ApplicationCommand:
     ...
 
 
-def _command_factory(data: ApplicationCommandPayload, state: ConnectionState) -> ApplicationCommand:
+def _command_factory(data: ApplicationCommandPayload, state: BaseConnectionState) -> ApplicationCommand:
     if data['type'] == 1:
         return SlashCommand(data=data, state=state)
     elif data['type'] == 2:

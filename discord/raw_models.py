@@ -582,7 +582,7 @@ class RawAppCommandPermissionsUpdateEvent(_RawReprMixin):
     def __init__(self, *, data: GuildApplicationCommandPermissions, state: ConnectionState):
         self.target_id: int = int(data['id'])
         self.application_id: int = int(data['application_id'])
-        self.guild: Guild = state._get_or_create_unavailable_guild(int(data['guild_id']))
+        self.guild: Guild = state.get_or_create_unavailable_guild(int(data['guild_id']))
         # self.permissions: List[AppCommandPermissions] = [
         #     AppCommandPermissions(data=perm, guild=self.guild, state=state) for perm in data['permissions']
         # ]

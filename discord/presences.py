@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from .guild import Guild
     from .member import Member
     from .relationship import Relationship
-    from .state import ConnectionState
+    from .state import BaseConnectionState, ConnectionState
     from .types.channel import VoiceChannel as VoiceChannelPayload
     from .types.presences import (
         Presence as PresencePayload,
@@ -190,7 +190,7 @@ class Presence(_RawReprMixin):
         'pair',
     )
 
-    def __init__(self, *, data: PresencePayload, state: ConnectionState, full_user: bool = False) -> None:
+    def __init__(self, *, data: PresencePayload, state: BaseConnectionState, full_user: bool = False) -> None:
         user_data = data['user']
 
         self.user_id: int = int(user_data['id'])

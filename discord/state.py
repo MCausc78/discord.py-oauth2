@@ -130,6 +130,8 @@ async def logging_coroutine(coroutine: Coroutine[Any, Any, T], *, info: str) -> 
 
 
 class BaseConnectionState:
+    get_websocket: Callable[[], DiscordWebSocket]
+
     def __init__(
         self,
         *,
@@ -137,13 +139,37 @@ class BaseConnectionState:
         http: HTTPClient,
         **options: Any,
     ) -> None:
+        def get_websocket() -> DiscordWebSocket:
+            raise TypeError('WebSocket is unavailable')
+        
         # Set later, after Client.login
         self.loop: asyncio.AbstractEventLoop = MISSING
         self.http: HTTPClient = http
         self.dispatch: Callable[..., Any] = dispatch
+        self.application_id: Optional[int] = _get_as_snowflake(options, 'application_id')
+        self.get_websocket = get_websocket
+        
+        cache_flags = options.get('member_cache_flags')
+        if cache_flags is None:
+            intents = options.get('intents')
+            if intents is None:
+                cache_flags = MemberCacheFlags.none()
+            else:
+                cache_flags = MemberCacheFlags.from_intents(intents)
+        elif not isinstance(cache_flags, MemberCacheFlags):
+            raise TypeError(f'member_cache_flags parameter must be MemberCacheFlags not {type(cache_flags)!r}')
+        # else: cache_flags._verify_intents(intents)
+
+        self.member_cache_flags: MemberCacheFlags = cache_flags
+    
+    def create_user(self, data: Union[UserPayload, PartialUserPayload]) -> User:
+        return User(data=data, state=self)
 
     def game_relationship_map(self) -> Mapping[int, GameRelationship]:
         return {}
+
+    def get_emoji(self, emoji_id: Optional[int]) -> Optional[Emoji]:
+        return None
 
     def get_game_relationship(self, id: Optional[int]) -> Optional[GameRelationship]:
         return None
@@ -154,7 +180,25 @@ class BaseConnectionState:
     def get_lobby(self, lobby_id: Optional[int]) -> Optional[Lobby]:
         return None
 
+    def get_message(self, message_id: Optional[int]) -> Optional[Message]:
+        return None
+
+    def get_or_create_unavailable_guild(self, guild_id: int, *, data: Optional[Dict[str, Any]] = None) -> Guild:
+        guild = self.get_guild(guild_id)
+        if guild is None:
+            guild = Guild._create_unavailable(data=data, guild_id=guild_id, state=self)
+        return guild
+
     def get_relationship(self, id: Optional[int]) -> Optional[Relationship]:
+        return None
+
+    def get_sticker(self, sticker_id: Optional[int]) -> Optional[GuildSticker]:
+        return None
+
+    def get_user(self, id: Optional[int]) -> Optional[User]:
+        return None
+
+    def get_voice_client(self, key_id: Optional[int]) -> Optional[VoiceProtocol]:
         return None
 
     @property
@@ -176,6 +220,10 @@ class BaseConnectionState:
     @property
     def relationship_map(self) -> Mapping[int, Relationship]:
         return {}
+
+    @property
+    def self_id(self) -> Optional[int]:
+        return None
 
     def _get_private_channel_by_user(self, user_id: Optional[int]) -> Optional[Union[DMChannel, EphemeralDMChannel]]:
         return None
@@ -204,6 +252,15 @@ class BaseConnectionState:
         channel = cls(data=data, me=self.user, state=self)  # type: ignore
         self._add_private_channel(channel)
         return channel
+    
+    def store_emoji(self, guild: Guild, data: EmojiPayload) -> Emoji:
+        return Emoji(guild=guild, state=self, data=data)
+        
+    def store_sticker(self, guild: Guild, data: GuildStickerPayload) -> GuildSticker:
+        return GuildSticker(data=data, state=self)
+
+    def store_user(self, data: Union[UserPayload, PartialUserPayload], *, cache: bool = True, dispatch: bool = True) -> User:
+        return self.create_user(data)
 
     def _voice_state_for(self, user_id: int) -> Optional[VoiceState]:
         return None
@@ -211,7 +268,6 @@ class BaseConnectionState:
 
 class ConnectionState(BaseConnectionState, Generic[ClientT]):
     if TYPE_CHECKING:
-        _get_websocket: Callable[[], DiscordWebSocket]
         _get_client: Callable[[], ClientT]
         _parsers: Dict[str, Callable[[Any], None]]
 
@@ -224,7 +280,15 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         http: HTTPClient,
         **options: Any,
     ) -> None:
-        BaseConnectionState.__init__(self, dispatch=dispatch, http=http)
+        intents = options.get('intents')
+        if intents is not None:
+            if not isinstance(intents, Intents):
+                raise TypeError(f'intents parameter must be Intents not {type(intents)!r}')
+
+            if not intents.guilds:
+                _log.warning('Guilds intent seems to be disabled. This may cause state related issues.')
+        
+        BaseConnectionState.__init__(self, dispatch=dispatch, http=http, intents=intents)
         self.max_messages: Optional[int] = options.get('max_messages', 1000)
         if self.max_messages is not None and self.max_messages <= 0:
             self.max_messages = 1000
@@ -265,25 +329,8 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             else:
                 status = str(status)
 
-        intents = options.get('intents')
-        if intents is not None:
-            if not isinstance(intents, Intents):
-                raise TypeError(f'intents parameter must be Intent not {type(intents)!r}')
 
-        if intents is not None and not intents.guilds:
-            _log.warning('Guilds intent seems to be disabled. This may cause state related issues.')
 
-        cache_flags = options.get('member_cache_flags')
-        if cache_flags is None:
-            if intents is None:
-                cache_flags = MemberCacheFlags.none()
-            else:
-                cache_flags = MemberCacheFlags.from_intents(intents)
-        elif not isinstance(cache_flags, MemberCacheFlags):
-            raise TypeError(f'member_cache_flags parameter must be MemberCacheFlags not {type(cache_flags)!r}')
-        # else: cache_flags._verify_intents(intents)
-
-        self.member_cache_flags: MemberCacheFlags = cache_flags
         self._activities: List[SendableActivityPayload] = activities
         self._status: Optional[str] = status
         self._intents: Optional[Intents] = intents
@@ -421,10 +468,6 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
     def _voice_state_for(self, user_id: int) -> Optional[VoiceState]:
         return self._voice_states.get(user_id)
 
-    def _get_voice_client(self, key_id: Optional[int]) -> Optional[VoiceProtocol]:
-        # the keys of self._voice_clients are ints
-        return self._voice_clients.get(key_id)  # type: ignore
-
     def _add_voice_client(self, key_id: int, voice: VoiceProtocol) -> None:
         self._voice_clients[key_id] = voice
 
@@ -434,6 +477,80 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
     def _update_references(self, ws: DiscordWebSocket) -> None:
         for vc in self.voice_clients:
             vc.main_ws = ws  # type: ignore # Silencing the unknown attribute (ok at runtime).
+
+    # Methods/properties to fully implement BaseConnectionState
+    @property
+    def game_relationship_map(self) -> Mapping[int, GameRelationship]:
+        return self._game_relationships
+
+    def get_emoji(self, emoji_id: Optional[int]) -> Optional[Emoji]:
+        # the keys of self._emojis are ints
+        return self._emojis.get(emoji_id)  # type: ignore
+
+    def get_game_relationship(self, id: Optional[int]) -> Optional[Relationship]:
+        # The keys of self._game_relationships are ints
+        return self._game_relationships.get(id)  # type: ignore
+
+    def get_guild(self, guild_id: Optional[int]) -> Optional[Guild]:
+        # The keys of self._guilds are ints
+        return self._guilds.get(guild_id)  # type: ignore
+
+    def get_message(self, msg_id: Optional[int]) -> Optional[Message]:
+        if msg_id is None:
+            return None
+        
+        return find(lambda m: m.id == msg_id, reversed(self._messages)) if self._messages else None
+
+    def get_lobby(self, lobby_id: Optional[int]) -> Optional[Lobby]:
+        # The keys of self._lobbies are ints
+        return self._lobbies.get(lobby_id)  # type: ignore
+
+    def get_relationship(self, id: Optional[int]) -> Optional[Relationship]:
+        # The keys of self._relationships are ints
+        return self._relationships.get(id)  # type: ignore
+
+    def get_sticker(self, sticker_id: Optional[int]) -> Optional[GuildSticker]:
+        # The keys of self._stickers are ints
+        return self._stickers.get(sticker_id)  # type: ignore
+
+    def get_user(self, id: Optional[int]) -> Optional[User]:
+        # The keys of self._users are ints
+        return self._users.get(id)  # type: ignore
+
+    def get_voice_client(self, key_id: Optional[int]) -> Optional[VoiceProtocol]:
+        # the keys of self._voice_clients are ints
+        return self._voice_clients.get(key_id)  # type: ignore
+
+    @property
+    def guild_map(self) -> Mapping[int, Guild]:
+        return self._guilds
+
+    @property
+    def guilds(self) -> Sequence[Guild]:
+        return SequenceProxy(self._guilds.values())
+
+    @property
+    def lobbies(self) -> Sequence[Lobby]:
+        return SequenceProxy(self._lobbies.values())
+
+    @property
+    def private_channel_map(self) -> Mapping[int, PrivateChannel]:
+        return self._private_channels
+
+    @property
+    def relationship_map(self) -> Mapping[int, Relationship]:
+        return self._relationships
+
+    def store_emoji(self, guild: Guild, data: EmojiPayload) -> Emoji:
+        # The ID will be present here
+        emoji_id = int(data['id'])  # type: ignore
+        self._emojis[emoji_id] = emoji = Emoji(guild=guild, state=self, data=data)
+        return emoji
+
+    def store_sticker(self, guild: Guild, data: GuildStickerPayload) -> GuildSticker:
+        sticker_id = int(data['id'])
+        self._stickers[sticker_id] = sticker = GuildSticker(state=self, data=data)
+        return sticker
 
     def store_user(self, data: Union[UserPayload, PartialUserPayload], *, cache: bool = True, dispatch: bool = True) -> User:
         # this way is 300% faster than `dict.setdefault`.
@@ -472,69 +589,8 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
                         self.dispatch('user_update', before, user)
             return user
 
-    def create_user(self, data: Union[UserPayload, PartialUserPayload]) -> User:
-        return User(state=self, data=data)
-
-    def get_user(self, id: int) -> Optional[User]:
-        return self._users.get(id)
-
-    def store_emoji(self, guild: Guild, data: EmojiPayload) -> Emoji:
-        # the id will be present here
-        emoji_id = int(data['id'])  # type: ignore
-        self._emojis[emoji_id] = emoji = Emoji(guild=guild, state=self, data=data)
-        return emoji
-
-    def store_sticker(self, guild: Guild, data: GuildStickerPayload) -> GuildSticker:
-        sticker_id = int(data['id'])
-        self._stickers[sticker_id] = sticker = GuildSticker(state=self, data=data)
-        return sticker
-
-    # Methods/properties to fully implement BaseConnectionState
-    @property
-    def game_relationship_map(self) -> Mapping[int, GameRelationship]:
-        return self._game_relationships
-
-    def get_game_relationship(self, id: Optional[int]) -> Optional[Relationship]:
-        # The keys of self._game_relationships are ints
-        return self._game_relationships.get(id)  # type: ignore
-
-    def get_guild(self, guild_id: Optional[int]) -> Optional[Guild]:
-        # The keys of self._guilds are ints
-        return self._guilds.get(guild_id)  # type: ignore
-
-    def get_lobby(self, lobby_id: Optional[int]) -> Optional[Lobby]:
-        # The keys of self._lobbies are ints
-        return self._lobbies.get(lobby_id)  # type: ignore
-
-    def get_relationship(self, id: Optional[int]) -> Optional[Relationship]:
-        # The keys of self._relationships are ints
-        return self._relationships.get(id)  # type: ignore
-
-    @property
-    def guild_map(self) -> Mapping[int, Guild]:
-        return self._guilds
-
-    @property
-    def guilds(self) -> Sequence[Guild]:
-        return SequenceProxy(self._guilds.values())
-
-    @property
-    def lobbies(self) -> Sequence[Lobby]:
-        return SequenceProxy(self._lobbies.values())
-
-    @property
-    def private_channel_map(self) -> Mapping[int, PrivateChannel]:
-        return self._private_channels
-
-    @property
-    def relationship_map(self) -> Mapping[int, Relationship]:
-        return self._relationships
 
     # ...
-
-    def _get_or_create_unavailable_guild(self, guild_id: int, *, data: Optional[Dict[str, Any]] = None) -> Guild:
-        return self._guilds.get(guild_id) or Guild._create_unavailable(state=self, guild_id=guild_id, data=data)
-
     def _add_guild(self, guild: Guild) -> None:
         self._guilds[guild.id] = guild
 
@@ -564,14 +620,6 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             all_sounds.extend(guild.soundboard_sounds)
 
         return all_sounds
-
-    def get_emoji(self, emoji_id: Optional[int]) -> Optional[Emoji]:
-        # the keys of self._emojis are ints
-        return self._emojis.get(emoji_id)  # type: ignore
-
-    def get_sticker(self, sticker_id: Optional[int]) -> Optional[GuildSticker]:
-        # the keys of self._stickers are ints
-        return self._stickers.get(sticker_id)  # type: ignore
 
     @property
     def private_channels(self) -> Sequence[PrivateChannel]:
@@ -632,9 +680,6 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             if recipient is not None:
                 self._private_channels_by_user.pop(recipient.id, None)
 
-    def _get_message(self, msg_id: Optional[int]) -> Optional[Message]:
-        return find(lambda m: m.id == msg_id, reversed(self._messages)) if self._messages else None
-
     def _get_lobby_message(self, msg_id: Optional[int]) -> Optional[LobbyMessage]:
         return find(lambda m: m.id == msg_id, reversed(self._lobby_messages)) if self._lobby_messages else None
 
@@ -679,7 +724,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
             guild = self.get_guild(guild_id)
             if guild is None:
-                guild = self._get_or_create_unavailable_guild(guild_id)
+                guild = self.get_or_create_unavailable_guild(guild_id)
 
             channel = guild._resolve_channel(channel_id)
             if channel is None:
@@ -742,9 +787,9 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
     def _update_poll_results(self, from_: Message, to: Union[Message, int]) -> None:
         if isinstance(to, Message):
-            cached = self._get_message(to.id)
+            cached = self.get_message(to.id)
         elif isinstance(to, int):
-            cached = self._get_message(to)
+            cached = self.get_message(to)
 
             if cached is None:
                 return
@@ -1034,7 +1079,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
     def parse_message_delete(self, data: gw.MessageDeleteEvent) -> None:
         raw = RawMessageDeleteEvent(data)
-        found = self._get_message(raw.message_id)
+        found = self.get_message(raw.message_id)
         raw.cached_message = found
         if self._messages is not None and found is not None:
             self.dispatch('message_delete', found)
@@ -1061,7 +1106,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         updated_message = Message(channel=channel, data=data, state=self)  # type: ignore
 
         raw = RawMessageUpdateEvent(data=data, message=updated_message)
-        cached_message = self._get_message(updated_message.id)
+        cached_message = self.get_message(updated_message.id)
         if cached_message is not None:
             older_message = copy(cached_message)
             raw.cached_message = older_message
@@ -1092,7 +1137,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             raw.member = None
 
         # Rich interface here
-        message = self._get_message(raw.message_id)
+        message = self.get_message(raw.message_id)
         if message is not None:
             emoji = self._upgrade_partial_emoji(emoji)
             reaction = message._add_reaction(data, emoji, raw.user_id)
@@ -1105,7 +1150,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
     def parse_message_reaction_remove_all(self, data: gw.MessageReactionRemoveAllEvent) -> None:
         raw = RawReactionClearEvent(data)
 
-        message = self._get_message(raw.message_id)
+        message = self.get_message(raw.message_id)
         if message is not None:
             old_reactions = message.reactions.copy()
             message.reactions.clear()
@@ -1117,7 +1162,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         emoji._state = self
         raw = RawReactionActionEvent(data, emoji, 'REACTION_REMOVE')
 
-        message = self._get_message(raw.message_id)
+        message = self.get_message(raw.message_id)
         if message is not None:
             emoji = self._upgrade_partial_emoji(emoji)
             try:
@@ -1135,7 +1180,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         emoji._state = self
         raw = RawReactionClearEmojiEvent(data, emoji)
 
-        message = self._get_message(raw.message_id)
+        message = self.get_message(raw.message_id)
         if message is not None:
             try:
                 reaction = message._clear_emoji(emoji)
@@ -2175,7 +2220,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             self.dispatch('call_update', old_call, call)
             return
 
-        message = self._get_message(int(data['message_id']))
+        message = self.get_message(int(data['message_id']))
         call = channel._add_call(data=data, state=self, message=message, channel=channel)
         self._calls[channel.id] = call
         self.dispatch('call_create', call)
@@ -2225,7 +2270,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
         user_id = int(data['user_id'])
         if user_id == self_id:
-            voice = self._get_voice_client(guild.id if guild else self_id)
+            voice = self.get_voice_client(guild.id if guild else self_id)
             if voice is not None:
                 coro = voice.on_voice_state_update(data)
                 asyncio.create_task(logging_coroutine(coro, info='Voice Protocol voice state update handler'))
@@ -2255,7 +2300,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         if key_id is None:
             key_id = self.self_id
 
-        vc = self._get_voice_client(key_id)
+        vc = self.get_voice_client(key_id)
         if vc is not None:
             coro = vc.on_voice_server_update(data)
             asyncio.create_task(logging_coroutine(coro, info='Voice Protocol voice server update handler'))
@@ -2326,7 +2371,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
         self.dispatch('raw_poll_vote_add', raw)
 
-        message = self._get_message(raw.message_id)
+        message = self.get_message(raw.message_id)
         guild = self.get_guild(raw.guild_id)
 
         if guild:
@@ -2344,7 +2389,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
         self.dispatch('raw_poll_vote_remove', raw)
 
-        message = self._get_message(raw.message_id)
+        message = self.get_message(raw.message_id)
         guild = self.get_guild(raw.guild_id)
 
         if guild:
@@ -2549,7 +2594,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
     def parse_lobby_voice_server_update(self, data: gw.LobbyVoiceServerUpdateEvent) -> None:
         key_id = int(data['lobby_id'])
 
-        vc = self._get_voice_client(key_id)
+        vc = self.get_voice_client(key_id)
         if vc is not None:
             coro = vc.on_lobby_voice_server_update(data)
             asyncio.create_task(logging_coroutine(coro, info='Voice Protocol voice server update handler'))
@@ -2579,7 +2624,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         self.dispatch('lobby_voice_state_update', member, old, new)
 
         if user_id == self_id:
-            voice = self._get_voice_client(lobby.id)
+            voice = self.get_voice_client(lobby.id)
             if voice is not None:
                 coro = voice.on_voice_state_update(data)
                 asyncio.create_task(logging_coroutine(coro, info='Voice Protocol voice state update handler'))
@@ -2651,7 +2696,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
         else:
             self.dispatch('game_relationship_remove', old)
 
-        ws = self._get_websocket()
+        ws = self.get_websocket()
         asyncio.create_task(self._prevent_fake_presence_update(ws, r_id))
 
     async def _prevent_fake_presence_update(self, ws: DiscordWebSocket, user_id: int) -> None:
@@ -2715,7 +2760,7 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
             # Else, we create a new one with fake data
             if len(data) > 1:
                 # We have more than one session, this should not happen
-                ws = self._get_websocket()
+                ws = self.get_websocket()
                 fake = data[ws.session_id]  # type: ignore
             elif data:
                 fake = list(data.values())[0]
@@ -2941,5 +2986,5 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
 
     @property
     def current_session(self) -> Optional[Session]:
-        ws = self._get_websocket()
+        ws = self.get_websocket()
         return self._sessions.get(ws.session_id)  # type: ignore

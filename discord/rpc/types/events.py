@@ -3,10 +3,13 @@ from __future__ import annotations
 from typing import Any, List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
-from ...types.message import MessageActivityType
-from ...types.presences import ReceivableActivity
+from ...types.entitlements import Entitlement
+from ...types.message import MessageActivity, MessageActivityType
 from ...types.snowflake import Snowflake
-from .user import User
+from .channel import PartialGuildChannel
+from .guild import PartialGuild
+from .message import Message
+from .user import User, Relationship
 
 
 class IncomingPacket(TypedDict):
@@ -34,19 +37,37 @@ class ReadyEvent(TypedDict):
     config: ReadyEventConfig
     user: NotRequired[User]
 
+class CurrentUserUpdateEventRequest(TypedDict):
+    pass
 
-# CURRENT_USER_UPDATE
-
+# TODO: CURRENT_USER_UPDATE response
 
 class CurrentGuildMemberUpdateEventRequest(TypedDict):
     guild_id: Snowflake
 
+# TODO: CURRENT_GUILD_MEMBER_UPDATE response
 
-# CURRENT_GUILD_MEMBER_UPDATE
-# GUILD_STATUS
-# GUILD_CREATE
-# CHANNEL_CREATE
-# RELATIONSHIP_UPDATE
+class GuildStatusEventRequest(TypedDict):
+    guild_id: Snowflake
+
+class GuildStatusEvent(TypedDict):
+    guild: PartialGuild
+    online: Literal[0] # Deprecated
+
+class GuildCreateEventRequest(TypedDict):
+    pass
+
+GuildCreateEvent = PartialGuild
+
+class ChannelCreateEventRequest(TypedDict):
+    pass
+
+ChannelCreateEvent = PartialGuildChannel
+
+class RelationshipUpdateEventRequest(TypedDict):
+    pass
+
+RelationshipUpdateEvent = Relationship
 
 
 class VoiceChannelSelectEventRequest(TypedDict):
@@ -58,9 +79,25 @@ class VoiceChannelSelectEvent(TypedDict):
     guild_id: Optional[Snowflake]
 
 
+class VoiceStateCreateEventRequest(TypedDict):
+    channel_id: Snowflake
+
+class VoiceStateUpdateEventRequest(TypedDict):
+    channel_id: Snowflake
+
+class VoiceStateDeleteEventRequest(TypedDict):
+    channel_id: Snowflake
+
 # VOICE_STATE_CREATE
 # VOICE_STATE_DELETE
 # VOICE_STATE_UPDATE
+
+class VoiceSettingsUpdateEventRequest(TypedDict):
+    pass
+
+class VoiceSettingsUpdate2EventRequest(TypedDict):
+    pass
+
 # VOICE_SETTINGS_UPDATE
 # VOICE_SETTINGS_UPDATE_2
 
@@ -141,7 +178,7 @@ class ActivityJoinRequestEventRequest(TypedDict):
 
 class ActivityJoinRequestEvent(TypedDict):
     user: User
-    activity: ReceivableActivity
+    activity: MessageActivity
     type: MessageActivityType
     channel_id: Snowflake
     message_id: Snowflake
@@ -150,13 +187,13 @@ class ActivityJoinRequestEvent(TypedDict):
 # ACTIVITY_SPECTATE (deprecated and appears to never fire based on client code)
 
 
-class ActivityInviteRequestEventRequest(TypedDict):
+class ActivityInviteEventRequest(TypedDict):
     pass
 
 
-class ActivityInviteRequestEvent(TypedDict):
+class ActivityInviteEvent(TypedDict):
     user: User
-    activity: ReceivableActivity
+    activity: MessageActivity
     type: MessageActivityType
     channel_id: Snowflake
     message_id: Snowflake
@@ -177,16 +214,71 @@ class ActivityLayoutModeUpdateEventRequest(TypedDict):
 class ActivityLayoutModeUpdateEvent(TypedDict):
     layout_mode: Literal[0, 1, 2]  # {FOCUSED: 0, PIP: 1, GRID: 2}
 
+class ThermalStateUpdateEventRequest(TypedDict):
+    pass
 
-# THERMAL_STATE_UPDATE
-# ORIENTATION_UPDATE
-# ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE
-# NOTIFICATION_CREATE
-# MESSAGE_CREATE
-# MESSAGE_UPDATE
-# MESSAGE_DELETE
+class ThermalStateUpdateEvent(TypedDict):
+    thermal_state: Literal[
+        -1, # UNHANDLED
+        0, # NOMINAL
+        1, # FAIR
+        2, # SERIOUS
+        3, # CRITICAL
+    ]
+
+class OrientationUpdateEventRequest(TypedDict):
+    pass
 
 
+class OrientationUpdateEvent(TypedDict):
+    # Unsure how the enum is called in client, but it is Orientation in embedded app sdk
+    screen_orientation: Literal[
+        1, # UNLOCKED
+        2, # PORTRAIT
+        3, # LANDSCAPE
+    ]
+
+class ActivityInstanceParticipantsUpdateEventRequest(TypedDict):
+    pass
+
+class ActivityInstanceParticipantsUpdateEvent(TypedDict):
+    participants: List[User]
+
+class NotificationCreateEventRequest(TypedDict):
+    pass
+
+class NotificationCreateEvent(TypedDict):
+    channel_id: Snowflake
+    message: Snowflake
+    icon_url: Optional[str]
+    title: str
+    body: str
+
+class MessageCreateEventRequest(TypedDict):
+    channel_id: Snowflake
+
+class MessageCreateEvent(TypedDict):
+    channel_id: Snowflake
+    message: Message
+
+class MessageUpdateEventRequest(TypedDict):
+    channel_id: Snowflake
+
+class MessageUpdateEvent(TypedDict):
+    channel_id: Snowflake
+    message: Message
+
+class MessageDeleteEventRequest(TypedDict):
+    channel_id: Snowflake
+
+class PartialMessage(TypedDict):
+    id: Snowflake
+
+class MessageDeleteEvent(TypedDict):
+    channel_id: Snowflake
+    message: PartialMessage
+
+# TODO: Overlay commands/events
 class OverlayEventRequest(TypedDict):
     pass
 
@@ -195,11 +287,33 @@ class OverlayEvent(TypedDict):
     pass
 
 
-# OVERLAY_UPDATE
-# ENTITLEMENT_CREATE
-# ENTITLEMENT_DELETE
+class EntitlementCreateEventRequest(TypedDict):
+    pass
+
+EntitlementCreateEvent = Entitlement
+
+class EntitlementDeleteEventRequest(TypedDict):
+    pass
+
+EntitlementDeleteEvent = Entitlement
+
 # VOICE_CHANNEL_EFFECT_SEND
 # VOICE_CHANNEL_EFFECT_RECENT_EMOJI
 # VOICE_CHANNEL_EFFECT_TOGGLE_ANIMATION_TYPE
-# SCREENSHARE_STATE_UPDATE
-# VIDEO_STATE_UPDATE
+
+class ScreenshareStateUpdateEventRequest(TypedDict):
+    pass
+
+class ScreenshareStateUpdateEventApplication(TypedDict):
+    name: str
+
+class ScreenshareStateUpdateEvent(TypedDict):
+    active: bool
+    pid: Optional[int]
+    application: Optional[ScreenshareStateUpdateEventApplication]
+
+class VideoStateUpdateEventRequest(TypedDict):
+    pass
+
+class VideoStateUpdateEvent(TypedDict):
+    active: bool

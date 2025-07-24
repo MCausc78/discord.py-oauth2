@@ -89,7 +89,7 @@ if TYPE_CHECKING:
     from .lobby import Lobby
     from .mentions import AllowedMentions
     from .role import Role
-    from .state import ConnectionState
+    from .state import BaseConnectionState, ConnectionState
     from .types.components import MessageComponent as MessageComponentPayload
     from .types.embed import Embed as EmbedPayload
     from .types.gateway import MessageReactionRemoveEvent, MessageUpdateEvent
@@ -238,7 +238,7 @@ class Attachment(Hashable):
         'title',
     )
 
-    def __init__(self, *, data: AttachmentPayload, state: ConnectionState):
+    def __init__(self, *, data: AttachmentPayload, state: BaseConnectionState):
         self.id: int = int(data['id'])
         self.size: int = data['size']
         self.height: Optional[int] = data.get('height')
@@ -722,7 +722,7 @@ class MessageReference:
     @property
     def cached_message(self) -> Optional[Message]:
         """Optional[:class:`~discord.Message`]: The cached message, if found in the internal message cache."""
-        return self._state and self._state._get_message(self.message_id)
+        return self._state and self._state.get_message(self.message_id)
 
     @property
     def jump_url(self) -> str:
@@ -926,7 +926,7 @@ class MessageInteractionMetadata(Hashable):
         is a follow-up and is found in cache.
         """
         if self.original_response_message_id:
-            return self._state._get_message(self.original_response_message_id)
+            return self._state.get_message(self.original_response_message_id)
         return None
 
     @property
@@ -935,7 +935,7 @@ class MessageInteractionMetadata(Hashable):
         containes the interactive components, if applicable and is found in cache.
         """
         if self.interacted_message_id:
-            return self._state._get_message(self.interacted_message_id)
+            return self._state.get_message(self.interacted_message_id)
         return None
 
     @property
@@ -945,7 +945,7 @@ class MessageInteractionMetadata(Hashable):
         .. versionadded:: 2.5
         """
         if self.target_message_id:
-            return self._state._get_message(self.target_message_id)
+            return self._state.get_message(self.target_message_id)
         return None
 
     def is_guild_integration(self) -> bool:
@@ -1413,7 +1413,7 @@ class Message(PartialMessage, Hashable):
     tts: :class:`bool`
         Specifies if the message was done with text-to-speech.
         This can only be accurately received in :func:`on_message` due to
-        a discord limitation.
+        a Discord limitation.
     type: :class:`MessageType`
         The type of message. In most cases this should not be checked, but it is helpful
         in cases where it might be a system message for :attr:`system_content`.
@@ -1425,7 +1425,7 @@ class Message(PartialMessage, Hashable):
         If :attr:`Intents.message_content` is not enabled this will always be an empty string
         unless the bot is mentioned or the message is a direct message.
     nonce: Optional[Union[:class:`str`, :class:`int`]]
-        The value used by the discord guild and the client to verify that the message is successfully sent.
+        The value used by the Discord client to verify that the message is successfully sent.
         This is not stored long term within Discord's servers and is only used ephemerally.
     embeds: List[:class:`Embed`]
         A list of embeds the message has.

@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     import datetime
 
     from .guild import Guild
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.sticker import (
         StickerPack as StickerPackPayload,
         StickerItem as StickerItemPayload,
@@ -102,8 +102,8 @@ class StickerPack(Hashable):
         '_banner',
     )
 
-    def __init__(self, *, state: ConnectionState, data: StickerPackPayload) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, *, state: BaseConnectionState, data: StickerPackPayload) -> None:
+        self._state: BaseConnectionState = state
         self._from_data(data)
 
     def _from_data(self, data: StickerPackPayload) -> None:
@@ -196,8 +196,8 @@ class StickerItem(_StickerTag):
 
     __slots__ = ('_state', 'name', 'id', 'format', 'url')
 
-    def __init__(self, *, state: ConnectionState, data: StickerItemPayload) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, *, state: BaseConnectionState, data: StickerItemPayload) -> None:
+        self._state: BaseConnectionState = state
         self.name: str = data['name']
         self.id: int = int(data['id'])
         self.format: StickerFormatType = try_enum(StickerFormatType, data['format_type'])
@@ -248,8 +248,8 @@ class Sticker(_StickerTag):
 
     __slots__ = ('_state', 'id', 'name', 'description', 'format', 'url')
 
-    def __init__(self, *, state: ConnectionState, data: StickerPayload) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, *, data: StickerPayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self._from_data(data)
 
     def _from_data(self, data: StickerPayload) -> None:

@@ -9,6 +9,7 @@ from ..user import ClientUser
 
 if TYPE_CHECKING:
     from ..http import HTTPClient
+    from .guild import Guild
     from .types.events import (
         ReadyEvent as ReadyEventPayload,
     )
@@ -61,3 +62,7 @@ class RPCConnectionState(BaseConnectionState):
             _log.warning('Detected arRPC. Most of functions will not work!')
 
         self.dispatch('ready')
+
+    # Overrides
+    def get_rpc_guild(self, guild_id: Optional[int]) -> Optional[Guild]:
+        return None

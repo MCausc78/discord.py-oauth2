@@ -477,14 +477,17 @@ class DiscordWebSocket:
             # | PRIORITIZED_READY_PAYLOAD(5)
             # | AUTO_CALL_CONNECT(12)
             # | AUTO_LOBBY_CONNECT(16)
+
+            # Below ones are not used by SDK yet
             # | PRIVATE_CHANNEL_OBFUSCATION(15) (obfuscates channel objects you do not have access to)
             # | STATE_UPDATE(17) (? idk what it actually does, but its added in same commit that handles STATE_UPDATE & READY->failed_states?: unknown[])
             # | VOICE_STATE_UPDATE_BATCH(18)
             # | DEBOUNCE_MESSAGE_POLL_VOTES(19)
-            # TODO: VOICE_STATE_UPDATE_BATCH is not used by SDK yet, instead of dispatching multiple VOICE_STATE_UPDATE events,
+            # | VOICE_STATE_UPDATE_BATCH_V2(20)
+            # |
+            # VOICE_STATE_UPDATE_BATCH: instead of dispatching multiple VOICE_STATE_UPDATE events,
             # it debounces them and dispatches single VOICE_STATE_UPDATE_BATCH event with ``{'voice_states': List[VoiceState]}`` payload.
-            # 'capabilities': 331824,
-            # TODO: DEBOUNCE_MESSAGE_POLL_VOTES is not used by SDK yet, instead of dispatching multiple MESSAGE_POLL_VOTE_ADD events,
+            # DEBOUNCE_MESSAGE_POLL_VOTES: instead of dispatching multiple MESSAGE_POLL_VOTE_ADD events,
             # it debounces them and dispatches single MESSAGE_POLL_VOTE_ADD_MANY event.
             'capabilities': 69680,
         }

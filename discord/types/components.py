@@ -29,6 +29,7 @@ from typing_extensions import NotRequired, Required
 
 from .channel import ChannelType
 from .emoji import PartialEmoji
+from .message import MediaScanMetadata
 from .snowflake import Snowflake
 
 ComponentType = Literal[1, 2, 3, 4]
@@ -148,10 +149,6 @@ MediaItemLoadingState = Literal[
     3,  # LOADED_NOT_FOUND
 ]
 
-
-class MediaScanMetadata(TypedDict):
-    version: int
-    flags: int  # EXPLICIT = 1 << 0, GORE = 1 << 1
 
 
 class UnfurledMediaItem(TypedDict, total=False):

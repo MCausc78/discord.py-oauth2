@@ -100,7 +100,7 @@ if TYPE_CHECKING:
     from .abc import Snowflake
     from .channel import VoiceChannel, StageChannel, TextChannel, ForumChannel, CategoryChannel
     from .permissions import Permissions
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.commands import (
         SlashCommand as SlashCommandPayload,
         UserCommand as UserCommandPayload,
@@ -174,9 +174,9 @@ class PartialGuild(Hashable):
     )
 
     def __init__(
-        self, *, id: int, name: str, icon_hash: Optional[str] = None, features: List[GuildFeature], state: ConnectionState
+        self, *, id: int, name: str, icon_hash: Optional[str] = None, features: List[GuildFeature], state: BaseConnectionState
     ) -> None:
-        self._state: ConnectionState = state
+        self._state: BaseConnectionState = state
         self.id: int = id
         self.name: str = name
         self._icon: Optional[str] = icon_hash
@@ -610,7 +610,7 @@ class PartialGuild(Hashable):
         if isinstance(self, Guild):
             guild = self
         else:
-            guild = state._get_or_create_unavailable_guild(
+            guild = state.get_or_create_unavailable_guild(
                 self.id,
                 data={
                     'name': self.name,
@@ -677,7 +677,7 @@ class PartialGuild(Hashable):
             Indicates if the client should show camera.
         """
 
-        ws = self._state._get_websocket()
+        ws = self._state.get_websocket()
         channel_id = channel.id if channel else None
         await ws.voice_state(
             guild_id=self.id,
@@ -892,14 +892,17 @@ class UserGuild(PartialGuild):
         'approximate_presence_count',
     )
 
-    def __init__(self, *, data: GuildPayload, state: ConnectionState) -> None:
-        self._state: ConnectionState = state
-        self.id: int = int(data['id'])
-        self.name: str = data['name']
-        self._icon: Optional[str] = data.get('icon')
+    def __init__(self, *, data: GuildPayload, state: BaseConnectionState) -> None:
+        super().__init__(
+            id=int(data['id']),
+            name=data.get('name', ''),
+            icon_hash=data.get('icon'),
+            features=data.get('features', []),
+            state=state,
+        )
+
         self._banner: Optional[str] = data.get('banner')
         self.is_owner: bool = data.get('owner', False)
-        self.features: List[GuildFeature] = data.get('features', [])
         self._permissions: int = int(data.get('permissions', 0))
         self.approximate_member_count: Optional[int] = data.get('approximate_member_count')
         self.approximate_presence_count: Optional[int] = data.get('approximate_presence_count')
@@ -982,7 +985,7 @@ class Guild(UserGuild):
     verification_level: :class:`VerificationLevel`
         The guild's verification level.
     vanity_url_code: Optional[:class:`str`]
-        The guild's vanity url code, if any
+        The guild's vanity URL code, if any.
 
         .. versionadded:: 2.0
     explicit_content_filter: :class:`ContentFilter`
@@ -1077,7 +1080,9 @@ class Guild(UserGuild):
         3: _GuildLimit(emoji=250, stickers=60, bitrate=384e3, filesize=104857600),
     }
 
-    def __init__(self, *, data: GuildPayload, state: ConnectionState) -> None:
+    def __init__(self, *, data: GuildPayload, state: BaseConnectionState) -> None:
+        super().__init__(data=data, state=state)
+
         self._channels: Dict[int, GuildChannel] = {}
         self._members: Dict[int, Member] = {}
         self._voice_states: Dict[int, VoiceState] = {}
@@ -1085,7 +1090,6 @@ class Guild(UserGuild):
         self._stage_instances: Dict[int, StageInstance] = {}
         self._scheduled_events: Dict[int, ScheduledEvent] = {}
         self._soundboard_sounds: Dict[int, SoundboardSound] = {}
-        self._state: ConnectionState = state
         self._member_count: Optional[int] = None
         self._from_data(data)
 
@@ -1187,11 +1191,12 @@ class Guild(UserGuild):
         return self._roles.pop(role_id)
 
     @classmethod
-    def _create_unavailable(cls, *, state: ConnectionState, guild_id: int, data: Optional[Dict[str, Any]]) -> Guild:
+    def _create_unavailable(cls, *, data: Optional[Dict[str, Any]], guild_id: int, state: BaseConnectionState) -> Guild:
         if data is None:
             data = {'unavailable': True}
+        
         data.update(id=guild_id)
-        return cls(state=state, data=data)  # type: ignore
+        return cls(data=data, state=state)  # type: ignore
 
     def _from_data(self, guild: GuildPayload) -> None:
         from .presences import Presence
@@ -1218,14 +1223,15 @@ class Guild(UserGuild):
             role = Role(guild=self, data=r, state=state)
             self._roles[role.id] = role
 
+        cache_guild_expressions = getattr(state, 'cache_guild_expressions', True)
         self.emojis: Tuple[Emoji, ...] = (
             tuple(map(lambda d: state.store_emoji(self, d), guild.get('emojis', ())))
-            if state.cache_guild_expressions
+            if cache_guild_expressions
             else ()
         )
         self.stickers: Tuple[GuildSticker, ...] = (
             tuple(map(lambda d: state.store_sticker(self, d), guild.get('stickers', ())))
-            if state.cache_guild_expressions
+            if cache_guild_expressions
             else ()
         )
         self.features: List[GuildFeature]
@@ -1368,7 +1374,7 @@ class Guild(UserGuild):
     @property
     def voice_client(self) -> Optional[VoiceProtocol]:
         """Optional[:class:`VoiceProtocol`]: Returns the :class:`VoiceProtocol` associated with this guild, if any."""
-        return self._state._get_voice_client(self.id)
+        return self._state.get_voice_client(self.id)
 
     @property
     def text_channels(self) -> List[TextChannel]:
@@ -2016,7 +2022,7 @@ class Guild(UserGuild):
             Indicates if the client is using video. Do not use.
         """
         state = self._state
-        ws = state._get_websocket()
+        ws = state.get_websocket()
         channel_id = channel.id if channel else None
 
         await ws.voice_state(self.id, channel_id, self_mute, self_deaf, self_video)

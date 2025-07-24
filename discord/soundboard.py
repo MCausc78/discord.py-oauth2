@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     import datetime
 
     from .guild import Guild
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.soundboard import (
         BaseSoundboardSound as BaseSoundboardSoundPayload,
         SoundboardDefaultSound as SoundboardDefaultSoundPayload,
@@ -79,8 +79,8 @@ class BaseSoundboardSound(Hashable, AssetMixin):
 
     __slots__ = ('_state', 'id', 'volume')
 
-    def __init__(self, *, state: ConnectionState, data: BaseSoundboardSoundPayload):
-        self._state: ConnectionState = state
+    def __init__(self, *, data: BaseSoundboardSoundPayload, state: BaseConnectionState):
+        self._state: BaseConnectionState = state
         self.id: int = int(data['sound_id'])
         self._update(data)
 
@@ -134,7 +134,7 @@ class SoundboardDefaultSound(BaseSoundboardSound):
 
     __slots__ = ('name', 'emoji')
 
-    def __init__(self, *, state: ConnectionState, data: SoundboardDefaultSoundPayload):
+    def __init__(self, *, data: SoundboardDefaultSoundPayload, state: BaseConnectionState):
         self.name: str = data['name']
         self.emoji: PartialEmoji = PartialEmoji(name=data['emoji_name'])
         super().__init__(state=state, data=data)
@@ -197,8 +197,8 @@ class SoundboardSound(BaseSoundboardSound):
         'available',
     )
 
-    def __init__(self, *, guild: Guild, state: ConnectionState, data: SoundboardSoundPayload):
-        super().__init__(state=state, data=data)
+    def __init__(self, *, data: SoundboardSoundPayload, guild: Guild, state: BaseConnectionState):
+        super().__init__(data=data, state=state)
         self.guild = guild
         self.user_id: Optional[int] = _get_as_snowflake(data, 'user_id')
         self._user = data.get('user')
