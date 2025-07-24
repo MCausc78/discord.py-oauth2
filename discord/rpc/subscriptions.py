@@ -5,9 +5,10 @@ from typing import Any, Dict, Literal, TYPE_CHECKING
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+
 class EventSubscription:
     """Represents an event subscription.
-    
+
     .. versionadded:: 3.0
     """
 
@@ -18,6 +19,7 @@ class EventSubscription:
 
     def get_data(self) -> Dict[str, Any]:
         return {}
+
 
 class GenericSubscription(EventSubscription):
     """Represents a subscription for a generic event (event that does not require arguments)."""
@@ -33,7 +35,7 @@ class GenericSubscription(EventSubscription):
     @classmethod
     def current_user_update(cls) -> Self:
         return cls('CURRENT_USER_UPDATE')
-    
+
     @classmethod
     def guild_join(cls) -> Self:
         return cls('GUILD_CREATE')
@@ -81,11 +83,11 @@ class GenericSubscription(EventSubscription):
     @classmethod
     def activity_pip_mode_update(cls) -> Self:
         return cls('ACTIVITY_PIP_MODE_UPDATE')
-    
+
     @classmethod
     def activity_layout_mode_update(cls) -> Self:
         return cls('ACTIVITY_LAYOUT_MODE_UPDATE')
-    
+
     @classmethod
     def thermal_state_update(cls) -> Self:
         return cls('THERMAL_STATE_UPDATE')
@@ -101,19 +103,19 @@ class GenericSubscription(EventSubscription):
     @classmethod
     def notification_create(cls) -> Self:
         return cls('NOTIFICATION_CREATE')
-    
+
     @classmethod
     def entitlement_create(cls) -> Self:
         return cls('ENTITLEMENT_CREATE')
-    
+
     @classmethod
     def entitlement_delete(cls) -> Self:
         return cls('ENTITLEMENT_DELETE')
-    
+
     @classmethod
     def screenshare_state_update(cls) -> Self:
         return cls('SCREENSHARE_STATE_UPDATE')
-    
+
     @classmethod
     def video_state_update(cls) -> Self:
         return cls('VIDEO_STATE_UPDATE')
@@ -133,15 +135,15 @@ class ChannelSubscription(EventSubscription):
 
     def get_data(self) -> Dict[str, Any]:
         return {'channel_id': str(self.channel_id)}
-    
+
     @classmethod
     def voice_state_create(cls, channel_id: int) -> Self:
         return cls('VOICE_STATE_CREATE', channel_id=channel_id)
-    
+
     @classmethod
     def voice_state_update(cls, channel_id: int) -> Self:
         return cls('VOICE_STATE_UPDATE', channel_id=channel_id)
-    
+
     @classmethod
     def voice_state_delete(cls, channel_id: int) -> Self:
         return cls('VOICE_STATE_DELETE', channel_id=channel_id)
@@ -149,14 +151,15 @@ class ChannelSubscription(EventSubscription):
     @classmethod
     def message_create(cls, channel_id: int) -> Self:
         return cls('MESSAGE_CREATE', channel_id=channel_id)
-    
+
     @classmethod
     def message_update(cls, channel_id: int) -> Self:
         return cls('MESSAGE_UPDATE', channel_id=channel_id)
-    
+
     @classmethod
     def message_delete(cls, channel_id: int) -> Self:
         return cls('MESSAGE_DELETE', channel_id=channel_id)
+
 
 class GuildSubscription(EventSubscription):
     """Represents a subscription for a guild event (event that happens in a specific guild)."""
@@ -172,7 +175,7 @@ class GuildSubscription(EventSubscription):
 
     def get_data(self) -> Dict[str, Any]:
         return {'guild_id': str(self.guild_id)}
-    
+
     @classmethod
     def current_member_update(cls, guild_id: int) -> Self:
         return cls('CURRENT_GUILD_MEMBER_UPDATE', guild_id=guild_id)
@@ -180,6 +183,7 @@ class GuildSubscription(EventSubscription):
     @classmethod
     def guild_status(cls, guild_id: int) -> Self:
         return cls('GUILD_STATUS', guild_id=guild_id)
+
 
 class SpeakingEventSubscription(EventSubscription):
     __slots__ = (
@@ -192,7 +196,7 @@ class SpeakingEventSubscription(EventSubscription):
         self.operation = operation
         self.channel_id: int = channel_id
         self.user_id: int = user_id
-    
+
     def get_type(self) -> str:
         return 'SPEAKING_' + self.operation
 

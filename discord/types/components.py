@@ -150,7 +150,6 @@ MediaItemLoadingState = Literal[
 ]
 
 
-
 class UnfurledMediaItem(TypedDict, total=False):
     url: Required[str]
     proxy_url: str

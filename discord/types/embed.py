@@ -28,6 +28,7 @@ from typing_extensions import NotRequired, Required
 from .message import MediaScanMetadata
 from .snowflake import Snowflake
 
+
 class EmbedFooter(TypedDict):
     text: str
     icon_url: NotRequired[str]
@@ -51,6 +52,7 @@ class EmbedMedia(TypedDict, total=False):
     content_scan_metadata: MediaScanMetadata
     placeholder_version: int
     placeholder: str
+
 
 class EmbedProvider(TypedDict, total=False):
     name: str

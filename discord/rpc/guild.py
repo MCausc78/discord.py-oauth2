@@ -12,6 +12,7 @@ if TYPE_CHECKING:
         PartialGuild as PartialGuildPayload,
     )
 
+
 def _get_icon_hash_from_url(url: str) -> str:
     # Is this terrible? Yes.
     # Does it work? Yes.
@@ -42,12 +43,12 @@ class PartialGuild(_PartialGuild):
 
     def __init__(self, *, data: PartialGuildPayload, state: RPCConnectionState) -> None:
         icon_url = data.get('icon_url')
-        
+
         if icon_url:
             icon_hash = _get_icon_hash_from_url(icon_url) or None
         else:
             icon_hash = None
-        
+
         super().__init__(
             id=int(data['id']),
             name=data['name'],
@@ -55,6 +56,7 @@ class PartialGuild(_PartialGuild):
             features=[],
             state=state,
         )
+
 
 class Guild(PartialGuild):
     """Represents a Discord guild.
@@ -67,10 +69,7 @@ class Guild(PartialGuild):
         The guild's vanity URL code, if any.
     """
 
-    __slots__ = (
-        'vanity_url_code',
-    )
-
+    __slots__ = ('vanity_url_code',)
 
     def __init__(self, *, data: GetGuildResponsePayload, state: RPCConnectionState) -> None:
         super().__init__(data=data, state=state)

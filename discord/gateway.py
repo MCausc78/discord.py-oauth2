@@ -477,7 +477,6 @@ class DiscordWebSocket:
             # | PRIORITIZED_READY_PAYLOAD(5)
             # | AUTO_CALL_CONNECT(12)
             # | AUTO_LOBBY_CONNECT(16)
-
             # Below ones are not used by SDK yet
             # | PRIVATE_CHANNEL_OBFUSCATION(15) (obfuscates channel objects you do not have access to)
             # | STATE_UPDATE(17) (? idk what it actually does, but its added in same commit that handles STATE_UPDATE & READY->failed_states?: unknown[])

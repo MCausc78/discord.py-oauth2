@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 class Message(Hashable):
     r"""Represents a message from Discord.
-    
+
     .. versionadded:: 3.0
 
     .. container:: operations
@@ -116,7 +116,9 @@ class Message(Hashable):
         'nick',
     )
 
-    def __init__(self, *, data: MessagePayload, channel: Optional[GuildChannel] = None, channel_id: int = 0, state: RPCConnectionState) -> None:
+    def __init__(
+        self, *, data: MessagePayload, channel: Optional[GuildChannel] = None, channel_id: int = 0, state: RPCConnectionState
+    ) -> None:
         if channel and not channel_id:
             channel_id = channel.id
 
@@ -126,7 +128,7 @@ class Message(Hashable):
         self.channel_id: int = channel_id
 
         self._update(data)
-    
+
     def _update(self, data: MessagePayload) -> None:
         state = self._state
 

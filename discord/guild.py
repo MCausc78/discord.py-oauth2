@@ -174,7 +174,13 @@ class PartialGuild(Hashable):
     )
 
     def __init__(
-        self, *, id: int, name: str, icon_hash: Optional[str] = None, features: List[GuildFeature], state: BaseConnectionState
+        self,
+        *,
+        id: int,
+        name: str,
+        icon_hash: Optional[str] = None,
+        features: List[GuildFeature],
+        state: BaseConnectionState,
     ) -> None:
         self._state: BaseConnectionState = state
         self.id: int = id
@@ -1194,7 +1200,7 @@ class Guild(UserGuild):
     def _create_unavailable(cls, *, data: Optional[Dict[str, Any]], guild_id: int, state: BaseConnectionState) -> Guild:
         if data is None:
             data = {'unavailable': True}
-        
+
         data.update(id=guild_id)
         return cls(data=data, state=state)  # type: ignore
 
@@ -1225,14 +1231,10 @@ class Guild(UserGuild):
 
         cache_guild_expressions = getattr(state, 'cache_guild_expressions', True)
         self.emojis: Tuple[Emoji, ...] = (
-            tuple(map(lambda d: state.store_emoji(self, d), guild.get('emojis', ())))
-            if cache_guild_expressions
-            else ()
+            tuple(map(lambda d: state.store_emoji(self, d), guild.get('emojis', ()))) if cache_guild_expressions else ()
         )
         self.stickers: Tuple[GuildSticker, ...] = (
-            tuple(map(lambda d: state.store_sticker(self, d), guild.get('stickers', ())))
-            if cache_guild_expressions
-            else ()
+            tuple(map(lambda d: state.store_sticker(self, d), guild.get('stickers', ()))) if cache_guild_expressions else ()
         )
         self.features: List[GuildFeature]
         if 'features' in guild:
