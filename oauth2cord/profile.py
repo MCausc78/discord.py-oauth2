@@ -35,7 +35,7 @@ from .enums import try_enum, GuildBadgeType, GuildVisibility
 from .utils import _get_as_snowflake, snowflake_time
 
 if TYPE_CHECKING:
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.guild import GuildFeature
     from .types.profile import (
         GuildProfile as GuildProfilePayload,
@@ -136,8 +136,8 @@ class GuildProfile(Hashable):
         'premium_tier',
     )
 
-    def __init__(self, *, data: GuildProfilePayload, state: ConnectionState) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, *, data: GuildProfilePayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self.id: int = int(data['id'])
         self._update(data)
 
@@ -205,6 +205,8 @@ class GuildProfile(Hashable):
 class GameActivity:
     """Represents a game activity.
 
+    .. versionadded:: 3.0
+
     Attributes
     ----------
     level: :class:`int`
@@ -226,6 +228,8 @@ class GameActivity:
 class GuildTrait:
     """Represents a guild trait.
 
+    .. versionadded:: 3.0
+
     Attributes
     ----------
     emoji: Optional[:class:`PartialEmoji`]
@@ -242,7 +246,7 @@ class GuildTrait:
         'position',
     )
 
-    def __init__(self, *, data: GuildTraitPayload, state: ConnectionState) -> None:
+    def __init__(self, *, data: GuildTraitPayload, state: BaseConnectionState) -> None:
         emoji_id = _get_as_snowflake(data, 'emoji_id')
         emoji_name = data.get('emoji_name')
         emoji_animated = data.get('emoji_animated', False)

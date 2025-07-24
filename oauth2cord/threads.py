@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     from .member import Member
     from .message import Message
     from .role import Role
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.threads import (
         Thread as ThreadPayload,
         ThreadMember as ThreadMemberPayload,
@@ -154,8 +154,8 @@ class Thread(Hashable):
         '_applied_tags',
     )
 
-    def __init__(self, *, guild: Guild, state: ConnectionState, data: ThreadPayload) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, *, data: ThreadPayload, guild: Guild, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self.guild: Guild = guild
         self._members: Dict[int, ThreadMember] = {}
         self._from_data(data)
@@ -297,7 +297,7 @@ class Thread(Hashable):
         Optional[:class:`Message`]
             The thread starter message or ``None`` if not found.
         """
-        return self._state._get_message(self.id)
+        return self._state.get_message(self.id)
 
     @property
     def last_message(self) -> Optional[Message]:
@@ -318,7 +318,7 @@ class Thread(Hashable):
         Optional[:class:`Message`]
             The last message in this channel or ``None`` if not found.
         """
-        return self._state._get_message(self.last_message_id) if self.last_message_id else None
+        return self._state.get_message(self.last_message_id) if self.last_message_id else None
 
     @property
     def category(self) -> Optional[CategoryChannel]:
@@ -519,8 +519,8 @@ class ThreadMember(Hashable):
     )
 
     def __init__(self, parent: Thread, data: ThreadMemberPayload) -> None:
+        self._state: BaseConnectionState = parent._state
         self.parent: Thread = parent
-        self._state: ConnectionState = parent._state
         self._from_data(data)
 
     def __repr__(self) -> str:

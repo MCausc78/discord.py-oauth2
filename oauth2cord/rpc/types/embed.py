@@ -57,7 +57,7 @@ class EmbedMedia(TypedDict, total=False):
     placeholder: str
     placeholderVersion: int
     description: str
-    srcIsAnimated: Required[bool]
+    srcIsAnimated: Required[bool] # Literally same thing as `(flags & IS_ANIMATED) != 0``
     flags: Required[int]
 
 

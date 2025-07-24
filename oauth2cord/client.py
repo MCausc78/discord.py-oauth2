@@ -328,7 +328,7 @@ class Client(Dispatcher):
         self._closing_task: Optional[asyncio.Task[None]] = None
         self._ready: asyncio.Event = MISSING
         self._application: Optional[AppInfo] = None
-        self._connection._get_websocket = self._get_websocket
+        self._connection.get_websocket = self._get_websocket
         self._connection._get_client = lambda: self
 
         if VoiceClient.warn_nacl:

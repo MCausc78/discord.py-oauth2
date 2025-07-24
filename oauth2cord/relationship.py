@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING, Tuple, Union
 
+from .activity import create_activity
 from .enums import RelationshipType, Status, try_enum
 from .mixins import Hashable
 from .object import Object
@@ -39,7 +40,8 @@ if TYPE_CHECKING:
 
     from .activity import ActivityTypes
     from .presences import Presence
-    from .state import ConnectionState
+    from .rpc.types.user import Relationship as RPCRelationshipPayload
+    from .state import BaseConnectionState
     from .types.gateway import RelationshipEvent
     from .types.user import User as UserPayload, Relationship as RelationshipPayload
 
@@ -121,7 +123,7 @@ class Relationship(Hashable):
     if TYPE_CHECKING:
         user: User
 
-    def __init__(self, *, state: ConnectionState, data: RelationshipPayload) -> None:
+    def __init__(self, *, data: RelationshipPayload, state: BaseConnectionState) -> None:
         self._state = state
         self.client_status: ClientStatus = ClientStatus()
         self.activities: Tuple[ActivityTypes, ...] = ()
@@ -206,7 +208,7 @@ class Relationship(Hashable):
             return to_return, u
 
     @classmethod
-    def _from_implicit(cls, *, state: ConnectionState, user: User) -> Relationship:
+    def _from_implicit(cls, *, state: BaseConnectionState, user: User) -> Self:
         self = cls.__new__(cls)
         self._state = state
         self.client_status = ClientStatus()
@@ -220,6 +222,29 @@ class Relationship(Hashable):
         self.origin_application_id = None
         self.since = None
         self.has_played_game = False
+        return self
+
+    @classmethod
+    def _from_rpc(cls, data: RPCRelationshipPayload, state: BaseConnectionState) -> Self:
+        presence_data = data['presence']
+        activity_data = presence_data.get('activity')
+
+        self = cls.__new__(cls)
+        self._state = state
+        self.client_status = ClientStatus(status=presence_data['status'])
+        self.activities = (create_activity(activity_data, state),) if activity_data else ()
+        self.type = try_enum(RelationshipType, data['type'])
+        self.user = User._from_rpc(data['user'], state)
+        self.nick = None
+        self.spam_request = False
+        self.stranger_request = False
+        self.user_ignored = False
+        self.origin_application_id = None
+        self.since = None
+        # Technically, this could be bool(activity_data)
+        # But I am unsure if this is great
+        self.has_played_game = False
+
         return self
 
     @classmethod

@@ -35,7 +35,7 @@ from .utils import _get_as_snowflake, resolve_invite, snowflake_time
 if TYPE_CHECKING:
     import datetime
 
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.widget import (
         WidgetMember as WidgetMemberPayload,
         Widget as WidgetPayload,
@@ -76,7 +76,7 @@ class WidgetChannel:
     name: :class:`str`
         The channel's name.
     position: :class:`int`
-        The channel's position
+        The channel's position.
     """
 
     __slots__ = ('id', 'name', 'position')
@@ -173,26 +173,18 @@ class WidgetMember(BaseUser):
     def __init__(
         self,
         *,
-        state: ConnectionState,
+        state: BaseConnectionState,
         data: WidgetMemberPayload,
         connected_channel: Optional[WidgetChannel] = None,
     ) -> None:
-        super().__init__(state=state, data=data)
+        super().__init__(data=data, state=state)
         self.nick: Optional[str] = data.get('nick')
         self.status: Status = try_enum(Status, data.get('status'))
         self.deafened: Optional[bool] = data.get('deaf', False) or data.get('self_deaf', False)
         self.muted: Optional[bool] = data.get('mute', False) or data.get('self_mute', False)
         self.suppress: Optional[bool] = data.get('suppress', False)
 
-        try:
-            game = data['game']  # pyright: ignore[reportTypedDictNotRequiredAccess]
-        except KeyError:
-            activity = None
-        else:
-            activity = create_activity(game, state)
-
-        self.activity: Optional[Union[BaseActivity, Spotify]] = activity
-
+        self.activity: Optional[Union[BaseActivity, Spotify]] = create_activity(data.get('game'), state)
         self.connected_channel: Optional[WidgetChannel] = connected_channel
 
     def __repr__(self) -> str:
@@ -249,7 +241,7 @@ class Widget:
 
     __slots__ = ('_state', 'channels', '_invite', 'id', 'members', 'name', 'presence_count')
 
-    def __init__(self, *, state: ConnectionState, data: WidgetPayload) -> None:
+    def __init__(self, *, data: WidgetPayload, state: BaseConnectionState) -> None:
         self._state = state
         self._invite = data['instant_invite']
         self.name: str = data['name']
@@ -321,6 +313,7 @@ class Widget:
         """
         if self._invite:
             resolved = resolve_invite(self._invite)
-            data = await self._state.http.get_invite(resolved.code, with_counts=with_counts)
-            return Invite.from_incomplete(state=self._state, data=data)
+            state = self._state
+            data = await state.http.get_invite(resolved.code, with_counts=with_counts)
+            return Invite.from_incomplete(data=data, state=state)
         return None

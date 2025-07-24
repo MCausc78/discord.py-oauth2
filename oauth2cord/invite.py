@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 
     from .abc import Snowflake, GuildChannel
     from .guild import Guild
-    from .state import ConnectionState
+    from .state import BaseConnectionState, ConnectionState
     from .types.guild import GuildFeature
     from .types.channel import (
         PartialChannel as InviteChannelPayload,
@@ -186,8 +186,8 @@ class PartialInviteGuild:
         'premium_subscription_count',
     )
 
-    def __init__(self, state: ConnectionState, data: InviteGuildPayload, id: int):
-        self._state: ConnectionState = state
+    def __init__(self, state: BaseConnectionState, data: InviteGuildPayload, id: int):
+        self._state: BaseConnectionState = state
         self.id: int = id
         self.name: str = data['name']
         self.features: List[GuildFeature] = data.get('features', [])
@@ -394,9 +394,9 @@ class Invite(Hashable):
         data: InvitePayload,
         guild: Optional[Union[PartialInviteGuild, Guild]] = None,
         channel: Optional[Union[PartialInviteChannel, GuildChannel]] = None,
-        state: ConnectionState,
+        state: BaseConnectionState,
     ) -> None:
-        self._state: ConnectionState = state
+        self._state: BaseConnectionState = state
 
         raw_profile = data.get('profile')
 
@@ -434,8 +434,8 @@ class Invite(Hashable):
         scheduled_event = data.get('guild_scheduled_event')
         self.scheduled_event: Optional[ScheduledEvent] = (
             ScheduledEvent(
-                state=self._state,
                 data=scheduled_event,
+                state=self._state,
             )
             if scheduled_event
             else None
@@ -443,7 +443,7 @@ class Invite(Hashable):
         self.scheduled_event_id: Optional[int] = self.scheduled_event.id if self.scheduled_event else None
 
     @classmethod
-    def from_incomplete(cls, *, state: ConnectionState, data: InvitePayload) -> Self:
+    def from_incomplete(cls, *, data: InvitePayload, state: BaseConnectionState) -> Self:
         guild: Optional[Union[Guild, PartialInviteGuild]]
         try:
             guild_data = data['guild']  # pyright: ignore[reportTypedDictNotRequiredAccess]
@@ -464,7 +464,7 @@ class Invite(Hashable):
             # Upgrade the partial data if applicable
             channel = guild.get_channel(channel.id) or channel
 
-        return cls(state=state, data=data, guild=guild, channel=channel)
+        return cls(data=data, guild=guild, channel=channel, state=state)
 
     @classmethod
     def from_gateway(cls, *, state: ConnectionState, data: GatewayInvitePayload) -> Self:
@@ -476,7 +476,7 @@ class Invite(Hashable):
         elif guild_id is None:
             channel = None
         else:
-            guild = state._get_or_create_unavailable_guild(guild_id)
+            guild = state.get_or_create_unavailable_guild(guild_id)
             channel = Object(id=channel_id)
 
         return cls(state=state, data=data, guild=guild, channel=channel)  # type: ignore
