@@ -307,8 +307,8 @@ CloseActivityJoinResponse = None
 class ActivityInviteUserRequest(TypedDict):
     user_id: Snowflake
     type: Literal[1]  # JOIN
-    content: NotRequired[str]  # min 0-1024 characters
-    pid: NotRequired[int]  # min 0
+    content: NotRequired[str]  # 0-1024 characters
+    pid: int  # min 0
 
 
 ActivityInviteUserResponse = None
@@ -320,7 +320,7 @@ class AcceptActivityInviteRequest(TypedDict):
     session_id: str
     channel_id: Snowflake
     message_id: Snowflake
-
+    application_id: NotRequired[Snowflake]
 
 AcceptActivityInviteResponse = None
 
