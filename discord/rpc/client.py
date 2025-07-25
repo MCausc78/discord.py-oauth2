@@ -96,7 +96,6 @@ if TYPE_CHECKING:
         # ActivityInviteUserResponse as ActivityInviteUserResponsePayload,
         AcceptActivityInviteRequest as AcceptActivityInviteRequestPayload,
         # AcceptActivityInviteResponse as AcceptActivityInviteResponsePayload,
-
     )
     from .voice_state import Pan
 
@@ -1107,14 +1106,14 @@ class Client(Dispatcher):
 
     async def close_activity_join_request(self, from_: Snowflake) -> None:
         """|coro|
-        
+
         Rejects an activity join request from the target user.
 
         Parameters
         ----------
         from_: :class:`~discord.abc.Snowflake`
             The user to reject the join request from.
-        
+
         """
         payload: CloseActivityJoinRequestPayload = {'user_id': str(from_.id)}
         await self._transport.send_command('CLOSE_ACTIVITY_JOIN_REQUEST', payload)
@@ -1143,7 +1142,7 @@ class Client(Dispatcher):
         }
         if content is not None:
             payload['content'] = content
-        
+
         await self._transport.send_command('ACTIVITY_INVITE_USER', payload)
 
     async def accept_activity_invite(
@@ -1180,7 +1179,7 @@ class Client(Dispatcher):
         }
         if application_id is not None:
             payload['application_id'] = str(application_id)
-        
+
         await self._transport.send_command('ACCEPT_ACTIVITY_INVITE', payload)
 
     # e.OPEN_INVITE_DIALOG = "OPEN_INVITE_DIALOG",

@@ -322,6 +322,7 @@ class AcceptActivityInviteRequest(TypedDict):
     message_id: Snowflake
     application_id: NotRequired[Snowflake]
 
+
 AcceptActivityInviteResponse = None
 
 
