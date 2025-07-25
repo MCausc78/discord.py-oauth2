@@ -92,6 +92,10 @@ if TYPE_CHECKING:
         SetActivityResponse as SetActivityResponsePayload,
         SendActivityJoinInviteRequest as SendActivityJoinInviteRequestPayload,
         CloseActivityJoinRequest as CloseActivityJoinRequestPayload,
+        ActivityInviteUserRequest as ActivityInviteUserRequestPayload,
+        # ActivityInviteUserResponse as ActivityInviteUserResponsePayload,
+        AcceptActivityInviteRequest as AcceptActivityInviteRequestPayload,
+        # AcceptActivityInviteResponse as AcceptActivityInviteResponsePayload,
     )
     from .voice_state import Pan
 
@@ -1079,8 +1083,6 @@ class Client(Dispatcher):
         data: SetActivityResponsePayload = await self._transport.send_command('SET_ACTIVITY', payload)
         return create_activity_from_rpc(data, self._connection)
 
-    # TODO: Add more below
-
     async def send_activity_join_invite(self, to: Snowflake) -> None:
         """|coro|
 
@@ -1100,8 +1102,90 @@ class Client(Dispatcher):
             'pid': self.pid,
             'user_id': str(to.id),
         }
-        await self._transport.send_command('ACTIVITY_JOIN_INVITE', payload)
+        await self._transport.send_command('SEND_ACTIVITY_JOIN_INVITE', payload)
 
     async def close_activity_join_request(self, from_: Snowflake) -> None:
+        """|coro|
+
+        Rejects an activity join request from the target user.
+
+        Parameters
+        ----------
+        from_: :class:`~oauth2cord.abc.Snowflake`
+            The user to reject the join request from.
+
+        """
         payload: CloseActivityJoinRequestPayload = {'user_id': str(from_.id)}
         await self._transport.send_command('CLOSE_ACTIVITY_JOIN_REQUEST', payload)
+
+    async def send_activity_invite(self, to: Snowflake, *, content: Optional[str] = None) -> None:
+        """|coro|
+
+        Sends an activity invite to target user.
+
+        Parameters
+        ----------
+        to: :class:`~oauth2cord.abc.Snowflake`
+            The user to send invite to.
+        content: Optional[:class:`str`]
+            The content to send with the invite.
+
+        Raises
+        ------
+        RPCException
+            Sending the invite failed.
+        """
+        payload: ActivityInviteUserRequestPayload = {
+            'user_id': str(to.id),
+            'type': 1,
+            'pid': self.pid,
+        }
+        if content is not None:
+            payload['content'] = content
+
+        await self._transport.send_command('ACTIVITY_INVITE_USER', payload)
+
+    async def accept_activity_invite(
+        self,
+        from_: Snowflake,
+        *,
+        session_id: str,
+        channel_id: int,
+        message_id: int,
+        application_id: Optional[int] = None,
+    ) -> None:
+        """|coro|
+
+        Sends an activity invite to target user.
+
+        Parameters
+        ----------
+        to: :class:`~oauth2cord.abc.Snowflake`
+            The user to send invite to.
+        content: Optional[:class:`str`]
+            The content to send with the invite.
+
+        Raises
+        ------
+        RPCException
+            Sending the invite failed.
+        """
+        payload: AcceptActivityInviteRequestPayload = {
+            'type': 1,
+            'user_id': str(from_.id),
+            'session_id': session_id,
+            'channel_id': str(channel_id),
+            'message_id': str(message_id),
+        }
+        if application_id is not None:
+            payload['application_id'] = str(application_id)
+
+        await self._transport.send_command('ACCEPT_ACTIVITY_INVITE', payload)
+
+    # e.OPEN_INVITE_DIALOG = "OPEN_INVITE_DIALOG",
+    # e.OPEN_SHARE_MOMENT_DIALOG = "OPEN_SHARE_MOMENT_DIALOG",
+    # e.SHARE_INTERACTION = "SHARE_INTERACTION",
+    # e.INITIATE_IMAGE_UPLOAD = "INITIATE_IMAGE_UPLOAD",
+    # e.SHARE_LINK = "SHARE_LINK",
+    # e.INVITE_BROWSER = "INVITE_BROWSER",
+    # e.DEEP_LINK = "DEEP_LINK",
