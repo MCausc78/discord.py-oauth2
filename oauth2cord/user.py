@@ -201,6 +201,23 @@ class BaseUser(_UserTag):
         self._primary_guild = data.get('primary_guild')
         self.display_name_style = None if display_name_style_data is None else DisplayNameStyle(display_name_style_data)
 
+    def _update_from_rpc(self, data: RPCUserPayload) -> None:
+        avatar_decoration_data = data.get('avatar_decoration_data')
+        if avatar_decoration_data is None:
+            add: Optional[AvatarDecorationDataPayload] = None
+        else:
+            add: Optional[AvatarDecorationDataPayload] = {
+                'asset': avatar_decoration_data['asset'],
+                'sku_id': avatar_decoration_data['skuId'],
+            }
+
+        self.name = data['username']
+        self.discriminator = data['discriminator']
+        self.global_name = data.get('global_name')
+        self._avatar_decoration_data = add
+        self.bot = data['bot']
+        self._public_flags = data['flags']
+
     @classmethod
     def _copy(cls, user: Self) -> Self:
         self = cls.__new__(cls)  # bypass __init__
@@ -257,6 +274,7 @@ class BaseUser(_UserTag):
             'avatar_decoration_data': add,
             'primary_guild': None,
             'bot': data['bot'],
+            'public_flags': data['flags'],
             'flags': data['flags'],
             'premium_type': data['premium_type'],  # type: ignore
         }
@@ -575,6 +593,11 @@ class ClientUser(BaseUser):
         self.locale = data.get('locale')
         self._flags = data.get('flags', 0)
         self.mfa_enabled = data.get('mfa_enabled', False)
+        self.premium_type = try_enum(PremiumType, data.get('premium_type', 0))
+
+    def _update_from_rpc(self, data: RPCUserPayload) -> None:
+        super()._update_from_rpc(data)
+        self._flags = data['flags']
         self.premium_type = try_enum(PremiumType, data.get('premium_type', 0))
 
     async def edit(self, *, global_name: Optional[str] = MISSING) -> ClientUser:
