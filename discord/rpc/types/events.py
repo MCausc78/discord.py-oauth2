@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import Any, List, Literal, Optional, TypedDict
+from typing import Any, Dict, List, Literal, Optional, TypedDict
 from typing_extensions import NotRequired
 
 from ...types.entitlements import Entitlement
 from ...types.message import MessageActivity, MessageActivityType
 from ...types.snowflake import Snowflake
-from .channel import PartialGuildChannel
+from .channel import PartialChannel
 from .guild import PartialGuild
 from .message import Message
+from .settings import VoiceSettings, VoiceInputMode
 from .user import AvatarDecorationData, User, Relationship
+from .voice_state import VoiceState
 
 
 class IncomingPacket(TypedDict):
@@ -81,7 +83,7 @@ class ChannelCreateEventRequest(TypedDict):
     pass
 
 
-ChannelCreateEvent = PartialGuildChannel
+ChannelCreateEvent = PartialChannel
 
 
 class RelationshipUpdateEventRequest(TypedDict):
@@ -97,36 +99,61 @@ class VoiceChannelSelectEventRequest(TypedDict):
 
 class VoiceChannelSelectEvent(TypedDict):
     channel_id: Optional[Snowflake]
-    guild_id: Optional[Snowflake]
+    guild_id: NotRequired[Optional[Snowflake]]
 
 
 class VoiceStateCreateEventRequest(TypedDict):
     channel_id: Snowflake
 
 
+VoiceStateCreateEvent = VoiceState
+
+
 class VoiceStateUpdateEventRequest(TypedDict):
     channel_id: Snowflake
+
+
+VoiceStateUpdateEvent = VoiceState
 
 
 class VoiceStateDeleteEventRequest(TypedDict):
     channel_id: Snowflake
 
 
-# VOICE_STATE_CREATE
-# VOICE_STATE_DELETE
-# VOICE_STATE_UPDATE
+VoiceStateDeleteEvent = VoiceState
 
 
 class VoiceSettingsUpdateEventRequest(TypedDict):
     pass
 
 
+VoiceSettingsUpdateEvent = VoiceSettings
+
+
 class VoiceSettingsUpdate2EventRequest(TypedDict):
     pass
 
 
-# VOICE_SETTINGS_UPDATE
-# VOICE_SETTINGS_UPDATE_2
+class VoiceSettingsUpdate2Event(TypedDict):
+    input_mode: VoiceInputMode
+    local_mutes: List[Snowflake]
+    local_volumes: Dict[Snowflake, float]
+    self_mute: bool
+    self_deaf: bool
+
+
+# 2025-07-26 22:09:50 DEBUG    discord.rpc.transport For IPC event: 1 b'{
+#   "cmd":"DISPATCH",
+#   "data":{
+#     "input_mode":{"type":"VOICE_ACTIVITY","shortcut":""},
+#     "local_mutes":[],
+#     "local_volumes":{},
+#     "self_mute":false,
+#     "self_deaf":false
+#   },
+#   "evt":"VOICE_SETTINGS_UPDATE_2",
+#   "nonce":null
+# }'
 
 
 class VoiceConnectionStatusEventRequest(TypedDict):
@@ -178,6 +205,11 @@ class SpeakingStartEvent(TypedDict):
 
 class SpeakingStopEventRequest(TypedDict):
     channel_id: Optional[Snowflake]
+
+
+class SpeakingStopEvent(TypedDict):
+    channel_id: Snowflake
+    user_id: Snowflake
 
 
 class GameJoinEventRequest(TypedDict):

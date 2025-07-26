@@ -191,7 +191,7 @@ class BaseUser(_UserTag):
         self.name = data['username']
         self.discriminator = data['discriminator']
         self.global_name = data.get('global_name')
-        self._avatar = data['avatar']
+        self._avatar = data.get('avatar')
         self._banner = data.get('banner')
         self._accent_color = data.get('accent_color')
         self._public_flags = data.get('public_flags', 0)
@@ -260,10 +260,12 @@ class BaseUser(_UserTag):
         if avatar_decoration_data is None:
             add: Optional[AvatarDecorationDataPayload] = None
         else:
-            add: Optional[AvatarDecorationDataPayload] = {
+            add = {
                 'asset': avatar_decoration_data['asset'],
                 'sku_id': avatar_decoration_data['skuId'],
             }
+            if 'expiresAt' in avatar_decoration_data:
+                add['expires_at'] = avatar_decoration_data['expiresAt']
 
         transformed_payload: UserPayload = {
             'id': data['id'],
@@ -279,6 +281,87 @@ class BaseUser(_UserTag):
             'premium_type': data['premium_type'],  # type: ignore
         }
         return cls(data=transformed_payload, state=state)
+
+    @classmethod
+    def _from_client(cls, data: Dict[str, Any], state: BaseConnectionState) -> Self:
+        payload = {
+            'id': data['id'],
+            'username': data['username'],
+            'discriminator': data['discriminator'],
+        }
+
+        global_name = data.get('global_name')
+        if global_name is None:
+            global_name = data.get('globalName')
+
+        add: Optional[AvatarDecorationDataPayload] = data.get('avatar_decoration_data')
+        if add is None:
+            avatar_decoration_data = data.get('avatarDecorationData')
+            if avatar_decoration_data is None:
+                add = None
+            else:
+                add = {
+                    'asset': avatar_decoration_data['asset'],
+                    'sku_id': avatar_decoration_data['skuId'],
+                }
+                if 'expiresAt' in avatar_decoration_data:
+                    add['expires_at'] = avatar_decoration_data['expiresAt']
+
+        payload['avatar_decoration_data'] = add
+
+        pg: Optional[PrimaryGuildPayload] = data.get('primary_guild')
+        if pg is None:
+            primary_guild = data.get('primaryGuild')
+            if primary_guild is not None:
+                keys = {
+                    'identityGuildId': 'identity_guild_id',
+                    'identityEnabled': 'identity_enabled',
+                    'tag': None,
+                    'badge': None,
+                }
+                pg = {}
+                for k, v in keys.items():
+                    if k in primary_guild:
+                        pg[k if v is None else v] = primary_guild[k]
+
+        payload['primary_guild'] = pg
+
+        dns: Optional[DisplayNameStylePayload] = data.get('display_name_styles')
+        if dns is None:
+            display_name_style = data.get('displayNameStyles')
+            if display_name_style is not None:
+                dns = {
+                    'font_id': display_name_style['fontId'],
+                    'effect_id': display_name_style['effectId'],
+                    'colors': display_name_style['colors'],
+                }
+
+        payload['display_name_styles'] = dns
+
+        public_flags = data.get('public_flags')
+        if public_flags is None:
+            public_flags = data.get('publicFlags')
+
+        if public_flags is not None:
+            payload['public_flags'] = public_flags
+
+        premium_type = data.get('premium_type')
+        if premium_type is None:
+            premium_type = data.get('premiumType')
+
+        if premium_type is not None:
+            payload['premium_type'] = premium_type
+
+        if 'bot' in data:
+            payload['bot'] = data['bot']
+
+        if 'system' in data:
+            payload['system'] = data['system']
+
+        if 'flags' in data:
+            payload['flags'] = data['flags']
+
+        return cls(data=payload, state=state)  # type: ignore
 
     @property
     def voice(self) -> Optional[VoiceState]:

@@ -126,3 +126,8 @@ class VoiceSettings(TypedDict):
     silence_warning: bool
     deaf: bool
     mute: bool
+
+
+class VoiceInputMode(TypedDict):
+    type: VoiceSettingsModeType
+    shortcut: str

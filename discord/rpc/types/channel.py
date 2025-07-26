@@ -24,39 +24,21 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Literal, TypedDict
+from typing import List, TypedDict
 
-# from typing_extensions import NotRequired
-
+from ...types.channel import ChannelType
 from ...types.snowflake import Snowflake
 from .message import Message
 from .voice_state import VoiceState
 
-GuildChannelType = Literal[
-    0,
-    2,
-    4,
-    5,
-    6,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    # 17: LOBBY
-    # 18: DM_SDK
-]
 
-
-class PartialGuildChannel(TypedDict):
+class PartialChannel(TypedDict):
     id: Snowflake
     name: str
-    type: GuildChannelType
+    type: ChannelType
 
 
-class GuildChannel(PartialGuildChannel):
+class GuildChannel(PartialChannel):
     topic: str
     bitrate: int
     user_limit: int

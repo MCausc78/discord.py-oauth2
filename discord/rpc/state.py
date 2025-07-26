@@ -5,13 +5,17 @@ import inspect
 import logging
 from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
 
+from ..enums import ChannelType
 from ..entitlements import Entitlement
 from ..relationship import Relationship
 from ..state import BaseConnectionState
 from ..user import ClientUser
-from .channel import PartialGuildChannel
+from ..utils import _get_as_snowflake
+from .channel import PartialChannel
 from .guild import PartialGuild
 from .message import Message
+from .settings import VoiceSettings
+from .voice_state import VoiceState
 
 if TYPE_CHECKING:
     from ..http import HTTPClient
@@ -19,15 +23,25 @@ if TYPE_CHECKING:
     from .types.events import (
         ReadyEvent as ReadyEventPayload,
         CurrentUserUpdateEvent as CurrentUserUpdateEventPayload,
-        MessageCreateEvent as MessageCreateEventPayload,
-        MessageUpdateEvent as MessageUpdateEventPayload,
-        MessageDeleteEvent as MessageDeleteEventPayload,
         GuildStatusEvent as GuildStatusEventPayload,
         GuildCreateEvent as GuildCreateEventPayload,
         ChannelCreateEvent as ChannelCreateEventPayload,
         RelationshipUpdateEvent as RelationshipUpdateEventPayload,
+        VoiceChannelSelectEvent as VoiceChannelSelectEventPayload,
+        VoiceStateCreateEvent as VoiceStateCreateEventPayload,
+        VoiceStateUpdateEvent as VoiceStateUpdateEventPayload,
+        VoiceStateDeleteEvent as VoiceStateDeleteEventPayload,
+        VoiceSettingsUpdateEvent as VoiceSettingsUpdateEventPayload,
+        SpeakingStartEvent as SpeakingStartEventPayload,
+        SpeakingStopEvent as SpeakingStopEventPayload,
+        GameJoinEvent as GameJoinEventPayload,
+        ActivityJoinEvent as ActivityJoinEventPayload,
+        MessageCreateEvent as MessageCreateEventPayload,
+        MessageUpdateEvent as MessageUpdateEventPayload,
+        MessageDeleteEvent as MessageDeleteEventPayload,
         EntitlementCreateEvent as EntitlementCreateEventPayload,
         EntitlementDeleteEvent as EntitlementDeleteEventPayload,
+        VideoStateUpdateEvent as VideoStateUpdateEventPayload,
     )
 
 _log = logging.getLogger(__name__)
@@ -88,6 +102,76 @@ class RPCConnectionState(BaseConnectionState):
             self.user._update_from_rpc(data)
             self.dispatch('current_user_update', old, self.user)
 
+    def parse_guild_status(self, data: GuildStatusEventPayload) -> None:
+        guild = PartialGuild(data=data['guild'], state=self)
+
+        self.dispatch('guild_update', guild)
+
+    def parse_guild_create(self, data: GuildCreateEventPayload) -> None:
+        guild = PartialGuild(data=data, state=self)
+
+        self.dispatch('guild_join', guild)
+
+    def parse_channel_create(self, data: ChannelCreateEventPayload) -> None:
+        channel = PartialChannel(data=data, guild_id=0, state=self)
+
+        if channel.type in (
+            ChannelType.private,
+            ChannelType.group,
+            ChannelType.ephemeral_dm,
+        ):
+            event = 'private_channel_create'
+        else:
+            event = 'guild_channel_create'
+
+        self.dispatch(event, channel)
+
+    def parse_relationship_update(self, data: RelationshipUpdateEventPayload) -> None:
+        relationship = Relationship._from_rpc(data, self)
+
+        self.dispatch('relationship_update', relationship)
+
+    def parse_voice_channel_select(self, data: VoiceChannelSelectEventPayload) -> None:
+        channel_id = _get_as_snowflake(data, 'channel_id')
+        guild_id = _get_as_snowflake(data, 'guild_id')  # Always seems to be absent when channel_id is null?
+        self.dispatch('voice_channel_select', channel_id, guild_id)
+
+    def parse_voice_state_create(self, data: VoiceStateCreateEventPayload) -> None:
+        voice_state = VoiceState(data=data, state=self)
+
+        self.dispatch('voice_state_create', voice_state)
+
+    def parse_voice_state_update(self, data: VoiceStateUpdateEventPayload) -> None:
+        voice_state = VoiceState(data=data, state=self)
+
+        self.dispatch('voice_state_update', voice_state)
+
+    def parse_voice_state_delete(self, data: VoiceStateDeleteEventPayload) -> None:
+        voice_state = VoiceState(data=data, state=self)
+
+        self.dispatch('voice_state_delete', voice_state)
+
+    def parse_voice_settings_update(self, data: VoiceSettingsUpdateEventPayload) -> None:
+        self.dispatch('voice_settings_update', VoiceSettings(data=data, state=self))
+
+    def parse_speaking_start(self, data: SpeakingStartEventPayload) -> None:
+        channel_id = int(data['channel_id'])
+        user_id = int(data['user_id'])
+
+        self.dispatch('speaking_start', channel_id, user_id)
+
+    def parse_speaking_stop(self, data: SpeakingStopEventPayload) -> None:
+        channel_id = int(data['channel_id'])
+        user_id = int(data['user_id'])
+
+        self.dispatch('speaking_stop', channel_id, user_id)
+
+    def parse_game_join(self, data: GameJoinEventPayload) -> None:
+        self.dispatch('game_join', data['secret'])
+
+    def parse_activity_join(self, data: ActivityJoinEventPayload) -> None:
+        self.dispatch('activity_join', data['secret'])
+
     def parse_message_create(self, data: MessageCreateEventPayload) -> None:
         channel_id = int(data['channel_id'])
         message = Message(data=data['message'], channel_id=channel_id, state=self)
@@ -106,26 +190,6 @@ class RPCConnectionState(BaseConnectionState):
 
         self.dispatch('message_delete', channel_id, message_id)
 
-    def parse_guild_status(self, data: GuildStatusEventPayload) -> None:
-        guild = PartialGuild(data=data['guild'], state=self)
-
-        self.dispatch('guild_update', guild)
-
-    def parse_guild_create(self, data: GuildCreateEventPayload) -> None:
-        guild = PartialGuild(data=data, state=self)
-
-        self.dispatch('guild_join', guild)
-
-    def parse_channel_create(self, data: ChannelCreateEventPayload) -> None:
-        channel = PartialGuildChannel(data=data, guild_id=0, state=self)
-
-        self.dispatch('guild_channel_create', channel)
-
-    def parse_relationship_update(self, data: RelationshipUpdateEventPayload) -> None:
-        relationship = Relationship._from_rpc(data, self)
-
-        self.dispatch('relationship_update', relationship)
-
     def parse_entitlement_create(self, data: EntitlementCreateEventPayload) -> None:
         entitlement = Entitlement(data=data, state=self)
 
@@ -135,6 +199,9 @@ class RPCConnectionState(BaseConnectionState):
         entitlement = Entitlement(data=data, state=self)
 
         self.dispatch('entitlement_delete', entitlement)
+
+    def parse_video_state_update(self, data: VideoStateUpdateEventPayload) -> None:
+        self.dispatch('video_state_update', data['active'])
 
     # Overrides
     def get_rpc_guild(self, guild_id: Optional[int]) -> Optional[Guild]:

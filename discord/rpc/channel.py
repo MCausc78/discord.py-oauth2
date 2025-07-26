@@ -11,20 +11,18 @@ if TYPE_CHECKING:
     from .guild import Guild
     from .state import RPCConnectionState
     from .types.channel import (
-        PartialGuildChannel as PartialGuildChannelPayload,
+        PartialChannel as PartialChannelPayload,
         GuildChannel as GuildChannelPayload,
     )
 
 __all__ = (
-    'PartialGuildChannel',
+    'PartialChannel',
     'GuildChannel',
 )
 
 
-class PartialGuildChannel(Hashable):
-    """Represents a partial Discord guild channel.
-
-    Unlike :class:`discord.abc.GuildChannel`, these are received from RPC.
+class PartialChannel(Hashable):
+    """Represents a partial Discord channel.
 
     .. versionadded:: 3.0
 
@@ -33,11 +31,11 @@ class PartialGuildChannel(Hashable):
     id: :class:`int`
         The channel's ID.
     guild_id: :class:`int`
-        The guild's ID that this channel belongs to.
+        The guild's ID that this channel belongs to (or zero if the channel is a private channel).
     type: :class:`discord.ChannelType`
         The channel's type.
     name: :class:`str`
-        The channel's name.
+        The channel's name. Empty for DM channels.
     """
 
     __slots__ = (
@@ -49,14 +47,17 @@ class PartialGuildChannel(Hashable):
     )
 
     def __init__(
-        self, *, data: Union[PartialGuildChannelPayload, GuildChannelPayload], guild_id: int, state: RPCConnectionState
+        self, *, data: Union[PartialChannelPayload, GuildChannelPayload], guild_id: int, state: RPCConnectionState
     ) -> None:
         self._state: RPCConnectionState = state
         self.id = int(data['id'])
         self.guild_id: int = guild_id
         self._update(data)
 
-    def _update(self, data: Union[PartialGuildChannelPayload, GuildChannelPayload]) -> None:
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} id={self.id!r} type={self.type!r} name={self.name!r}>'
+
+    def _update(self, data: Union[PartialChannelPayload, GuildChannelPayload]) -> None:
         self.type: ChannelType = try_enum(ChannelType, data['type'])
         self.name: str = data['name']
 
@@ -66,10 +67,10 @@ class PartialGuildChannel(Hashable):
         return self._state.get_rpc_guild(self.guild_id)
 
 
-class GuildChannel(PartialGuildChannel):
+class GuildChannel(PartialChannel):
     """Represents a Discord guild channel.
 
-    This inherits from :class:`PartialGuildChannel`.
+    This inherits from :class:`PartialChannel`.
 
     .. versionadded:: 3.0
 
@@ -103,11 +104,12 @@ class GuildChannel(PartialGuildChannel):
     )
 
     def __init__(
-        self, *, data: Union[PartialGuildChannelPayload, GuildChannelPayload], guild_id: int = 0, state: RPCConnectionState
+        self, *, data: Union[PartialChannelPayload, GuildChannelPayload], guild_id: int = 0, state: RPCConnectionState
     ) -> None:
         super().__init__(data=data, guild_id=int(data.get('guild_id', guild_id)), state=state)
 
     def _update(self, data: GuildChannelPayload) -> None:
+        super()._update(data)
         state = self._state
 
         self.topic: str = data.get('topic', '')

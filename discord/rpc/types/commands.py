@@ -41,7 +41,7 @@ from .channel import PartialGuildChannel, GuildChannel
 from .guild import PartialGuild
 from .http import Response
 from .presence import Activity
-from .settings import PartialShortcutKeyCombo, VoiceSettingsModeType, VoiceSettings
+from .settings import PartialShortcutKeyCombo, VoiceSettingsModeType, VoiceSettings, VoiceInputMode
 from .template import Template
 from .user import User, Relationship
 from .voice_state import Pan
@@ -239,13 +239,8 @@ class GetVoiceSettingsRequest(TypedDict):
 GetVoiceSettingsResponse = VoiceSettings
 
 
-class SetVoiceSettings2RequestInputMode(TypedDict):
-    type: VoiceSettingsModeType
-    shortcut: str
-
-
 class SetVoiceSettings2Request(TypedDict, total=False):
-    input_mode: SetVoiceSettings2RequestInputMode
+    input_mode: VoiceInputMode
     self_mute: bool
     self_deaf: bool
 

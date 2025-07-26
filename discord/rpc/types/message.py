@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypedDict, Union
+from typing import Any, List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired, Required
 
 from ...types.message import Attachment
@@ -337,7 +337,11 @@ class Message(TypedDict):
     edited_timestamp: Optional[str]  # ISO8601 timestamp
     timestamp: str  # also ISO8601 timestamp
     tts: bool
-    mentions: List[Snowflake]
+
+    # Apparently, this is not a list of snowflakes, but rather either an actual API representation or client representation
+    # (this is so fucking stupid, thanks retarded RPC)
+    mentions: List[Any]
+
     mention_everyone: bool
     mention_roles: List[Snowflake]
     embeds: List[Embed]
