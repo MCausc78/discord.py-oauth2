@@ -39,6 +39,7 @@ from ...types.soundboard import SoundboardSound
 
 from .channel import PartialGuildChannel, GuildChannel
 from .guild import PartialGuild
+from .http import Response
 from .presence import Activity
 from .settings import PartialShortcutKeyCombo, VoiceSettingsModeType, VoiceSettings
 from .template import Template
@@ -361,16 +362,16 @@ class ShareInteractionRequestComponentButton(TypedDict):
 
 class ShareInteractionRequestComponent(TypedDict):
     type: Literal[1]
-    components: List[ShareInteractionRequestComponentButton]  # max 5
+    components: NotRequired[List[ShareInteractionRequestComponentButton]]  # max 5
 
 
 class ShareInteractionRequest(TypedDict):
     command: str
-    options: List[ShareInteractionRequestOption]
-    content: str  # max 2000
+    options: NotRequired[List[ShareInteractionRequestOption]]
+    content: NotRequired[str]  # max 2000
     require_launch_channel: NotRequired[bool]
     preview_image: NotRequired[ShareInteractionRequestPreviewImage]
-    components: NotRequired[ShareInteractionRequestComponent]
+    components: NotRequired[List[ShareInteractionRequestComponent]]
     pid: NotRequired[int]
 
 
@@ -387,9 +388,9 @@ class InitiateImageUploadResponse(TypedDict):
 
 
 class ShareLinkRequest(TypedDict):
-    custom_id: str  # max 64 characters
+    custom_id: NotRequired[str]  # max 64 characters
     message: str  # max 1000 characters
-    link_id: str  # max 64 characters
+    link_id: NotRequired[str]  # max 64 characters
 
 
 class ShareLinkResponse(TypedDict):
@@ -423,7 +424,7 @@ class DeepLinkRequest(TypedDict):
         'FEATURES',
         'ACTIVITIES',
     ]
-
+    params: NotRequired[Any]
 
 DeepLinkResponse = Optional[bool]
 
@@ -446,7 +447,7 @@ class BillingPopupBridgeCallbackRequest(TypedDict):
     payment_source_type: PaymentSourceType
 
 
-BillingPopupBridgeCallbackResponse = Any  # Gives result of await RestAPI.post(...) as is lol
+BillingPopupBridgeCallbackResponse = Response  # Gives result of await RestAPI.post(...) as is lol
 
 
 class BraintreePopupBridgeCallbackRequest(TypedDict):
@@ -456,7 +457,7 @@ class BraintreePopupBridgeCallbackRequest(TypedDict):
     query: NotRequired[Dict[str, str]]
 
 
-BraintreePopupBridgeCallbackResponse = Any  # Gives result of await RestAPI.post(...) as is lol
+BraintreePopupBridgeCallbackResponse = Response  # Gives result of await RestAPI.post(...) as is lol
 
 
 class GiftCodeBrowserRequest(TypedDict):

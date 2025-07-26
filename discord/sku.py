@@ -41,7 +41,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     from .abc import SnowflakeTime, Snowflake
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.sku import SKU as SKUPayload
 
 __all__ = ('SKU',)
@@ -77,8 +77,8 @@ class SKU:
         '_flags',
     )
 
-    def __init__(self, *, state: ConnectionState, data: SKUPayload):
-        self._state: ConnectionState = state
+    def __init__(self, *, state: BaseConnectionState, data: SKUPayload):
+        self._state: BaseConnectionState = state
         self.id: int = int(data['id'])
         self.application_id: int = int(data['application_id'])
         self._update(data)
@@ -128,8 +128,9 @@ class SKU:
         :class:`.Subscription`
             The subscription you requested.
         """
-        data = await self._state.http.get_sku_subscription(self.id, subscription_id)
-        return Subscription(data=data, state=self._state)
+        state = self._state
+        data = await state.http.get_sku_subscription(self.id, subscription_id)
+        return Subscription(data=data, state=state)
 
     async def subscriptions(
         self,

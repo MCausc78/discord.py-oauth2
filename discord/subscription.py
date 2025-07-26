@@ -32,7 +32,7 @@ from .mixins import Hashable
 from .utils import parse_time, snowflake_time
 
 if TYPE_CHECKING:
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.subscription import Subscription as SubscriptionPayload
     from .user import User
 
@@ -85,8 +85,8 @@ class Subscription(Hashable):
         'country',
     )
 
-    def __init__(self, *, state: ConnectionState, data: SubscriptionPayload):
-        self._state: ConnectionState = state
+    def __init__(self, *, data: SubscriptionPayload, state: BaseConnectionState):
+        self._state: BaseConnectionState = state
 
         self.id: int = int(data['id'])
         self._update(data)

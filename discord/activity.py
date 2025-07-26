@@ -1078,7 +1078,7 @@ class Game(BaseActivity):
                 application_id = self.application_id
 
         if session_id is MISSING:
-            session = state.current_session
+            session = state.get_current_session()
             if session:
                 session_id = session.id
             else:
@@ -1847,7 +1847,7 @@ class Session:
 
     def is_current(self) -> bool:
         """:class:`bool`: Whether the session is the current session."""
-        ws = self._state._get_websocket()
+        ws = self._state.get_websocket()
         return False if ws is None else self.id == ws.session_id
 
 
@@ -2004,7 +2004,7 @@ class ActivityInvite:
     @cached_slot_property('_cs_message')
     def message(self) -> Optional[Message]:
         """Optional[:class:`~discord.Message`]: The message associated with this Rich Presence invite."""
-        return self._message or self._state._get_message(self.message_id)
+        return self._message or self._state.get_message(self.message_id)
 
     @classmethod
     def from_event(cls, data: ActivityInviteCreateEventPayload, state: ConnectionState) -> Self:

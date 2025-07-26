@@ -32,7 +32,7 @@ from .utils import parse_time
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.quests import QuestRewardCode as QuestRewardCodePayload
 
 # fmt: off
@@ -82,6 +82,7 @@ class QuestRewardCode:
     """
 
     __slots__ = (
+        '_state',
         'quest_id',
         'code',
         'platform',
@@ -90,7 +91,8 @@ class QuestRewardCode:
         'tier',
     )
 
-    def __init__(self, *, data: QuestRewardCodePayload, state: ConnectionState) -> None:
+    def __init__(self, *, data: QuestRewardCodePayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self.quest_id: int = int(data['quest_id'])
         self.code: str = data['code']
         self.platform: QuestPlatformType = try_enum(QuestPlatformType, data['platform'])
