@@ -130,6 +130,9 @@ class Message(Hashable):
 
         self._update(data)
 
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} id={self.id!r} channel_id={self.channel_id!r} type={self.type!r}>'
+
     def _update(self, data: MessagePayload) -> None:
         state = self._state
 
