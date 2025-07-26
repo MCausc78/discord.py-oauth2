@@ -244,6 +244,8 @@ class Client(Dispatcher):
     sync_presence: Optional[:class:`bool`]
         Whether to keep presences up-to-date across clients.
         The default behavior is ``True`` (what the SDK does).
+
+        .. versionadded:: 3.0
     enable_raw_presences: :class:`bool`
         Whether to manually enable or disable the :func:`on_raw_presence_update` event.
 
@@ -269,14 +271,18 @@ class Client(Dispatcher):
         .. versionadded:: 2.0
     connector: Optional[:class:`aiohttp.BaseConnector`]
         The aiohttp connector to use for this client. This can be used to control underlying aiohttp
-        behavior, such as setting a dns resolver or sslcontext.
+        behavior, such as setting a DNS resolver or sslcontext.
 
         .. versionadded:: 2.5
+    rpc: Optional[:class:`oauth2cord.rpc.Client`]
+        The RPC client to upgrade from.
+
+        .. versionadded:: 3.0
 
     Attributes
     ----------
     ws
-        The websocket gateway the client is currently connected to. Could be ``None``.
+        The WebSocket Gateway the client is currently connected to. Could be ``None``.
     """
 
     def __init__(self, *, intents: Optional[Intents] = None, **options: Any) -> None:
@@ -290,7 +296,7 @@ class Client(Dispatcher):
             impersonate = DefaultImpersonate()
 
         try:
-            rpc: RPCClient = options.pop('_rpc_client')
+            rpc: RPCClient = options.pop('rpc')
         except KeyError:
             connector: Optional[aiohttp.BaseConnector] = options.get('connector', None)
             proxy: Optional[str] = options.pop('proxy', None)
@@ -706,7 +712,7 @@ class Client(Dispatcher):
         # - Third, in client, set status to online
         # As a result, client_status for Presence of that user will be set to `{<desktop or mobile or web>: 'online', embedded: 'dnd'}`
         # Which results in undefined behavior (embedded is library session status)
-        current_session = self._connection.current_session
+        current_session = self._connection.get_current_session()
         if current_session:
             current_session.activities = tuple(activities)
             current_session.status = status
@@ -1460,7 +1466,7 @@ class Client(Dispatcher):
     @property
     def client_status(self) -> Status:
         """:class:`.Status`: The library's status."""
-        status = getattr(self._connection.current_session, 'status', None)
+        status = getattr(self._connection.get_current_session(), 'status', None)
         if status is None and not self.is_closed():
             status = getattr(self._connection.settings, 'status', status)
         return status or Status.offline
@@ -1512,7 +1518,8 @@ class Client(Dispatcher):
         """
 
         state = self._connection
-        activities = state.current_session.activities if state.current_session else None
+        current_session = state.get_current_session()
+        activities = current_session.activities if current_session else None
         if activities is None and not self.is_closed():
             activity = getattr(state.settings, 'custom_activity', None)
             activities = (activity,) if activity else activities

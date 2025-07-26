@@ -2981,7 +2981,6 @@ class ConnectionState(BaseConnectionState, Generic[ClientT]):
     def all_session(self) -> Optional[Session]:
         return self._sessions.get('all')
 
-    @property
-    def current_session(self) -> Optional[Session]:
+    def get_current_session(self) -> Optional[Session]:
         ws = self.get_websocket()
         return self._sessions.get(ws.session_id)  # type: ignore

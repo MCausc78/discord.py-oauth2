@@ -3,25 +3,29 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any, Dict, List, Literal, Optional, TYPE_CHECKING, Tuple, Type, Union
+from typing import Any, Dict, List, Literal, Optional, TYPE_CHECKING, Tuple, Type, TypeVar, Union, overload
 
 from ..activity import create_activity_from_rpc
+from ..client import Client as NormalClient
 from ..dispatcher import _loop, Dispatcher
+from ..entitlements import Gift
 from ..enums import (
+    ConnectionType,
     InstallationType,
     OAuth2CodeChallengeMethod,
     OAuth2ResponseType,
+    PaymentSourceType,
 )
 from ..http import HTTPClient
 from ..impersonate import DefaultImpersonate
 from ..invite import Invite
 from ..oauth2 import OAuth2Authorization
 from ..relationship import Relationship
-from ..user import User
+from ..user import User, ClientUser
 from ..utils import MISSING
 from .channel import PartialGuildChannel, GuildChannel
 from .config import EmbeddedActivityConfig
-from .enums import Opcode, PromptBehavior, VoiceSettingsModeType
+from .enums import DeepLinkLocation, Opcode, PromptBehavior, VoiceSettingsModeType
 from .guild import PartialGuild, Guild
 from .settings import (
     UserVoiceSettings,
@@ -40,7 +44,6 @@ if TYPE_CHECKING:
 
     from ..abc import Snowflake
     from ..activity import BaseActivity, Spotify, ActivityTypes
-    from ..client import Client as NormalClient
     from ..flags import Intents
     from ..permissions import Permissions
     from .subscriptions import EventSubscription
@@ -96,8 +99,36 @@ if TYPE_CHECKING:
         # ActivityInviteUserResponse as ActivityInviteUserResponsePayload,
         AcceptActivityInviteRequest as AcceptActivityInviteRequestPayload,
         # AcceptActivityInviteResponse as AcceptActivityInviteResponsePayload,
+        OpenInviteDialogRequest as OpenInviteDialogRequestPayload,
+        # OpenInviteDialogResponse as OpenInviteDialogResponsePayload,
+        OpenShareMomentDialogRequest as OpenShareMomentDialogRequestPayload,
+        # OpenShareMomentDialogResponse as OpenShareMomentDialogResponsePayload,
+        ShareInteractionRequestPreviewImage as ShareInteractionRequestPreviewImagePayload,
+        ShareInteractionRequestComponent as ShareInteractionRequestComponentPayload,
+        ShareInteractionRequest as ShareInteractionRequestPayload,
+        ShareInteractionResponse as ShareInteractionResponsePayload,
+        InitiateImageUploadRequest as InitiateImageUploadRequestPayload,
+        InitiateImageUploadResponse as InitiateImageUploadResponsePayload,
+        ShareLinkRequest as ShareLinkRequestPayload,
+        ShareLinkResponse as ShareLinkResponsePayload,
+        InviteBrowserRequest as InviteBrowserRequestPayload,
+        InviteBrowserResponse as InviteBrowserResponsePayload,
+        DeepLinkRequest as DeepLinkRequestPayload,
+        DeepLinkResponse as DeepLinkResponsePayload,
+        ConnectionsCallbackRequest as ConnectionsCallbackRequestPayload,
+        # ConnectionsCallbackResponse as ConnectionsCallbackResponsePayload,
+        BillingPopupBridgeCallbackRequest as BillingPopupBridgeCallbackRequestPayload,
+        BillingPopupBridgeCallbackResponse as BillingPopupBridgeCallbackResponsePayload,
+        BraintreePopupBridgeCallbackRequest as BraintreePopupBridgeCallbackRequestPayload,
+        BraintreePopupBridgeCallbackResponse as BraintreePopupBridgeCallbackResponsePayload,
+        GiftCodeBrowserRequest as GiftCodeBrowserRequestPayload,
+        GiftCodeBrowserResponse as GiftCodeBrowserResponsePayload,
     )
+    from .types.http import Response as ResponsePayload
+    from .ui import Button
     from .voice_state import Pan
+
+    C = TypeVar('C', bound='NormalClient')
 
 TransportType = Literal[
     'ipc',
@@ -105,8 +136,46 @@ TransportType = Literal[
 
 _log = logging.getLogger(__name__)
 
+# Unsure where to place this
+class PreviewImage:
+    __slots__ = (
+        'height',
+        'url',
+        'width',
+    )
+
+    def __init__(self, url: str, *, height: int, width: int) -> None:
+        self.url: str = url
+        self.height: int = height
+        self.width: int = width
+
+    def to_dict(self) -> ShareInteractionRequestPreviewImagePayload:
+        return {
+            'height': self.height,
+            'url': self.url,
+            'width': self.width,
+        }
+
+
+class SharedLink:
+    __slots__ = (
+        'success',
+        'did_copy_link',
+        'did_send_message',
+    )
+
+    def __init__(self, data: ShareLinkResponsePayload) -> None:
+        self.success: bool = data['success']
+        self.did_copy_link: bool = data.get('didCopyLink', False)
+        self.did_send_message: bool = data.get('didSendMessage', False)
+
 
 class Client(Dispatcher):
+    """Represents a RPC client.
+
+    Note that to perform any operations with the Discord client you must call :meth:`start` first.
+    """
+
     def __init__(
         self,
         *,
@@ -173,9 +242,22 @@ class Client(Dispatcher):
         await self.http.startup()
 
     def upgrade(self, *, intents: Optional[Intents] = None) -> NormalClient:
-        from ..client import Client as NormalClient
+        """|coro|
 
-        return NormalClient(intents=intents, _rpc_client=self)
+        Upgrades the RPC client to regular client.
+
+        Parameters
+        ----------
+        intents: Optional[:class:`~oauth2cord.Intents`]
+            The intents that you want to enable for the session.
+            This is a way of disabling and enabling certain Gateway events from triggering and being sent.
+
+        Returns
+        -------
+        :class:`oauth2cord.Client`
+            The client.
+        """
+        return NormalClient(intents=intents, rpc=self)
 
     async def setup_hook(self) -> None:
         """|coro|
@@ -197,14 +279,56 @@ class Client(Dispatcher):
         """
         pass
 
+    @overload
     async def start(
         self,
         client_id: int,
         *,
-        background: bool,
+        background: Literal[False],
+        pipe: Optional[int] = None,
+        timeout: Optional[float] = 30.0,
+    ) -> None:
+        ...
+
+    @overload
+    async def start(
+        self,
+        client_id: int,
+        *,
+        background: Literal[True],
+        pipe: Optional[int] = None,
+        timeout: Optional[float] = 30.0,
+    ) -> asyncio.Task[None]:
+        ...
+
+    async def start(
+        self,
+        client_id: int,
+        *,
+        background: bool = False,
         pipe: Optional[int] = None,
         timeout: Optional[float] = 30.0,
     ) -> Optional[asyncio.Task[None]]:
+        """|coro|
+
+        Connects to the IPC socket.
+
+        Parameters
+        ----------
+        client_id: :class:`int`
+            The ID of the application.
+        background: :class:`bool`
+            Whether to connect to IPC socket and return task that will handle the socket flow.
+        pipe: Optional[:class:`int`]
+            The pipe to connect to.
+        timeout: Optional[:class:`float`]
+            The connection timeout in seconds.
+
+        Returns
+        -------
+        Optional[:class:`asyncio.Task`]
+            The task that handles the flow.
+        """
         if self.loop is _loop:
             await self._async_setup_hook()
 
@@ -262,6 +386,11 @@ class Client(Dispatcher):
                 cond = await self._transport.poll_event()
             except StopAsyncIteration:
                 cond = False
+
+    @property
+    def user(self) -> Optional[ClientUser]:
+        """Optional[:class:`~oauth2cord.ClientUser`]: The currently connected user. ``None`` if not connected yet."""
+        return self._connection.user
 
     async def edit_embedded_activity_config(self, *, use_interactive_pip: bool) -> EmbeddedActivityConfig:
         """|coro|
@@ -351,7 +480,7 @@ class Client(Dispatcher):
             Only applicable when requesting ``application.commands`` scope.
             Defaults to :attr:`~oauth2cord.InstallationType.guild`.
         pid: Optional[:class:`int`]
-            The ID of the process to open the authorization modal in. If ``None`` wasn't explicitly passed, this defaults to result of :func:`os.getpid`.
+            The ID of the process to open the authorization modal in. If ``None`` wasn't explicitly passed, this defaults to result of :attr:`pid`.
 
             If ``None`` is explicitly passed, then the modal will be open in existing Discord client instead.
 
@@ -1104,7 +1233,7 @@ class Client(Dispatcher):
         }
         await self._transport.send_command('SEND_ACTIVITY_JOIN_INVITE', payload)
 
-    async def close_activity_join_request(self, from_: Snowflake) -> None:
+    async def reject_activity_join_request(self, from_: Snowflake) -> None:
         """|coro|
 
         Rejects an activity join request from the target user.
@@ -1182,10 +1311,373 @@ class Client(Dispatcher):
 
         await self._transport.send_command('ACCEPT_ACTIVITY_INVITE', payload)
 
-    # e.OPEN_INVITE_DIALOG = "OPEN_INVITE_DIALOG",
-    # e.OPEN_SHARE_MOMENT_DIALOG = "OPEN_SHARE_MOMENT_DIALOG",
-    # e.SHARE_INTERACTION = "SHARE_INTERACTION",
-    # e.INITIATE_IMAGE_UPLOAD = "INITIATE_IMAGE_UPLOAD",
-    # e.SHARE_LINK = "SHARE_LINK",
-    # e.INVITE_BROWSER = "INVITE_BROWSER",
-    # e.DEEP_LINK = "DEEP_LINK",
+    async def open_invite_dialog(self) -> None:
+        """|coro|
+
+        Opens a modal to invite someone to the current voice channel.
+
+        Raises
+        ------
+        RPCException
+            Opening the modal failed.
+        """
+        payload: OpenInviteDialogRequestPayload = {}
+        await self._transport.send_command('OPEN_INVITE_DIALOG', payload)
+
+    async def open_share_moment_dialog(self, *, media_url: str) -> None:
+        """|coro|
+
+        Opens a modal to share media to a channel.
+
+        Parameters
+        ----------
+        media_url: :class:`str`
+            The URL to the media.
+
+        Raises
+        ------
+        RPCException
+            Opening the modal failed.
+        """
+        payload: OpenShareMomentDialogRequestPayload = {
+            'mediaUrl': media_url,
+        }
+        await self._transport.send_command('OPEN_SHARE_MOMENT_DIALOG', payload)
+
+    async def share_interaction(
+        self,
+        command: str,
+        *,
+        options: Optional[Dict[str, str]] = None,
+        content: Optional[str] = None,
+        require_launch_channel: Optional[bool] = None,
+        preview_image: Optional[PreviewImage] = None,
+        components: Optional[List[Optional[List[Button]]]] = None,
+        pid: Optional[int] = MISSING,
+    ) -> bool:
+        """|coro|
+
+        Shares an interaction.
+
+        Parameters
+        ----------
+        command: :class:`str`
+            The name of the command to share.
+        options: Optional[Dict[:class:`str`, :class:`str`]]
+            The options for the command.
+        content: Optional[:class:`str`]
+            The content. Can be only up to 2000 characters.
+        require_launch_channel: Optional[:class:`bool`]
+            Whether to require launching in channel.
+        preview_image: Optional[:class:`PreviewImage`]
+            The preview image.
+        components: Optional[List[Optional[List[:class:`Button`]]]]
+            The components. Rows can hold only up to 5 components.
+        pid: Optional[:class:`int`]
+            The ID of the process. If not provided, this defaults to :attr:`pid`.
+
+        Raises
+        ------
+        RPCException
+            Sharing the interaction failed.
+
+        Returns
+        -------
+        :class:`bool`
+            Whether the interaction was shared successfully.
+        """
+        if pid is MISSING:
+            pid = self.pid
+
+        payload: ShareInteractionRequestPayload = {
+            'command': command,
+        }
+        if options is not None:
+            payload['options'] = [{'name': k, 'value': v} for k, v in options.items()]
+        if content is not None:
+            payload['content'] = content
+        if require_launch_channel is not None:
+            payload['require_launch_channel'] = require_launch_channel
+        if preview_image is not None:
+            payload['preview_image'] = preview_image.to_dict()
+        if components is not None:
+            transformed_components: List[ShareInteractionRequestComponentPayload] = []
+            for row in components:
+                if row is None:
+                    transformed_components.append({'type': 1})
+                else:
+                    transformed_components.append(
+                        {
+                            'type': 1,
+                            'components': [inner.to_dict() for inner in row],
+                        }
+                    )
+            payload['components'] = transformed_components
+        if pid is not None:
+            payload['pid'] = pid
+
+        data: ShareInteractionResponsePayload = await self._transport.send_command('SHARE_INTERACTION', payload)
+        return data['success']
+
+    async def initiate_image_upload(self) -> str:
+        """|coro|
+
+        Initiates the image upload flow.
+
+        Raises
+        ------
+        RPCException
+            Initiating the image upload failed.
+
+        Returns
+        -------
+        :class:`str`
+            The URL to the image that was uploaded.
+        """
+        payload: InitiateImageUploadRequestPayload = {}
+        data: InitiateImageUploadResponsePayload = await self._transport.send_command('INITIATE_IMAGE_UPLOAD', payload)
+        return data['image_url']
+
+    async def share_link(
+        self,
+        message: str,
+        *,
+        custom_id: Optional[str] = None,
+        link_id: Optional[str] = None,
+    ) -> SharedLink:
+        """|coro|
+
+        Shares a link.
+
+        Parameters
+        ----------
+        message: :class:`str`
+            The message. Can be only up to 1000 characters.
+        custom_id: Optional[:class:`str`]
+            The developer-defined ID for the link. Can be only up to 64 characters.
+        link_id: Optional[:class:`str`]
+            The developer-defined ID for the link. Can be only up to 64 characters.
+
+        Raises
+        ------
+        RPCException
+            Sharing the link failed.
+
+        Returns
+        -------
+        :class:`SharedLink`
+            The result of sharing link.
+        """
+
+        payload: ShareLinkRequestPayload = {'message': message}
+        if custom_id is not None:
+            payload['custom_id'] = custom_id
+        if link_id is not None:
+            payload['link_id'] = link_id
+
+        data: ShareLinkResponsePayload = await self._transport.send_command('SHARE_LINK', payload)
+        return SharedLink(data)
+
+    async def open_invite_modal(self, code: str) -> Tuple[str, Invite]:
+        """|coro|
+
+        Opens a invite modal in the Discord client.
+
+        Parameters
+        ----------
+        code: :class:`str`
+            The code.
+
+        Raises
+        ------
+        RPCException
+            Opening the invite modal failed.
+
+        Returns
+        -------
+        Tuple[:class:`str`, :class:`~oauth2cord.Invite`]
+            The invite.
+        """
+        payload: InviteBrowserRequestPayload = {'code': code}
+        data: InviteBrowserResponsePayload = await self._transport.send_command('INVITE_BROWSER', payload)
+
+        return data['code'], Invite.from_incomplete(data=data['invite'], state=self._connection)
+
+    async def deep_link(self, location: DeepLinkLocation, *, params: Any = MISSING) -> Optional[bool]:
+        """|coro|
+
+        Opens a deep link.
+
+        Parameters
+        ----------
+        location: :class:`DeepLinkLocation`
+            The location.
+        params: Any
+            The parameters for the deep link.
+
+        Raises
+        ------
+        RPCException
+            Opening the deep link failed.
+
+        Returns
+        -------
+        Optional[:class:`bool`]
+            Unknown.
+        """
+
+        payload: DeepLinkRequestPayload = {
+            'type': location.value,
+        }
+        if params is not MISSING:
+            payload['params'] = params
+
+        data: DeepLinkResponsePayload = await self._transport.send_command('DEEP_LINK', payload)
+        return data
+
+    async def trigger_connections_callback(
+        self,
+        code: str,
+        *,
+        type: ConnectionType,
+        openid_params: Optional[str] = None,
+        issuer: Optional[str] = None,
+        state: str,
+    ) -> None:
+        """|coro|
+
+        Triggers the connections callback.
+
+        Parameters
+        ----------
+        code: :class:`str`
+            The code.
+        type: :class:`~oauth2cord.ConnectionType`
+            The connection type.
+        openid_params: Optional[:class:`str`]
+            The OpenID parameters.
+        issuer: Optional[:class:`str`]
+            The issuer.
+        state: :class:`str`
+            The state.
+
+        Raises
+        ------
+        RPCException
+            Triggering the connections callback failed.
+        """
+        payload: ConnectionsCallbackRequestPayload = {
+            'providerType': type.value,
+            'code': code,
+            'state': state,
+        }
+        if openid_params is not None:
+            payload['openid_params'] = openid_params
+        if issuer is not None:
+            payload['iss'] = issuer
+
+        await self._transport.send_command('CONNECTIONS_CALLBACK', payload)
+
+    async def trigger_billing_popup_bridge_callback(
+        self,
+        path: str,
+        *,
+        payment_source_type: PaymentSourceType,
+        query: Optional[Dict[str, str]] = None,
+        state: str,
+    ) -> ResponsePayload:
+        """|coro|
+
+        Triggers the billing popup bridge callback.
+
+        Parameters
+        ----------
+        path: :class:`str`
+            The path.
+        payment_source_type: :class:`~oauth2cord.PaymentSourceType`
+            The payment source type.
+        query: Optional[Dict[:class:`str`, :class:`str`]]
+            The parameters.
+        state: :class:`str`
+            The state.
+
+        Raises
+        ------
+        RPCException
+            Triggering the billing popup bridge callback failed.
+        """
+        payload: BillingPopupBridgeCallbackRequestPayload = {
+            'state': state,
+            'path': path,
+            'payment_source_type': payment_source_type.value,
+        }
+        if query is not None:
+            payload['query'] = query
+
+        data: BillingPopupBridgeCallbackResponsePayload = await self._transport.send_command(
+            'BILLING_POPUP_BRIDGE_CALLBACK', payload
+        )
+        return data
+
+    async def trigger_braintree_popup_bridge_callback(
+        self,
+        path: str,
+        *,
+        payment_source_type: PaymentSourceType,
+        query: Optional[Dict[str, str]] = None,
+        state: str,
+    ) -> ResponsePayload:
+        """|coro|
+
+        Triggers the Braintree popup bridge callback.
+
+        Parameters
+        ----------
+        path: :class:`str`
+            The path.
+        query: Optional[Dict[:class:`str`, :class:`str`]]
+            The parameters.
+        state: :class:`str`
+            The state.
+
+        Raises
+        ------
+        RPCException
+            Triggering the Braintree popup bridge callback failed.
+        """
+        payload: BraintreePopupBridgeCallbackRequestPayload = {
+            'state': state,
+            'path': path,
+        }
+        if query is not None:
+            payload['query'] = query
+
+        data: BraintreePopupBridgeCallbackResponsePayload = await self._transport.send_command(
+            'BRAINTREE_POPUP_BRIDGE_CALLBACK', payload
+        )
+        return data
+
+    async def fetch_gift(self, code: str) -> Gift:
+        """|coro|
+
+        Retrieves a gift.
+
+        Parameters
+        ----------
+        code: :class:`str`
+            The code of the gift.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the gift failed.
+
+        Returns
+        -------
+        :class:`~oauth2cord.Gift`
+            The gift.
+        """
+        payload: GiftCodeBrowserRequestPayload = {'code': code}
+        data: GiftCodeBrowserResponsePayload = await self._transport.send_command('GIFT_CODE_BROWSER', payload)
+
+        return Gift(data=data['giftCode'], state=self._connection)

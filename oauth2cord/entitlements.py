@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from .guild import Guild
-    from .state import ConnectionState
+    from .state import BaseConnectionState
     from .types.entitlements import (
         Entitlement as EntitlementPayload,
         TenantMetadata as TenantMetadataPayload,
@@ -149,8 +149,8 @@ class Entitlement(Hashable):
         # 'subscription_plan',
     )
 
-    def __init__(self, *, data: EntitlementPayload, state: ConnectionState) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, *, data: EntitlementPayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self.id: int = int(data['id'])
         self._update(data)
 
@@ -276,7 +276,7 @@ class TenantMetadata:
 
     __slots__ = ('quest_reward',)
 
-    def __init__(self, *, data: TenantMetadataPayload, state: ConnectionState) -> None:
+    def __init__(self, *, data: TenantMetadataPayload, state: BaseConnectionState) -> None:
         self.quest_reward: QuestRewardsMetadata = QuestRewardsMetadata(data=data['quest_reward'], state=state)
 
     def __eq__(self, other: object, /) -> bool:
@@ -314,7 +314,7 @@ class QuestRewardsMetadata:
         'reward_code',
     )
 
-    def __init__(self, *, data: QuestRewardsMetadataPayload, state: ConnectionState) -> None:
+    def __init__(self, *, data: QuestRewardsMetadataPayload, state: BaseConnectionState) -> None:
         raw_reward_code = data.get('reward_code')
 
         self.tag: QuestRewardType = try_enum(QuestRewardType, data['tag'])
@@ -405,8 +405,8 @@ class Gift:
         # 'promotion',
     )
 
-    def __init__(self, *, data: GiftPayload, state: ConnectionState) -> None:
-        self._state: ConnectionState = state
+    def __init__(self, *, data: GiftPayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self.code: str = data['code']
         self.sku_id: int = int(data['sku_id'])
         self.application_id: int = int(data['application_id'])
