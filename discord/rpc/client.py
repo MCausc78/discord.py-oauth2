@@ -148,13 +148,14 @@ class PreviewImage:
         self.url: str = url
         self.height: int = height
         self.width: int = width
-    
+
     def to_dict(self) -> ShareInteractionRequestPreviewImagePayload:
         return {
             'height': self.height,
             'url': self.url,
             'width': self.width,
         }
+
 
 class SharedLink:
     __slots__ = (
@@ -168,11 +169,13 @@ class SharedLink:
         self.did_copy_link: bool = data.get('didCopyLink', False)
         self.did_send_message: bool = data.get('didSendMessage', False)
 
+
 class Client(Dispatcher):
     """Represents a RPC client.
-    
+
     Note that to perform any operations with the Discord client you must call :meth:`start` first.
     """
+
     def __init__(
         self,
         *,
@@ -240,7 +243,7 @@ class Client(Dispatcher):
 
     def upgrade(self, *, intents: Optional[Intents] = None) -> NormalClient:
         """|coro|
-        
+
         Upgrades the RPC client to regular client.
 
         Parameters
@@ -307,7 +310,7 @@ class Client(Dispatcher):
         timeout: Optional[float] = 30.0,
     ) -> Optional[asyncio.Task[None]]:
         """|coro|
-        
+
         Connects to the IPC socket.
 
         Parameters
@@ -320,7 +323,7 @@ class Client(Dispatcher):
             The pipe to connect to.
         timeout: Optional[:class:`float`]
             The connection timeout in seconds.
-        
+
         Returns
         -------
         Optional[:class:`asyncio.Task`]
@@ -1310,7 +1313,7 @@ class Client(Dispatcher):
 
     async def open_invite_dialog(self) -> None:
         """|coro|
-        
+
         Opens a modal to invite someone to the current voice channel.
 
         Raises
@@ -1323,7 +1326,7 @@ class Client(Dispatcher):
 
     async def open_share_moment_dialog(self, *, media_url: str) -> None:
         """|coro|
-        
+
         Opens a modal to share media to a channel.
 
         Parameters
@@ -1340,7 +1343,7 @@ class Client(Dispatcher):
             'mediaUrl': media_url,
         }
         await self._transport.send_command('OPEN_SHARE_MOMENT_DIALOG', payload)
-    
+
     async def share_interaction(
         self,
         command: str,
@@ -1353,7 +1356,7 @@ class Client(Dispatcher):
         pid: Optional[int] = MISSING,
     ) -> bool:
         """|coro|
-        
+
         Shares an interaction.
 
         Parameters
@@ -1372,12 +1375,12 @@ class Client(Dispatcher):
             The components. Rows can hold only up to 5 components.
         pid: Optional[:class:`int`]
             The ID of the process. If not provided, this defaults to :attr:`pid`.
-        
+
         Raises
         ------
         RPCException
             Sharing the interaction failed.
-        
+
         Returns
         -------
         :class:`bool`
@@ -1385,15 +1388,12 @@ class Client(Dispatcher):
         """
         if pid is MISSING:
             pid = self.pid
-        
+
         payload: ShareInteractionRequestPayload = {
             'command': command,
         }
         if options is not None:
-            payload['options'] = [{
-                'name': k,
-                'value': v
-            } for k, v in options.items()]
+            payload['options'] = [{'name': k, 'value': v} for k, v in options.items()]
         if content is not None:
             payload['content'] = content
         if require_launch_channel is not None:
@@ -1406,27 +1406,29 @@ class Client(Dispatcher):
                 if row is None:
                     transformed_components.append({'type': 1})
                 else:
-                    transformed_components.append({
-                        'type': 1,
-                        'components': [inner.to_dict() for inner in row],
-                    })
+                    transformed_components.append(
+                        {
+                            'type': 1,
+                            'components': [inner.to_dict() for inner in row],
+                        }
+                    )
             payload['components'] = transformed_components
         if pid is not None:
             payload['pid'] = pid
-        
+
         data: ShareInteractionResponsePayload = await self._transport.send_command('SHARE_INTERACTION', payload)
         return data['success']
-    
+
     async def initiate_image_upload(self) -> str:
         """|coro|
 
         Initiates the image upload flow.
-        
+
         Raises
         ------
         RPCException
             Initiating the image upload failed.
-        
+
         Returns
         -------
         :class:`str`
@@ -1444,7 +1446,7 @@ class Client(Dispatcher):
         link_id: Optional[str] = None,
     ) -> SharedLink:
         """|coro|
-        
+
         Shares a link.
 
         Parameters
@@ -1455,12 +1457,12 @@ class Client(Dispatcher):
             The developer-defined ID for the link. Can be only up to 64 characters.
         link_id: Optional[:class:`str`]
             The developer-defined ID for the link. Can be only up to 64 characters.
-        
+
         Raises
         ------
         RPCException
             Sharing the link failed.
-        
+
         Returns
         -------
         :class:`SharedLink`
@@ -1472,25 +1474,25 @@ class Client(Dispatcher):
             payload['custom_id'] = custom_id
         if link_id is not None:
             payload['link_id'] = link_id
-        
+
         data: ShareLinkResponsePayload = await self._transport.send_command('SHARE_LINK', payload)
         return SharedLink(data)
-        
+
     async def open_invite_modal(self, code: str) -> Tuple[str, Invite]:
         """|coro|
-        
+
         Opens a invite modal in the Discord client.
-        
+
         Parameters
         ----------
         code: :class:`str`
             The code.
-        
+
         Raises
         ------
         RPCException
             Opening the invite modal failed.
-        
+
         Returns
         -------
         Tuple[:class:`str`, :class:`~discord.Invite`]
@@ -1500,10 +1502,10 @@ class Client(Dispatcher):
         data: InviteBrowserResponsePayload = await self._transport.send_command('INVITE_BROWSER', payload)
 
         return data['code'], Invite.from_incomplete(data=data['invite'], state=self._connection)
-    
+
     async def deep_link(self, location: DeepLinkLocation, *, params: Any = MISSING) -> Optional[bool]:
         """|coro|
-        
+
         Opens a deep link.
 
         Parameters
@@ -1512,12 +1514,12 @@ class Client(Dispatcher):
             The location.
         params: Any
             The parameters for the deep link.
-        
+
         Raises
         ------
         RPCException
             Opening the deep link failed.
-        
+
         Returns
         -------
         Optional[:class:`bool`]
@@ -1529,7 +1531,7 @@ class Client(Dispatcher):
         }
         if params is not MISSING:
             payload['params'] = params
-        
+
         data: DeepLinkResponsePayload = await self._transport.send_command('DEEP_LINK', payload)
         return data
 
@@ -1543,7 +1545,7 @@ class Client(Dispatcher):
         state: str,
     ) -> None:
         """|coro|
-        
+
         Triggers the connections callback.
 
         Parameters
@@ -1558,7 +1560,7 @@ class Client(Dispatcher):
             The issuer.
         state: :class:`str`
             The state.
-        
+
         Raises
         ------
         RPCException
@@ -1573,9 +1575,9 @@ class Client(Dispatcher):
             payload['openid_params'] = openid_params
         if issuer is not None:
             payload['iss'] = issuer
-        
+
         await self._transport.send_command('CONNECTIONS_CALLBACK', payload)
-    
+
     async def trigger_billing_popup_bridge_callback(
         self,
         path: str,
@@ -1585,9 +1587,9 @@ class Client(Dispatcher):
         state: str,
     ) -> ResponsePayload:
         """|coro|
-    
+
         Triggers the billing popup bridge callback.
-    
+
         Parameters
         ----------
         path: :class:`str`
@@ -1611,8 +1613,10 @@ class Client(Dispatcher):
         }
         if query is not None:
             payload['query'] = query
-        
-        data: BillingPopupBridgeCallbackResponsePayload = await self._transport.send_command('BILLING_POPUP_BRIDGE_CALLBACK', payload)
+
+        data: BillingPopupBridgeCallbackResponsePayload = await self._transport.send_command(
+            'BILLING_POPUP_BRIDGE_CALLBACK', payload
+        )
         return data
 
     async def trigger_braintree_popup_bridge_callback(
@@ -1624,9 +1628,9 @@ class Client(Dispatcher):
         state: str,
     ) -> ResponsePayload:
         """|coro|
-    
+
         Triggers the Braintree popup bridge callback.
-    
+
         Parameters
         ----------
         path: :class:`str`
@@ -1647,25 +1651,27 @@ class Client(Dispatcher):
         }
         if query is not None:
             payload['query'] = query
-        
-        data: BraintreePopupBridgeCallbackResponsePayload = await self._transport.send_command('BRAINTREE_POPUP_BRIDGE_CALLBACK', payload)
+
+        data: BraintreePopupBridgeCallbackResponsePayload = await self._transport.send_command(
+            'BRAINTREE_POPUP_BRIDGE_CALLBACK', payload
+        )
         return data
 
     async def fetch_gift(self, code: str) -> Gift:
         """|coro|
-        
+
         Retrieves a gift.
 
         Parameters
         ----------
         code: :class:`str`
             The code of the gift.
-        
+
         Raises
         ------
         RPCException
             Retrieving the gift failed.
-        
+
         Returns
         -------
         :class:`~discord.Gift`

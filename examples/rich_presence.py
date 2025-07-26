@@ -7,14 +7,16 @@ from discord.utils import setup_logging
 
 client_id = 1169421761859833997
 
+
 async def using_gateway(token):
     client = discord.Client()
-    
+
     @client.event
     async def on_ready():
         await client.change_presence(activity=discord.Game("Rich presence with discord.py-oauth2 (Gateway)"))
 
     await client.start(token)
+
 
 async def using_rpc():
     client = discord.rpc.Client()
@@ -29,6 +31,7 @@ async def using_rpc():
 
     await client.close()
 
+
 async def main():
     setup_logging()
 
@@ -37,5 +40,6 @@ async def main():
     else:
         token = sys.argv[1]
         await using_gateway(token)
+
 
 asyncio.run(main())

@@ -10,6 +10,7 @@ __all__ = (
     'VoiceSettingsModeType',
 )
 
+
 class DeepLinkLocation(Enum):
     user_settings = 'USER_SETTINGS'
     changelog = 'CHANGELOG'

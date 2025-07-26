@@ -426,6 +426,7 @@ class DeepLinkRequest(TypedDict):
     ]
     params: NotRequired[Any]
 
+
 DeepLinkResponse = Optional[bool]
 
 

@@ -13,9 +13,10 @@ __all__ = (
 )
 # fmt: on
 
+
 class Button:
     """Represents a button when sharing an interaction.
-    
+
     Attributes
     ----------
     style: :class:`~discord.ButtonStyle`
@@ -42,7 +43,7 @@ class Button:
         self.style: ButtonStyle = style
         self.label: Optional[str] = label
         self.custom_id: Optional[str] = custom_id
-    
+
     def to_dict(self) -> ShareInteractionRequestComponentButtonPayload:
         payload: ShareInteractionRequestComponentButtonPayload = {
             'type': 1,
@@ -51,5 +52,5 @@ class Button:
         if self.label is not None:
             payload['label'] = self.label
         if self.custom_id is not None:
-            payload['custom_id'] = self.custom_id    
+            payload['custom_id'] = self.custom_id
         return payload
