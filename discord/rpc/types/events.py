@@ -9,7 +9,7 @@ from ...types.snowflake import Snowflake
 from .channel import PartialGuildChannel
 from .guild import PartialGuild
 from .message import Message
-from .user import User, Relationship
+from .user import AvatarDecorationData, User, Relationship
 
 
 class IncomingPacket(TypedDict):
@@ -42,14 +42,23 @@ class CurrentUserUpdateEventRequest(TypedDict):
     pass
 
 
-# TODO: CURRENT_USER_UPDATE response
+CurrentUserUpdateEvent = User
 
 
 class CurrentGuildMemberUpdateEventRequest(TypedDict):
     guild_id: Snowflake
 
 
-# TODO: CURRENT_GUILD_MEMBER_UPDATE response
+class CurrentGuildMemberUpdateEvent(TypedDict):
+    user_id: Snowflake
+    nick: Optional[str]
+    guild_id: Snowflake
+    avatar: Optional[str]
+    avatar_decoration_data: Optional[AvatarDecorationData]
+    banner: NotRequired[Optional[str]]
+    bio: NotRequired[Optional[str]]
+    pronouns: NotRequired[Optional[str]]
+    color_string: NotRequired[Optional[str]]
 
 
 class GuildStatusEventRequest(TypedDict):

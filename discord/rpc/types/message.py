@@ -328,8 +328,8 @@ ContentComponent = Union[
 
 class Message(TypedDict):
     id: Snowflake
-    blocked: bool  # true if author is blocked
-    bot: bool  # always false?
+    blocked: NotRequired[bool]  # true if author is blocked
+    bot: NotRequired[bool]  # always false?
     content: str
     content_parsed: NotRequired[List[ContentComponent]]
     nick: NotRequired[str]

@@ -136,17 +136,17 @@ class Message(Hashable):
 
         self.type: MessageType = try_enum(MessageType, data['type'])
         self.author: Optional[User] = None if author_data is None else User._from_rpc(author_data, state)
-        self.blocked: bool = data['blocked']
-        self.bot: bool = data['bot']
-        self.content: str = data['content']
+        self.blocked: bool = data.get('blocked', False)
+        self.bot: bool = data.get('bot', False)
+        self.content: str = data.get('content', '')
         self.content_parsed: List[ContentComponentPayload] = data.get('content_parsed', [])
-        self.attachments: List[Attachment] = [Attachment(data=d, state=state) for d in data['attachments']]
-        self.embeds: List[Embed] = list(map(Embed._from_rpc, data['embeds']))
-        self.tts: bool = data['tts']
+        self.attachments: List[Attachment] = [Attachment(data=d, state=state) for d in data.get('attachments', ())]
+        self.embeds: List[Embed] = list(map(Embed._from_rpc, data.get('embeds', ())))
+        self.tts: bool = data.get('tts', False)
         self.edited_at: Optional[datetime] = parse_time(data.get('edited_timestamp'))
-        self.mentions: List[int] = list(map(int, data['mentions']))
-        self.mention_everyone: bool = data['mention_everyone']
-        self.role_mentions: List[int] = list(map(int, data['mention_roles']))
-        self.pinned: bool = data['pinned']
+        self.mentions: List[int] = list(map(int, data.get('mentions', ())))
+        self.mention_everyone: bool = data.get('mention_everyone', False)
+        self.role_mentions: List[int] = list(map(int, data.get('mention_roles', ())))
+        self.pinned: bool = data.get('pinned', False)
         self.author_color: Optional[str] = data.get('author_color')
         self.nick: Optional[str] = data.get('nick')
