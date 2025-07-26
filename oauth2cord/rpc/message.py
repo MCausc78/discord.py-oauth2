@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING, Union
 
 from ..embeds import Embed
 from ..enums import try_enum, MessageType
 from ..message import Attachment
 from ..mixins import Hashable
+from ..object import Object
 from ..user import User
 from ..utils import parse_time
 
@@ -66,8 +67,8 @@ class Message(Hashable):
         a Discord limitation.
     edited_at: Optional[:class:`~datetime.datetime`]:
         An aware UTC datetime object containing the edited time of the message.
-    mentions: List[:class:`int`]
-        A list of IDs of users that were mentioned. For messages that are not of type
+    mentions: List[Union[:class:`~oauth2cord.User`, :class:`~oauth2cord.Object`]]
+        A list of users that were mentioned. For messages that are not of type
         :attr:`MessageType.default`\, this array can be used to aid in system messages.
         For more information, see :attr:`system_content`.
 
@@ -129,6 +130,9 @@ class Message(Hashable):
 
         self._update(data)
 
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} id={self.id!r} channel_id={self.channel_id!r} type={self.type!r}>'
+
     def _update(self, data: MessagePayload) -> None:
         state = self._state
 
@@ -144,7 +148,12 @@ class Message(Hashable):
         self.embeds: List[Embed] = list(map(Embed._from_rpc, data.get('embeds', ())))
         self.tts: bool = data.get('tts', False)
         self.edited_at: Optional[datetime] = parse_time(data.get('edited_timestamp'))
-        self.mentions: List[int] = list(map(int, data.get('mentions', ())))
+
+        # Due to Discord being stupid, we have to convert manually improper user objects
+        self.mentions: List[Union[User, Object]] = [
+            Object(id=int(d), type=User) if isinstance(d, (int, str)) else User._from_client(d, state)
+            for d in data.get('mentions', ())
+        ]
         self.mention_everyone: bool = data.get('mention_everyone', False)
         self.role_mentions: List[int] = list(map(int, data.get('mention_roles', ())))
         self.pinned: bool = data.get('pinned', False)

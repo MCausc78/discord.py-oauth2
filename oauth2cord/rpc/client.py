@@ -23,15 +23,16 @@ from ..oauth2 import OAuth2Authorization
 from ..relationship import Relationship
 from ..user import User, ClientUser
 from ..utils import MISSING
-from .channel import PartialGuildChannel, GuildChannel
+from .channel import PartialChannel, GuildChannel
 from .config import EmbeddedActivityConfig
-from .enums import DeepLinkLocation, Opcode, PromptBehavior, VoiceSettingsModeType
+from .enums import DeepLinkLocation, Opcode, PromptBehavior
 from .guild import PartialGuild, Guild
 from .settings import (
     UserVoiceSettings,
     VoiceIOSettings,
     PartialVoiceSettingsMode,
     VoiceSettings,
+    VoiceInputMode,
 )
 from .state import RPCConnectionState
 from .transport import IPCTransport
@@ -634,7 +635,7 @@ class Client(Dispatcher):
         data: GetChannelResponsePayload = await self._transport.send_command('GET_CHANNEL', payload)
         return GuildChannel(data=data, state=self._connection)
 
-    async def fetch_guild_channels(self, guild_id: int) -> List[PartialGuildChannel]:
+    async def fetch_guild_channels(self, guild_id: int) -> List[PartialChannel]:
         """|coro|
 
         Retrieves a list of channels the guild has.
@@ -657,7 +658,7 @@ class Client(Dispatcher):
         payload: GetChannelsRequestPayload = {'guild_id': str(guild_id)}
         data: GetChannelsResponsePayload = await self._transport.send_command('GET_CHANNELS', payload)
         state = self._connection
-        return [PartialGuildChannel(data=d, guild_id=guild_id, state=state) for d in data['channels']]
+        return [PartialChannel(data=d, guild_id=guild_id, state=state) for d in data['channels']]
 
     async def fetch_current_channel_permissions(self) -> Permissions:
         """|coro|
@@ -1045,8 +1046,7 @@ class Client(Dispatcher):
     async def edit_voice_settings_2(
         self,
         *,
-        input_mode_type: VoiceSettingsModeType = MISSING,
-        input_mode_shortcut: str = MISSING,
+        input_mode: VoiceInputMode = MISSING,
         self_mute: bool = MISSING,
         self_deaf: bool = MISSING,
     ) -> None:
@@ -1058,10 +1058,8 @@ class Client(Dispatcher):
 
         Parameters
         ----------
-        input_mode_type: :class:`VoiceSettingsModeType`
-            The new type of input mode.
-        input_mode_shortcut: :class:`str`
-            The new shortcut of input mode.
+        input_mode: :class:`VoiceInputMode`
+            The new input mode.
         deaf: :class:`bool`
             Indicates if you should be deafened by your accord.
         mute: :class:`bool`
@@ -1074,16 +1072,8 @@ class Client(Dispatcher):
         """
         payload: SetVoiceSettings2RequestPayload = {}
 
-        input_mode: Dict[str, Any] = {}
-
-        if input_mode_type is not MISSING:
-            input_mode['type'] = input_mode_type.value
-
-        if input_mode_shortcut is not MISSING:
-            input_mode['shortcut'] = input_mode_shortcut
-
-        if input_mode:
-            payload['input_mode'] = input_mode  # type: ignore
+        if input_mode is not MISSING:
+            payload['input_mode'] = input_mode.to_dict()
 
         if self_mute is not MISSING:
             payload['self_mute'] = self_mute

@@ -23,6 +23,7 @@ if TYPE_CHECKING:
         ShortcutKeyCombo as ShortcutKeyComboPayload,
         VoiceSettingsMode as VoiceSettingsModePayload,
         VoiceSettings as VoiceSettingsPayload,
+        VoiceInputMode as VoiceInputModePayload,
     )
 
 __all__ = (
@@ -33,6 +34,7 @@ __all__ = (
     'PartialVoiceSettingsMode',
     'VoiceSettingsMode',
     'VoiceSettings',
+    'VoiceInputMode',
 )
 
 
@@ -348,3 +350,37 @@ class VoiceSettings:
         self.silence_warning: bool = data['silence_warning']
         self.deaf: bool = data['deaf']
         self.mute: bool = data['mute']
+
+
+class VoiceInputMode:
+    """Represents mode for the voice input.
+
+    Attributes
+    ----------
+    type: :class:`VoiceSettingsModeType`
+        The type.
+    shortcut: :class:`VoiceSettingsModeType`
+        The shortcut.
+    """
+
+    __slots__ = (
+        'type',
+        'shortcut',
+    )
+
+    def __init__(self, shortcut: str, *, type: VoiceSettingsModeType) -> None:
+        self.type: VoiceSettingsModeType = type
+        self.shortcut: str = shortcut
+
+    @classmethod
+    def from_dict(cls, data: VoiceInputModePayload) -> Self:
+        return cls(type=try_enum(VoiceSettingsModeType, data['type']), shortcut=data['shortcut'])
+
+    def to_dict(self) -> VoiceInputModePayload:
+        return {'type': self.type.value, 'shortcut': self.shortcut}
+
+    # input_mode: VoiceSettingsUpdate2EventInputMode
+    # local_mutes: List[Snowflake]
+    # local_volumes: Dict[Snowflake, float]
+    # self_mute: bool
+    # self_deaf: bool

@@ -31,6 +31,7 @@ from .snowflake import Snowflake
 class AvatarDecorationData(TypedDict):
     asset: str
     sku_id: Snowflake
+    expires_at: NotRequired[int]
 
 
 class PrimaryGuild(TypedDict, total=False):

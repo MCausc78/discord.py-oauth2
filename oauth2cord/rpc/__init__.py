@@ -9,7 +9,13 @@ An extension module to communicate with Discord client.
 """
 
 from . import utils as utils
+from .channel import *
 from .client import *
 from .config import *
 from .enums import *
 from .errors import *
+from .guild import *
+from .message import *
+from .subscriptions import *
+from .ui import *
+from .voice_state import *
