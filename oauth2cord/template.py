@@ -36,58 +36,13 @@ __all__ = (
 # fmt: on
 
 if TYPE_CHECKING:
-    import datetime
+    from datetime import datetime
+    from typing_extensions import Self
 
-    from .state import ConnectionState
+    from .rpc.types.template import Template as RPCTemplatePayload
+    from .state import BaseConnectionState
     from .types.template import Template as TemplatePayload
     from .user import User
-
-
-class _FriendlyHttpAttributeErrorHelper:
-    __slots__ = ()
-
-    def __getattr__(self, attr):
-        raise AttributeError('PartialTemplateState does not support http methods.')
-
-
-class _PartialTemplateState:
-    def __init__(self, *, state) -> None:
-        self.__state = state
-        self.http = _FriendlyHttpAttributeErrorHelper()
-
-    @property
-    def user(self):
-        return self.__state.user
-
-    @property
-    def self_id(self):
-        return self.__state.user.id
-
-    @property
-    def member_cache_flags(self):
-        return self.__state.member_cache_flags
-
-    @property
-    def cache_guild_expressions(self):
-        return False
-
-    def store_emoji(self, guild, packet) -> None:
-        return None
-
-    def _get_voice_client(self, id) -> None:
-        return None
-
-    def _get_message(self, id) -> None:
-        return None
-
-    def _get_guild(self, id):
-        return self.__state._get_guild(id)
-
-    async def query_members(self, **kwargs: Any) -> List[Any]:
-        return []
-
-    def __getattr__(self, attr):
-        raise AttributeError(f'PartialTemplateState does not support {attr!r}.')
 
 
 class Template:
@@ -107,9 +62,9 @@ class Template:
         The description of the template.
     creator: :class:`User`
         The creator of the template.
-    created_at: :class:`datetime.datetime`
+    created_at: :class:`datetime`
         An aware datetime in UTC representing when the template was created.
-    updated_at: :class:`datetime.datetime`
+    updated_at: :class:`datetime`
         An aware datetime in UTC representing when the template was last updated.
         This is referred to as "last synced" in the official Discord client.
     source_guild: :class:`Guild`
@@ -133,28 +88,43 @@ class Template:
         '_state',
     )
 
-    def __init__(self, *, state: ConnectionState, data: TemplatePayload) -> None:
-        self._state = state
+    def __init__(self, *, data: TemplatePayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
         self._store(data)
 
     def _store(self, data: TemplatePayload) -> None:
+        creator_data = data.get('creator')
+        source_serialized = data['serialized_source_guild']
+        source_serialized['id'] = int(data['source_guild_id'])
+
         self.code: str = data['code']
         self.uses: int = data['usage_count']
         self.name: str = data['name']
         self.description: Optional[str] = data['description']
-        creator_data = data.get('creator')
         self.creator: Optional[User] = None if creator_data is None else self._state.create_user(creator_data)
+        self.created_at: Optional[datetime] = parse_time(data.get('created_at'))
+        self.updated_at: Optional[datetime] = parse_time(data.get('updated_at'))
+        self.source_guild = Guild(data=source_serialized, state=self._state)
+        self.is_dirty: Optional[bool] = data.get('is_dirty')
 
-        self.created_at: Optional[datetime.datetime] = parse_time(data.get('created_at'))
-        self.updated_at: Optional[datetime.datetime] = parse_time(data.get('updated_at'))
-
-        source_serialised = data['serialized_source_guild']
-        source_serialised['id'] = int(data['source_guild_id'])
-        state = _PartialTemplateState(state=self._state)
-        # Guild expects a ConnectionState, we're passing a _PartialTemplateState
-        self.source_guild = Guild(data=source_serialised, state=state)  # type: ignore
-
-        self.is_dirty: Optional[bool] = data.get('is_dirty', None)
+    @classmethod
+    def _from_rpc(cls, data: RPCTemplatePayload, state: BaseConnectionState) -> Self:
+        return cls(
+            data={
+                'code': data['code'],
+                'name': data['name'],
+                'description': data.get('description'),
+                'usage_count': data['usageCount'],
+                'creator_id': data['creatorId'],
+                'creator': data['creator'],
+                'created_at': data['createdAt'],
+                'updated_at': data['updatedAt'],
+                'source_guild_id': data['sourceGuildId'],
+                'serialized_source_guild': data['serializedSourceGuild'],
+                'is_dirty': data.get('isDirty'),
+            },
+            state=state,
+        )
 
     def __repr__(self) -> str:
         return (

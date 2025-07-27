@@ -24,27 +24,37 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from ..errors import DiscordException
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+from ..state import BaseConnectionState
+from ..user import User
+from .types.commands import ActivityParticipant as ActivityParticipantPayload
 
 # fmt: off
 __all__ = (
-    'RPCException',
+    'ActivityParticipant',
 )
 # fmt: on
 
 
-class RPCException(DiscordException):
-    """Exception that's raised when a RPC request operation fails.
+class ActivityParticipant(User):
+    """Represents an activity participant.
+
+    Same as :class:`~oauth2cord.User`, except with additional ``nickname`` attribute.
 
     Attributes
     ----------
-    code: :class:`int`
-        The Discord specific error code for the failure.
-    text: :class:`str`
-        The text of the error. Could be an empty string.
+    nickname: Optional[:class:`str`]
+        The nickname that the user has for the current guild.
     """
 
-    def __init__(self, *, code: int, text: str) -> None:
-        self.code: int = code
-        self.text: str = text
-        super().__init__(f'{self.text} (error code: {self.code})')
+    __slots__ = ('nickname',)
+
+    @classmethod
+    def _from_rpc(cls, data: ActivityParticipantPayload, state: BaseConnectionState) -> Self:
+        self = super()._from_rpc(data, state)
+        self.nickname = data.get('nickname')
+        return self

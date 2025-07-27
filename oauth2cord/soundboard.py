@@ -179,6 +179,8 @@ class SoundboardSound(BaseSoundboardSound):
         The volume of the sound as floating point percentage (e.g. ``1.0`` for 100%).
     user_id: :class:`int`
         The ID of the user who created this sound.
+    user: Optional[:class:`User`]
+        The user who uploaded the sound.
     name: :class:`str`
         The name of the sound.
     emoji: Optional[:class:`PartialEmoji`]
@@ -191,7 +193,7 @@ class SoundboardSound(BaseSoundboardSound):
         '_state',
         'guild',
         'user_id',
-        '_user',
+        'user',
         'name',
         'emoji',
         'available',
@@ -199,9 +201,11 @@ class SoundboardSound(BaseSoundboardSound):
 
     def __init__(self, *, data: SoundboardSoundPayload, guild: Guild, state: BaseConnectionState):
         super().__init__(data=data, state=state)
-        self.guild = guild
+        user_data = data.get('user')
+
+        self.guild: Guild = guild
         self.user_id: Optional[int] = _get_as_snowflake(data, 'user_id')
-        self._user = data.get('user')
+        self.user: Optional[User] = None if user_data is None else state.store_user(user_data)
 
         self._update(data)
 
@@ -214,7 +218,7 @@ class SoundboardSound(BaseSoundboardSound):
             ('user', self.user),
         ]
         inner = ' '.join('%s=%r' % t for t in attrs)
-        return f"<{self.__class__.__name__} {inner}>"
+        return f'<{self.__class__.__name__} {inner}>'
 
     def _update(self, data: SoundboardSoundPayload):
         super()._update(data)
@@ -233,12 +237,3 @@ class SoundboardSound(BaseSoundboardSound):
     def created_at(self) -> datetime.datetime:
         """:class:`datetime.datetime`: Returns the snowflake's creation time in UTC."""
         return snowflake_time(self.id)
-
-    @property
-    def user(self) -> Optional[User]:
-        """Optional[:class:`User`]: The user who uploaded the sound."""
-        if self._user is None:
-            if self.user_id is None:
-                return None
-            return self._state.get_user(self.user_id)
-        return User(state=self._state, data=self._user)

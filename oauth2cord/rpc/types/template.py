@@ -41,6 +41,6 @@ class Template(TypedDict):
     createdAt: str
     updatedAt: str
     sourceGuildId: Snowflake
-    serializeSourceGuild: Guild
+    serializedSourceGuild: Guild
     usageCount: int
     isDirty: Optional[bool]
