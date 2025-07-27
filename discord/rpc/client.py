@@ -8,10 +8,12 @@ from typing import Any, Dict, List, Literal, Optional, TYPE_CHECKING, Tuple, Typ
 from ..activity import create_activity_from_rpc
 from ..client import Client as NormalClient
 from ..dispatcher import _loop, Dispatcher
-from ..entitlements import Gift
+from ..entitlements import Entitlement, Gift
 from ..enums import (
+    try_enum,
     ConnectionType,
     InstallationType,
+    Locale,
     OAuth2CodeChallengeMethod,
     OAuth2ResponseType,
     PaymentSourceType,
@@ -21,11 +23,15 @@ from ..impersonate import DefaultImpersonate
 from ..invite import Invite
 from ..oauth2 import OAuth2Authorization
 from ..relationship import Relationship
+from ..sku import SKU
+from ..soundboard import SoundboardDefaultSound, SoundboardSound
+from ..template import Template
 from ..user import User, ClientUser
-from ..utils import MISSING
+from ..utils import _get_as_snowflake, MISSING
+from .activities import ActivityParticipant
 from .channel import PartialChannel, GuildChannel
 from .config import EmbeddedActivityConfig
-from .enums import DeepLinkLocation, Opcode, PromptBehavior
+from .enums import DeepLinkLocation, LogLevel, Opcode, OrientationLockState, PromptBehavior
 from .guild import PartialGuild, Guild
 from .settings import (
     UserVoiceSettings,
@@ -47,6 +53,7 @@ if TYPE_CHECKING:
     from ..activity import BaseActivity, Spotify, ActivityTypes
     from ..flags import Intents
     from ..permissions import Permissions
+    from .certified_device import CertifiedDevice
     from .subscriptions import EventSubscription
     from .types.commands import (
         SetConfigRequest as SetConfigRequestPayload,
@@ -124,6 +131,86 @@ if TYPE_CHECKING:
         BraintreePopupBridgeCallbackResponse as BraintreePopupBridgeCallbackResponsePayload,
         GiftCodeBrowserRequest as GiftCodeBrowserRequestPayload,
         GiftCodeBrowserResponse as GiftCodeBrowserResponsePayload,
+        GuildTemplateBrowserRequest as GuildTemplateBrowserRequestPayload,
+        GuildTemplateBrowserResponse as GuildTemplateBrowserResponsePayload,
+        OpenMessageRequest as OpenMessageRequestPayload,
+        # OpenMessageResponse as OpenMessageResponsePayload,
+        SetSuppressNotificationsRequest as SetSuppressNotificationsRequestPayload,
+        # SetSuppressNotificationsResponse as SetSuppressNotificationsResponsePayload,
+        OverlayRequest as OverlayRequestPayload,
+        # OverlayResponse as OverlayResponsePayload,
+        BrowserHandoffRequest as BrowserHandoffRequestPayload,
+        # BrowserHandoffResponse as BrowserHandoffResponsePayload,
+        SetCertifiedDevicesRequest as SetCertifiedDevicesRequestPayload,
+        # SetCertifiedDevicesResponse as SetCertifiedDevicesResponsePayload,
+        GetImageRequest as GetImageRequestPayload,
+        GetImageResponse as GetImageResponsePayload,
+        SetOverlayLockedRequest as SetOverlayLockedRequestPayload,
+        # SetOverlayLockedResponse as SetOverlayLockedResponsePayload,
+        OpenOverlayActivityInviteRequest as OpenOverlayActivityInviteRequestPayload,
+        # OpenOverlayActivityInviteResponse as OpenOverlayActivityInviteResponsePayload,
+        OpenOverlayGuildInviteRequest as OpenOverlayGuildInviteRequestPayload,
+        # OpenOverlayGuildInviteResponse as OpenOverlayGuildInviteResponsePayload,
+        OpenOverlayVoiceSettingsRequest as OpenOverlayVoiceSettingsRequestPayload,
+        # OpenOverlayVoiceSettingsResponse as OpenOverlayVoiceSettingsResponsePayload,
+        ValidateApplicationRequest as ValidateApplicationRequestPayload,
+        ValidateApplicationResponse as ValidateApplicationResponsePayload,
+        GetEntitlementTicketRequest as GetEntitlementTicketRequestPayload,
+        GetEntitlementTicketResponse as GetEntitlementTicketResponsePayload,
+        GetApplicationTicketRequest as GetApplicationTicketRequestPayload,
+        GetApplicationTicketResponse as GetApplicationTicketResponsePayload,
+        StartPurchaseRequest as StartPurchaseRequestPayload,
+        StartPurchaseResponse as StartPurchaseResponsePayload,
+        StartPremiumPurchaseRequest as StartPremiumPurchaseRequestPayload,
+        # StartPremiumPurchaseResponse as StartPremiumPurchaseResponsePayload,
+        GetSKUsRequest as GetSKUsRequestPayload,
+        GetSKUsResponse as GetSKUsResponsePayload,
+        GetEntitlementsRequest as GetEntitlementsRequestPayload,
+        GetEntitlementsResponse as GetEntitlementsResponsePayload,
+        GetSKUsEmbeddedRequest as GetSKUsEmbeddedRequestPayload,
+        GetSKUsEmbeddedResponse as GetSKUsEmbeddedResponsePayload,
+        GetEntitlementsEmbeddedRequest as GetEntitlementsEmbeddedRequestPayload,
+        GetEntitlementsEmbeddedResponse as GetEntitlementsEmbeddedResponsePayload,
+        GetNetworkingConfigRequest as GetNetworkingConfigRequestPayload,
+        GetNetworkingConfigResponse as GetNetworkingConfigResponsePayload,
+        NetworkingSystemMetricsRequest as NetworkingSystemMetricsRequestPayload,
+        # NetworkingSystemMetricsResponse as NetworkingSystemMetricsResponsePayload,
+        NetworkingPeerMetricsRequest as NetworkingPeerMetricsRequestPayload,
+        # NetworkingPeerMetricsResponse as NetworkingPeerMetricsResponsePayload,
+        NetworkingCreateTokenRequest as NetworkingCreateTokenRequestPayload,
+        NetworkingCreateTokenResponse as NetworkingCreateTokenResponsePayload,
+        UserSettingsGetLocaleRequest as UserSettingsGetLocaleRequestPayload,
+        UserSettingsGetLocaleResponse as UserSettingsGetLocaleResponsePayload,
+        SendAnalyticsEventRequest as SendAnalyticsEventRequestPayload,
+        # SendAnalyticsEventResponse as SendAnalyticsEventResponsePayload,
+        OpenExternalLinkRequest as OpenExternalLinkRequestPayload,
+        OpenExternalLinkResponse as OpenExternalLinkResponsePayload,
+        CaptureLogRequest as CaptureLogRequestPayload,
+        # CaptureLogResponse as CaptureLogResponsePayload,
+        EncourageHwAccelerationRequest as EncourageHwAccelerationRequestPayload,
+        EncourageHwAccelerationResponse as EncourageHwAccelerationResponsePayload,
+        SetOrientationLockStateRequest as SetOrientationLockStateRequestPayload,
+        # SetOrientationLockStateResponse as SetOrientationLockStateResponsePayload,
+        GetPlatformBehaviorsRequest as GetPlatformBehaviorsRequestPayload,
+        GetPlatformBehaviorsResponse as GetPlatformBehaviorsResponsePayload,
+        GetSoundboardSoundsRequest as GetSoundboardSoundsRequestPayload,
+        GetSoundboardSoundsResponse as GetSoundboardSoundsResponsePayload,
+        PlaySoundboardSoundRequest as PlaySoundboardSoundRequestPayload,
+        # PlaySoundboardSoundResponse as PlaySoundboardSoundResponsePayload,
+        ToggleVideoRequest as ToggleVideoRequestPayload,
+        # ToggleVideoResponse as ToggleVideoResponsePayload,
+        ToggleScreenshareRequest as ToggleScreenshareRequestPayload,
+        # ToggleScreenshareResponse as ToggleScreenshareResponsePayload,
+        GetActivityInstanceConnectedParticipantsRequest as GetActivityInstanceConnectedParticipantsRequestPayload,
+        GetActivityInstanceConnectedParticipantsResponse as GetActivityInstanceConnectedParticipantsResponsePayload,
+        GetProviderAccessTokenRequest as GetProviderAccessTokenRequestPayload,
+        GetProviderAccessTokenResponse as GetProviderAccessTokenResponsePayload,
+        MaybeGetProviderAccessTokenRequest as MaybeGetProviderAccessTokenRequestPayload,
+        MaybeGetProviderAccessTokenResponse as MaybeGetProviderAccessTokenResponsePayload,
+        NavigateToConnectionsRequest as NavigateToConnectionsRequestPayload,
+        # NavigateToConnectionsResponse as NavigateToConnectionsResponsePayload,
+        InviteUserEmbeddedRequest as InviteUserEmbeddedRequestPayload,
+        # InviteUserEmbeddedResponse as InviteUserEmbeddedResponsePayload,
     )
     from .types.http import Response as ResponsePayload
     from .ui import Button
@@ -169,6 +256,21 @@ class SharedLink:
         self.success: bool = data['success']
         self.did_copy_link: bool = data.get('didCopyLink', False)
         self.did_send_message: bool = data.get('didSendMessage', False)
+
+
+class PlatformBehaviors:
+    """Represents behaviors for various platforms.
+
+    Attributes
+    ----------
+    ios_keyboard_resizes_view: :class:`bool`
+        indicates if keyboard on iOS resizes view.
+    """
+
+    __slots__ = ('ios_keyboard_resizes_view',)
+
+    def __init__(self, data: GetPlatformBehaviorsResponsePayload) -> None:
+        self.ios_keyboard_resizes_view: bool = data.get('iosKeyboardResizesView', False)
 
 
 class Client(Dispatcher):
@@ -1613,7 +1715,6 @@ class Client(Dispatcher):
         self,
         path: str,
         *,
-        payment_source_type: PaymentSourceType,
         query: Optional[Dict[str, str]] = None,
         state: str,
     ) -> ResponsePayload:
@@ -1671,3 +1772,901 @@ class Client(Dispatcher):
         data: GiftCodeBrowserResponsePayload = await self._transport.send_command('GIFT_CODE_BROWSER', payload)
 
         return Gift(data=data['giftCode'], state=self._connection)
+
+    async def fetch_template(self, code: str) -> Tuple[str, Template]:
+        """|coro|
+
+        Retrieves a template.
+
+        Parameters
+        ----------
+        code: :class:`str`
+            The code of the template.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the template failed.
+
+        Returns
+        -------
+        :class:`~discord.Template`
+            The template.
+        """
+        payload: GuildTemplateBrowserRequestPayload = {'code': code}
+        data: GuildTemplateBrowserResponsePayload = await self._transport.send_command('GUILD_TEMPLATE_BROWSER', payload)
+
+        return data['code'], Template._from_rpc(data['guildTemplate'], self._connection)
+
+    async def open_message(
+        self,
+        channel_id: int,
+        message_id: int,
+        *,
+        guild_id: Optional[int] = MISSING,
+        pid: int = MISSING,
+    ) -> None:
+        """|coro|
+
+        Jumps to a message.
+
+        Parameters
+        ----------
+        channel_id: :class:`int`
+            The ID of the channel the message was sent in.
+        message_id: :class:`int`
+            The ID of the message to jump to.
+        guild_id: Optional[:class:`int`]
+            The ID of the guild the message was sent in.
+        pid: :class:`int`
+            The ID of the process. Defaults to :attr:`pid`.
+
+        Raises
+        ------
+        RPCException
+            Jumping to the message failed.
+        """
+        if pid is MISSING:
+            pid = self.pid
+
+        payload: OpenMessageRequestPayload = {
+            'channel_id': str(channel_id),
+            'message_id': str(message_id),
+            'pid': pid,
+        }
+        if guild_id is not MISSING:
+            payload['guild_id'] = None if guild_id is None else str(guild_id)
+
+        await self._transport.send_command('OPEN_MESSAGE', payload)
+
+    async def suppress_notifications(self, value: bool, *, target_user_id: int) -> None:
+        """|coro|
+
+        Sets whether the notifications from specified user are suppressed.
+
+        Parameters
+        ----------
+        value: :class:`bool`
+            Indicates if notifications are suppressed.
+        target_user_id: :class:`int`
+            The ID of the user to suppress notifications from.
+
+        Raises
+        ------
+        RPCException
+            Setting failed.
+        """
+        payload: SetSuppressNotificationsRequestPayload = {
+            'suppress_notifications': value,
+            'target_user_id': str(target_user_id),
+        }
+        await self._transport.send_command('SET_SUPPRESS_NOTIFICATIONS', payload)
+
+    async def overlay(self, token: str) -> None:
+        """|coro|
+
+        Activates the overlay.
+
+        Parameters
+        ----------
+        token: :class:`str`
+            The token for activating the overlay.
+
+        Raises
+        ------
+        RPCException
+            Activating the overlay failed.
+        """
+        # I am not actually sure what this does do
+        payload: OverlayRequestPayload = {'token': token}
+        await self._transport.send_command('OVERLAY', payload)
+
+    async def handoff(self, token: str, *, fingerprint: str) -> None:
+        """|coro|
+
+        Ends the browser handoff flow.
+
+        Parameters
+        ----------
+        token: :class:`str`
+            The handoff token.
+        fingerprint: :class:`str`
+            The fingerprint.
+
+        Raises
+        ------
+        RPCException
+            Ending the browser handoff flow failed.
+        """
+        payload: BrowserHandoffRequestPayload = {
+            'handoffToken': token,
+            'fingerprint': fingerprint,
+        }
+        await self._transport.send_command('BROWSER_HANDOFF', payload)
+
+    async def set_certified_devices(self, *devices: CertifiedDevice) -> None:
+        """|coro|
+
+        Send current information about certified devices.
+
+        Parameters
+        ----------
+        \\*devices: :class:`CertifiedDevice`
+            The devices.
+
+        Raises
+        ------
+        RPCException
+            Setting the certified devices failed.
+        """
+        payload: SetCertifiedDevicesRequestPayload = {'devices': [device.to_dict() for device in devices]}
+        await self._transport.send_command('SET_CERTIFIED_DEVICES', payload)
+
+    async def get_image(
+        self,
+        id: str,
+        *,
+        format: Literal['png', 'webp', 'jpg'] = 'png',
+        size: Literal[16, 32, 64, 128, 256, 512, 1024] = 512,
+    ) -> str:
+        """|coro|
+
+        Retrieves a image.
+
+        Parameters
+        ----------
+        id: :class:`str`
+            The ID of the image.
+        format: :class:`str`
+            The format of the image. Currently can be only ``png``, ``webp``, or ``jpg``.
+        size: :class:`int`
+            The size of the image. Currently can be only 16, 32, 64, 128, 256, 512, or 1024.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the image failed.
+
+        Returns
+        -------
+        :class:`str`
+            The data URL of the image.
+        """
+
+        payload: GetImageRequestPayload = {
+            'type': 'user',
+            'id': id,
+            'format': format,
+            'size': size,
+        }
+        data: GetImageResponsePayload = await self._transport.send_command('GET_IMAGE', payload)
+        return data['data_url']
+
+    async def set_overlay_locked(self, value: bool, *, pid: int = MISSING) -> None:
+        """|coro|
+
+        Sets whether the overlay is locked.
+
+        Parameters
+        ----------
+        value: :class:`bool`
+            Indicates if the overlay is locked.
+        pid: :class:`int`
+            The ID of the process the overlay is running in. Defaults to :attr:`pid`.
+
+        Raises
+        ------
+        RPCException
+            Setting failed.
+        """
+        if pid is MISSING:
+            pid = self.pid
+
+        payload: SetOverlayLockedRequestPayload = {
+            'locked': value,
+            'pid': pid,
+        }
+        await self._transport.send_command('SET_OVERLAY_LOCKED', payload)
+
+    async def open_overlay_activity_invite(self, *, pid: int = MISSING) -> None:
+        """|coro|
+
+        Opens the activity invite in overlay.
+
+        Parameters
+        ----------
+        pid: :class:`int`
+            The ID of the process the overlay is running in. Defaults to :attr:`pid`.
+
+        Raises
+        ------
+        RPCException
+            Opening failed.
+        """
+        if pid is MISSING:
+            pid = self.pid
+
+        payload: OpenOverlayActivityInviteRequestPayload = {
+            'type': 1,
+            'pid': pid,
+        }
+        await self._transport.send_command('OPEN_OVERLAY_ACTIVITY_INVITE', payload)
+
+    async def open_overlay_guild_invite(self, code: str, *, pid: int = MISSING) -> None:
+        """|coro|
+
+        Opens the guild invite in overlay.
+
+        Parameters
+        ----------
+        code: :class:`str`
+            The invite code.
+        pid: :class:`int`
+            The ID of the process the overlay is running in. Defaults to :attr:`pid`.
+
+        Raises
+        ------
+        RPCException
+            Opening failed.
+        """
+        if pid is MISSING:
+            pid = self.pid
+
+        payload: OpenOverlayGuildInviteRequestPayload = {
+            'code': code,
+            'pid': pid,
+        }
+        await self._transport.send_command('OPEN_OVERLAY_GUILD_INVITE', payload)
+
+    async def open_overlay_voice_settings(self, *, pid: int = MISSING) -> None:
+        """|coro|
+
+        Opens the voice settings in overlay.
+
+        Parameters
+        ----------
+        pid: :class:`int`
+            The ID of the process the overlay is running in. Defaults to :attr:`pid`.
+
+        Raises
+        ------
+        RPCException
+            Opening failed.
+        """
+        if pid is MISSING:
+            pid = self.pid
+
+        payload: OpenOverlayVoiceSettingsRequestPayload = {
+            'pid': pid,
+        }
+        await self._transport.send_command('OPEN_OVERLAY_VOICE_SETTINGS', payload)
+
+    async def validate_application(self) -> Optional[bool]:
+        """|coro|
+
+        Validates the application.
+
+        Raises
+        ------
+        RPCException
+            Validating the application failed.
+
+        Returns
+        -------
+        Optional[:class:`bool`]
+            Whether the application is valid.
+        """
+        payload: ValidateApplicationRequestPayload = {}
+        data: ValidateApplicationResponsePayload = await self._transport.send_command('VALIDATE_APPLICATION', payload)
+        return data
+
+    async def get_entitlement_ticket(self) -> str:
+        """|coro|
+
+        Retrieve an entitlement ticket.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the entitlement ticket failed.
+
+        Returns
+        -------
+        :class:`str`
+            The entitlement ticket.
+        """
+        payload: GetEntitlementTicketRequestPayload = {}
+        data: GetEntitlementTicketResponsePayload = await self._transport.send_command('GET_ENTITLEMENT_TICKET', payload)
+        return data['ticket']
+
+    async def get_application_ticket(self) -> str:
+        """|coro|
+
+        Retrieve an application ticket.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the application ticket failed.
+
+        Returns
+        -------
+        :class:`str`
+            The application ticket.
+        """
+        payload: GetApplicationTicketRequestPayload = {}
+        data: GetApplicationTicketResponsePayload = await self._transport.send_command('GET_APPLICATION_TICKET', payload)
+        return data['ticket']
+
+    async def start_purchase(self, sku_id: int, *, pid: Optional[int] = MISSING) -> List[Entitlement]:
+        """|coro|
+
+        Starts a SKU purchase flow.
+
+        Parameters
+        ----------
+        sku_id: :class:`int`
+            The ID of the SKU to purchase.
+        pid: Optional[:class:`int`]
+            The ID of the process to start flow in.
+
+        Raises
+        ------
+        RPCException
+            Starting the SKU purchase flow failed.
+
+        Returns
+        -------
+        List[:class:`~discord.Entitlement`]
+            The entitlements.
+        """
+        if pid is MISSING:
+            pid = self.pid
+
+        payload: StartPurchaseRequestPayload = {'sku_id': str(sku_id)}
+
+        if pid is not None:
+            payload['pid'] = pid
+
+        data: StartPurchaseResponsePayload = await self._transport.send_command('START_PURCHASE', payload)
+        state = self._connection
+        return [Entitlement(data=d, state=state) for d in data]
+
+    async def start_premium_purchase(self, *, pid: Optional[int] = MISSING) -> None:
+        """|coro|
+
+        Starts a premium purchase flow.
+
+        Parameters
+        ----------
+        pid: Optional[:class:`int`]
+            The ID of the process to start flow in.
+
+        Raises
+        ------
+        RPCException
+            Starting the premium purchase flow failed.
+        """
+        payload: StartPremiumPurchaseRequestPayload = {}
+
+        if pid is MISSING:
+            pid = self.pid
+
+        if pid is not None:
+            payload['pid'] = pid
+
+        await self._transport.send_command('START_PREMIUM_PURCHASE', payload)
+
+    async def get_skus(self, *, embedded: bool = False) -> List[SKU]:
+        """|coro|
+
+        Retrieve the application's SKUs.
+
+        Parameters
+        ----------
+        embedded: :class:`bool`
+            Whether the application is embedded into the Discord client.
+
+        Returns
+        -------
+        List[:class:`~discord.SKU`]
+            The SKUs the application has.
+        """
+        state = self._connection
+
+        if embedded:
+            payload_embedded: GetSKUsEmbeddedRequestPayload = {}
+            data_embedded: GetSKUsEmbeddedResponsePayload = await self._transport.send_command(
+                'GET_SKUS_EMBEDDED', payload_embedded
+            )
+            return [SKU(data=d, state=state) for d in data_embedded['skus']]
+
+        payload: GetSKUsRequestPayload = {}
+        data: GetSKUsResponsePayload = await self._transport.send_command('GET_SKUS', payload)
+        return [SKU(data=d, state=state) for d in data]
+
+    async def get_entitlements(self, *, embedded: bool = False) -> List[Entitlement]:
+        """|coro|
+
+        Retrieve the entitlements you have associated with the current application.
+
+        Parameters
+        ----------
+        embedded: :class:`bool`
+            Whether the application is embedded into the Discord client.
+
+        Returns
+        -------
+        List[:class:`~discord.Entitlement`]
+            The entitlements you have.
+        """
+        state = self._connection
+
+        if embedded:
+            payload_embedded: GetEntitlementsEmbeddedRequestPayload = {}
+            data_embedded: GetEntitlementsEmbeddedResponsePayload = await self._transport.send_command(
+                'GET_ENTITLEMENTS_EMBEDDED', payload_embedded
+            )
+            return [Entitlement(data=d, state=state) for d in data_embedded['entitlements']]
+
+        payload: GetEntitlementsRequestPayload = {}
+        data: GetEntitlementsResponsePayload = await self._transport.send_command('GET_ENTITLEMENTS', payload)
+        return [Entitlement(data=d, state=state) for d in data]
+
+    async def fetch_networking_config(self) -> Tuple[str, str]:
+        """|coro|
+
+        Retrieve the user's networking config.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the networking config failed.
+
+        Returns
+        -------
+        Tuple[:class:`str`, :class:`str`]
+            A ``(address, token)`` tuple.
+        """
+        payload: GetNetworkingConfigRequestPayload = {}
+        data: GetNetworkingConfigResponsePayload = await self._transport.send_command('GET_NETWORKING_CONFIG', payload)
+        return data['address'], data['token']
+
+    async def track_networking_system_metrics(self) -> None:
+        """|coro|
+
+        Tracks the networking system metrics.
+
+        Raises
+        ------
+        RPCException
+            Tracking failed.
+        """
+        payload: NetworkingSystemMetricsRequestPayload = {}
+        await self._transport.send_command('NETWORKING_SYSTEM_METRICS', payload)
+
+    async def track_networking_peer_metrics(self) -> None:
+        """|coro|
+
+        Tracks the networking system metrics.
+
+        Raises
+        ------
+        RPCException
+            Tracking failed.
+        """
+        payload: NetworkingPeerMetricsRequestPayload = {}
+        await self._transport.send_command('NETWORKING_PEER_METRICS', payload)
+
+    async def create_networking_token(self) -> str:
+        """|coro|
+
+        Retrieve a networking token.
+
+        Raises
+        ------
+        RPCException
+            Creating the networking token failed.
+
+        Returns
+        -------
+        :class:`str`
+            The networking token.
+        """
+        payload: NetworkingCreateTokenRequestPayload = {}
+        data: NetworkingCreateTokenResponsePayload = await self._transport.send_command('NETWORKING_CREATE_TOKEN', payload)
+        return data['token']
+
+    async def fetch_user_locale(self) -> Locale:
+        """|coro|
+
+        Retrieve the user's current locale.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the user's locale failed.
+
+        Returns
+        -------
+        :class:`~discord.Locale`
+            The user's current locale.
+        """
+        payload: UserSettingsGetLocaleRequestPayload = {}
+        data: UserSettingsGetLocaleResponsePayload = await self._transport.send_command('USER_SETTINGS_GET_LOCALE', payload)
+        return try_enum(Locale, data['locale'])
+
+    async def send_analytics_event(self, name: str, properties: Dict[str, Any]) -> None:
+        """|coro|
+
+        Send analytics event.
+
+        Parameters
+        ----------
+        name: :class:`str`
+            The name of the analytics event.
+        properties: Dict[:class:`str`, Any]
+            The properties of the analytics event.
+
+        Raises
+        ------
+        RPCException
+            Sending the analytics event failed.
+        """
+        payload: SendAnalyticsEventRequestPayload = {
+            'event_name': name,
+            'event_properties': properties,
+        }
+        await self._transport.send_command('SEND_ANALYTICS_EVENT', payload)
+
+    async def open_external_link(self, url: str) -> bool:
+        """|coro|
+
+        Opens the external link.
+
+        Parameters
+        ----------
+        url: :class:`str`
+            The URL to open.
+
+        Raises
+        ------
+        RPCException
+            Opening the external link failed.
+
+        Returns
+        -------
+        :class:`bool`
+            Whether the URL was opened.
+        """
+
+        payload: OpenExternalLinkRequestPayload = {'url': url}
+        data: OpenExternalLinkResponsePayload = await self._transport.send_command('OPEN_EXTERNAL_LINK', payload)
+        return data['opened']
+
+    async def capture_log_entry(self, message: str, *, level: LogLevel = LogLevel.log) -> None:
+        """|coro|
+
+        Capture a log entry.
+
+        Parameters
+        ----------
+        message: :class:`str`
+            The message. Can be only up to 1000 characters.
+        level: :class:`LogLevel`
+            The log level.
+
+        Raises
+        ------
+        RPCException
+            Capturing the log entry failed.
+        """
+        payload: CaptureLogRequestPayload = {'level': level.value, 'message': message}
+        await self._transport.send_command('CAPTURE_LOG', payload)
+
+    async def encourage_hardware_acceleration(self) -> bool:
+        """|coro|
+
+        Opens a modal in the Discord client to encourage enabling hardware acceleration.
+
+        Raises
+        ------
+        RPCException
+            Opening the modal failed.
+
+        Returns
+        -------
+        :class:`bool`
+            Indicates if hardware acceleration was enabled.
+        """
+        payload: EncourageHwAccelerationRequestPayload = {}
+        data: EncourageHwAccelerationResponsePayload = await self._transport.send_command(
+            'ENCOURAGE_HW_ACCELERATION', payload
+        )
+        return data['enabled']
+
+    async def edit_orientation_lock_state(
+        self,
+        lock_state: OrientationLockState,
+        *,
+        pip_lock_state: Optional[OrientationLockState] = MISSING,
+        grid_lock_state: Optional[OrientationLockState] = MISSING,
+    ) -> None:
+        """|coro|
+
+        Edits the orientation lock state.
+
+        Parameters
+        ----------
+        lock_state: :class:`OrientationLockState`
+            The new lock state.
+        pip_lock_state: Optional[:class:`OrientationLockState`]
+            The new picture-in-picture lock state.
+        grid_lock_state: Optional[:class:`OrientationLockState`]
+            The new grid lock state.
+
+        Raises
+        ------
+        RPCException
+            Editing the orientation lock state failed.
+        """
+        payload: SetOrientationLockStateRequestPayload = {
+            'lock_state': lock_state.value,
+        }
+        if pip_lock_state is not MISSING:
+            payload['picture_in_picture_lock_state'] = None if pip_lock_state is None else pip_lock_state.value
+        if grid_lock_state is not MISSING:
+            payload['grid_lock_state'] = None if grid_lock_state is None else grid_lock_state.value
+
+        await self._transport.send_command('SET_ORIENTATION_LOCK_STATE', payload)
+
+    async def get_platform_behaviors(self) -> PlatformBehaviors:
+        """|coro|
+
+        Retrieve behaviors for the current platform.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the behaviors failed.
+
+        Returns
+        -------
+        :class:`PlatformBehaviors`
+            The platform behaviors.
+        """
+        payload: GetPlatformBehaviorsRequestPayload = {}
+        data: GetPlatformBehaviorsResponsePayload = await self._transport.send_command('GET_PLATFORM_BEHAVIORS', payload)
+        return PlatformBehaviors(data)
+
+    async def fetch_soundboard_sounds(self) -> List[Union[SoundboardDefaultSound, SoundboardSound]]:
+        """|coro|
+
+        Retrieve soundboard sounds from all guilds (including default ones).
+
+        Raises
+        ------
+        RPCException
+            Retrieving the soundboard sounds failed.
+
+        Returns
+        -------
+        List[Union[:class:`~discord.SoundboardDefaultSound`, :class:`~discord.SoundboardSound`]]
+            The sounds.
+        """
+        payload: GetSoundboardSoundsRequestPayload = {}
+        data: GetSoundboardSoundsResponsePayload = await self._transport.send_command('GET_SOUNDBOARD_SOUNDS', payload)
+
+        result = []
+        state = self._connection
+
+        for d in data:
+            guild_id = _get_as_snowflake(d, 'guild_id')
+            if guild_id is None:
+                result.append(SoundboardDefaultSound(data=d, state=state))  # type: ignore
+            else:
+                result.append(SoundboardSound(data=d, guild=state.get_or_create_unavailable_guild(guild_id), state=state))  # type: ignore
+
+        return result
+
+    async def play_soundboard_sound(self, sound_id: Optional[int] = None, *, guild_id: Optional[int] = None) -> None:
+        """|coro|
+
+        Plays the soundboard sound in the current channel.
+
+        Parameters
+        ----------
+        sound_id: Optional[:class:`int`]
+            The ID of the sound.
+        guild_Id: Optional[:class:`int`]
+            The ID of the guild the sound is from.
+
+        Raises
+        ------
+        RPCException
+            Playing the soundboard sound failed.
+        """
+        payload: PlaySoundboardSoundRequestPayload = {}
+        if guild_id is not None:
+            payload['guild_id'] = str(guild_id)
+        if sound_id is not None:
+            payload['sound_id'] = str(sound_id)
+
+        await self._transport.send_command('PLAY_SOUNDBOARD_SOUND', payload)
+
+    async def toggle_video(self) -> None:
+        """|coro|
+
+        Toggles the video display.
+
+        Raises
+        ------
+        RPCException
+            Toggling disabled.
+        """
+        payload: ToggleVideoRequestPayload = {}
+        await self._transport.send_command('TOGGLE_VIDEO', payload)
+
+    async def toggle_screenshare(self, *, pid: Optional[int] = MISSING) -> None:
+        """|coro|
+
+        Toggles the screenshare display.
+
+        Parameters
+        ----------
+        pid: Optional[:class:`int`]
+            The ID of the process to screenshare. Defaults to :attr:`pid`.
+
+        Raises
+        ------
+        RPCException
+            Toggling disabled.
+        """
+        payload: ToggleScreenshareRequestPayload = {}
+
+        if pid is MISSING:
+            pid = self.pid
+
+        if pid is not None:
+            payload['pid'] = pid
+
+        await self._transport.send_command('TOGGLE_SCREENSHARE', payload)
+
+    async def fetch_activity_instance_participants(self) -> List[ActivityParticipant]:
+        """|coro|
+
+        Retrieve a list of connected users participanting in the current activity instance.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the connected activity instance participants failed.
+
+        Returns
+        -------
+        List[:class:`ActivityParticipant`]
+            The participants.
+        """
+        payload: GetActivityInstanceConnectedParticipantsRequestPayload = {}
+        data: GetActivityInstanceConnectedParticipantsResponsePayload = await self._transport.send_command(
+            'GET_ACTIVITY_INSTANCE_CONNECTED_PARTICIPANTS', payload
+        )
+        state = self._connection
+        return [ActivityParticipant._from_rpc(d, state) for d in data['participants']]
+
+    async def fetch_provider_access_token(
+        self, provider: ConnectionType, *, connection_redirect: Optional[str] = None
+    ) -> str:
+        """|coro|
+
+        Retrieve access token for a specified provider.
+
+        Parameters
+        ----------
+        provider: :class:`ConnectionType`
+            The provider to retrieve access token for.
+        connection_redirect: Optional[:class:`str`]
+            The URL to redirect to.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the access token failed.
+
+        Returns
+        -------
+        :class:`str`
+            The retrieved access token.
+        """
+
+        payload: GetProviderAccessTokenRequestPayload = {'provider': provider.value}
+        if connection_redirect is not None:
+            payload['connection_redirect'] = connection_redirect
+
+        data: GetProviderAccessTokenResponsePayload = await self._transport.send_command(
+            'GET_PROVIDER_ACCESS_TOKEN', payload
+        )
+        return data['access_token']
+
+    async def maybe_fetch_provider_access_token(self, provider: ConnectionType) -> str:
+        """|coro|
+
+        Retrieve refresh token for a specified provider.
+
+        Parameters
+        ----------
+        provider: :class:`ConnectionType`
+            The provider to retrieve refresh token for.
+
+        Raises
+        ------
+        RPCException
+            Retrieving the refresh token failed.
+
+        Returns
+        -------
+        :class:`str`
+            The retrieved refresh token.
+        """
+
+        payload: MaybeGetProviderAccessTokenRequestPayload = {'provider': provider.value}
+        data: MaybeGetProviderAccessTokenResponsePayload = await self._transport.send_command(
+            'MAYBE_GET_PROVIDER_ACCESS_TOKEN', payload
+        )
+        return data['refresh_token']
+
+    async def navigate_to_connections(self) -> None:
+        """|coro|
+
+        Navigates to the "Connections" page.
+
+        Raises
+        ------
+        RPCException
+            Navigating failed.
+        """
+        payload: NavigateToConnectionsRequestPayload = {}
+        await self._transport.send_command('NAVIGATE_TO_CONNECTIONS', payload)
+
+    async def invite_user_embedded(self, content: Optional[str] = None, *, to: Snowflake) -> None:
+        """|coro|
+
+        Invites the target user to running activity.
+
+        Parameters
+        ----------
+        content: Optional[:class:`str`]
+            The message content. Can be only up to 1024 characters.
+        to: :class:`~discord.abc.Snowflake`
+            The user to send the invite to.
+
+        Raises
+        ------
+        RPCException
+            Inviting the user failed.
+        """
+        payload: InviteUserEmbeddedRequestPayload = {'user_id': str(to.id)}
+        if content is not None:
+            payload['content'] = content
+
+        await self._transport.send_command('INVITE_USER_EMBEDDED', payload)

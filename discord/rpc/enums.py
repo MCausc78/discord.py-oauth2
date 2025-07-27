@@ -3,12 +3,20 @@ from __future__ import annotations
 from ..enums import Enum
 
 __all__ = (
+    'CertifiedDeviceType',
     'DeepLinkLocation',
     'Opcode',
+    'OrientationLockState',
     'PromptBehavior',
     'ShortcutKeyComboType',
     'VoiceSettingsModeType',
 )
+
+
+class CertifiedDeviceType(Enum):
+    audio_input = 'audioinput'
+    audio_output = 'audiooutput'
+    video_input = 'videoinput'
 
 
 class DeepLinkLocation(Enum):
@@ -27,12 +35,26 @@ class DeepLinkLocation(Enum):
     activities = 'ACTIVITIES'
 
 
+class LogLevel(Enum):
+    log = 'log'
+    warn = 'warn'
+    debug = 'debug'
+    info = 'info'
+    error = 'error'
+
+
 class Opcode(Enum):
     handshake = 0
     frame = 1
     close = 2
     ping = 3
     pong = 4
+
+
+class OrientationLockState(Enum):
+    unlocked = 1
+    portrait = 2
+    landscape = 3
 
 
 class PromptBehavior(Enum):

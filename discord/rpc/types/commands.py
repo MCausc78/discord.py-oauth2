@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, TypedDict
+from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 from typing_extensions import NotRequired, Required
 
 from ...types.billing import PaymentSourceType
@@ -35,9 +35,9 @@ from ...types.invite import Invite, InviteWithCounts
 from ...types.oauth2 import GetCurrentAuthorizationInformationResponseBody
 from ...types.sku import SKU
 from ...types.snowflake import Snowflake
-from ...types.soundboard import SoundboardSound
+from ...types.soundboard import SoundboardSound, SoundboardDefaultSound
 
-from .channel import PartialGuildChannel, GuildChannel
+from .channel import PartialChannel, GuildChannel
 from .guild import PartialGuild
 from .http import Response
 from .presence import Activity
@@ -131,7 +131,7 @@ class GetChannelsRequest(TypedDict):
 
 
 class GetChannelsResponse(TypedDict):
-    channels: List[PartialGuildChannel]
+    channels: List[PartialChannel]
 
 
 class GetChannelPermissionsRequest(TypedDict):
@@ -488,6 +488,9 @@ class SetSuppressNotificationsRequest(TypedDict):
     target_user_id: Snowflake
 
 
+SetSuppressNotificationsResponse = None
+
+
 class OverlayRequest(TypedDict):
     token: str
 
@@ -537,7 +540,7 @@ SetCertifiedDevicesResponse = None
 
 
 class GetImageRequest(TypedDict):
-    type: Literal['image']
+    type: Literal['user']
     id: str
     format: Literal['png', 'webp', 'jpg']
     size: Literal[16, 32, 64, 128, 256, 512, 1024]
@@ -604,14 +607,14 @@ class GetApplicationTicketResponse(TypedDict):
 
 class StartPurchaseRequest(TypedDict):
     sku_id: Snowflake
-    pid: int  # min 0
+    pid: NotRequired[int]  # min 0
 
 
 StartPurchaseResponse = List[Entitlement]  # Hope that's correct
 
 
 class StartPremiumPurchaseRequest(TypedDict):
-    pid: int  # min 0
+    pid: NotRequired[int]  # min 0
 
 
 StartPremiumPurchaseResponse = None
@@ -639,6 +642,10 @@ class GetSKUsEmbeddedResponse(TypedDict):
     skus: List[SKU]
 
 
+class GetEntitlementsEmbeddedRequest(TypedDict):
+    pass
+
+
 class GetEntitlementsEmbeddedResponse(TypedDict):
     entitlements: List[Entitlement]
 
@@ -652,11 +659,18 @@ class GetNetworkingConfigResponse(TypedDict):
     token: str
 
 
-NetworkingSystemMetricsRequest = Any
+class NetworkingSystemMetricsRequest(TypedDict):
+    pass
+
+
 NetworkingSystemMetricsResponse = None
 
-NetworkingPeerMetricsRequest = Any
-NetworkingPeerMetricsResponse = Any
+
+class NetworkingPeerMetricsRequest(TypedDict):
+    pass
+
+
+NetworkingPeerMetricsResponse = None
 
 
 class NetworkingCreateTokenRequest(TypedDict):
@@ -733,7 +747,11 @@ class GetPlatformBehaviorsResponse(TypedDict):
     iosKeyboardResizesView: bool
 
 
-GetSoundboardSounds = List[SoundboardSound]
+class GetSoundboardSoundsRequest(TypedDict):
+    pass
+
+
+GetSoundboardSoundsResponse = List[Union[SoundboardSound, SoundboardDefaultSound]]
 
 
 class PlaySoundboardSoundRequest(TypedDict):
@@ -755,12 +773,19 @@ class ToggleScreenshareRequest(TypedDict):
     pid: NotRequired[int]  # min 0
 
 
+ToggleScreenshareResponse = None
+
+
 class GetActivityInstanceConnectedParticipantsRequest(TypedDict):
     pass
 
 
+class ActivityParticipant(User):
+    nickname: NotRequired[str]
+
+
 class GetActivityInstanceConnectedParticipantsResponse(TypedDict):
-    participants: List[User]
+    participants: List[ActivityParticipant]
 
 
 class GetProviderAccessTokenRequest(TypedDict):

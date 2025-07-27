@@ -149,7 +149,7 @@ class Message(Hashable):
         self.tts: bool = data.get('tts', False)
         self.edited_at: Optional[datetime] = parse_time(data.get('edited_timestamp'))
 
-        # Due to Discord being stupid, we have to convert manually improper user objects
+        # Due to Discord being stupid, we have to convert manually improper mention items into proper ones
         self.mentions: List[Union[User, Object]] = [
             Object(id=int(d), type=User) if isinstance(d, (int, str)) else User._from_client(d, state)
             for d in data.get('mentions', ())
