@@ -71,6 +71,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from .message import MessageApplication, Message
+    from .rpc.types.events import ActivityInviteEvent as RPCActivityInviteEventPayload
     from .rpc.types.presence import (
         ActivityButton as ActivityButtonPayload,
         Activity as RPCActivityPayload,
@@ -1991,9 +1992,9 @@ class ActivityInvite:
         author: Optional[User] = None,
         application: Optional[MessageApplication] = None,
         activity: Optional[MessageActivityPayload] = None,
-        state: ConnectionState,
+        state: BaseConnectionState,
     ) -> None:
-        self._state: ConnectionState = state
+        self._state: BaseConnectionState = state
         self._message: Optional[Message] = message
         self.channel_id: Optional[int] = channel_id
         self.message_id: Optional[int] = message_id
@@ -2055,9 +2056,21 @@ class ActivityInvite:
             state=state,
         )
 
-    async def accept_activity_invite(
-        self, *, application_id: Optional[int] = MISSING, session_id: Optional[str] = MISSING, state: ConnectionState
-    ) -> str:
+    @classmethod
+    def from_rpc(cls, data: RPCActivityInviteEventPayload, state: BaseConnectionState) -> Self:
+        from .user import User
+
+        self = cls.__new__(cls)
+        self._state = state
+        self._message = None
+        self.channel_id = int(data['channel_id'])
+        self.message_id = int(data['message_id'])
+        self.author = User._from_rpc(data['user'], state)
+        self.application = None
+        self.activity = data['activity']
+        return self
+
+    async def accept(self, *, session_id: Optional[str] = MISSING) -> str:
         """|coro|
 
         Accepts an activity invite.

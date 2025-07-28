@@ -29,16 +29,22 @@ import inspect
 import logging
 from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
 
-from ..enums import ChannelType
+from ..activity import ActivityInvite
+from ..enums import try_enum, ChannelType
 from ..entitlements import Entitlement
 from ..relationship import Relationship
 from ..state import BaseConnectionState
 from ..user import ClientUser
 from ..utils import _get_as_snowflake
+from .activities import ActivityParticipant
 from .channel import PartialChannel
+from .enums import LayoutMode, OrientationLockState, ThermalState
 from .guild import PartialGuild
+from .member import Member
 from .message import Message
+from .notification import Notification
 from .settings import VoiceSettings
+from .voice_connection_status import VoiceConnectionStatus
 from .voice_state import VoiceState
 
 if TYPE_CHECKING:
@@ -47,6 +53,7 @@ if TYPE_CHECKING:
     from .types.events import (
         ReadyEvent as ReadyEventPayload,
         CurrentUserUpdateEvent as CurrentUserUpdateEventPayload,
+        CurrentGuildMemberUpdateEvent as CurrentGuildMemberUpdateEventPayload,
         GuildStatusEvent as GuildStatusEventPayload,
         GuildCreateEvent as GuildCreateEventPayload,
         ChannelCreateEvent as ChannelCreateEventPayload,
@@ -56,15 +63,25 @@ if TYPE_CHECKING:
         VoiceStateUpdateEvent as VoiceStateUpdateEventPayload,
         VoiceStateDeleteEvent as VoiceStateDeleteEventPayload,
         VoiceSettingsUpdateEvent as VoiceSettingsUpdateEventPayload,
+        VoiceConnectionStatusEvent as VoiceConnectionStatusEventPayload,
         SpeakingStartEvent as SpeakingStartEventPayload,
         SpeakingStopEvent as SpeakingStopEventPayload,
         GameJoinEvent as GameJoinEventPayload,
         ActivityJoinEvent as ActivityJoinEventPayload,
+        ActivityJoinRequestEvent as ActivityJoinRequestEventPayload,
+        ActivityInviteEvent as ActivityInviteEventPayload,
+        ActivityPipModeUpdateEvent as ActivityPipModeUpdateEventPayload,
+        ActivityLayoutModeUpdateEvent as ActivityLayoutModeUpdateEventPayload,
+        ThermalStateUpdateEvent as ThermalStateUpdateEventPayload,
+        OrientationUpdateEvent as OrientationUpdateEventPayload,
+        ActivityInstanceParticipantsUpdateEvent as ActivityInstanceParticipantsUpdateEventPayload,
+        NotificationCreateEvent as NotificationCreateEventPayload,
         MessageCreateEvent as MessageCreateEventPayload,
         MessageUpdateEvent as MessageUpdateEventPayload,
         MessageDeleteEvent as MessageDeleteEventPayload,
         EntitlementCreateEvent as EntitlementCreateEventPayload,
         EntitlementDeleteEvent as EntitlementDeleteEventPayload,
+        ScreenshareStateUpdateEvent as ScreenshareStateUpdateEventPayload,
         VideoStateUpdateEvent as VideoStateUpdateEventPayload,
     )
 
@@ -126,6 +143,9 @@ class RPCConnectionState(BaseConnectionState):
             self.user._update_from_rpc(data)
             self.dispatch('current_user_update', old, self.user)
 
+    def parse_current_guild_member_update(self, data: CurrentGuildMemberUpdateEventPayload) -> None:
+        self.dispatch('current_member_update', Member(data=data, state=self))
+
     def parse_guild_status(self, data: GuildStatusEventPayload) -> None:
         guild = PartialGuild(data=data['guild'], state=self)
 
@@ -178,6 +198,9 @@ class RPCConnectionState(BaseConnectionState):
     def parse_voice_settings_update(self, data: VoiceSettingsUpdateEventPayload) -> None:
         self.dispatch('voice_settings_update', VoiceSettings(data=data, state=self))
 
+    def parse_voice_connection_status(self, data: VoiceConnectionStatusEventPayload) -> None:
+        self.dispatch('voice_connection_status_update', VoiceConnectionStatus(data))
+
     def parse_speaking_start(self, data: SpeakingStartEventPayload) -> None:
         channel_id = int(data['channel_id'])
         user_id = int(data['user_id'])
@@ -195,6 +218,32 @@ class RPCConnectionState(BaseConnectionState):
 
     def parse_activity_join(self, data: ActivityJoinEventPayload) -> None:
         self.dispatch('activity_join', data['secret'])
+
+    def parse_activity_join_request(self, data: ActivityJoinRequestEventPayload) -> None:
+        self.dispatch('activity_invite', ActivityInvite.from_rpc(data, self))
+
+    def parse_activity_invite(self, data: ActivityInviteEventPayload) -> None:
+        self.dispatch('activity_invite', ActivityInvite.from_rpc(data, self))
+
+    def parse_activity_pip_mode_update(self, data: ActivityPipModeUpdateEventPayload) -> None:
+        self.dispatch('pip_mode_update', data['is_pip_mode'])
+
+    def parse_activity_layout_mode_update(self, data: ActivityLayoutModeUpdateEventPayload) -> None:
+        self.dispatch('layout_mode_update', try_enum(LayoutMode, data['layout_mode']))
+
+    def parse_thermal_state_update(self, data: ThermalStateUpdateEventPayload) -> None:
+        self.dispatch('thermal_state_update', try_enum(ThermalState, data['thermal_state']))
+
+    def parse_orientation_update(self, data: OrientationUpdateEventPayload) -> None:
+        self.dispatch('orientation_update', try_enum(OrientationLockState, data['screen_orientation']))
+
+    def parse_activity_instance_participants_update(self, data: ActivityInstanceParticipantsUpdateEventPayload) -> None:
+        participants = [ActivityParticipant._from_rpc(d, self) for d in data['participants']]
+
+        self.dispatch('raw_activity_instance_participants_update', participants)
+
+    def parse_notification_create(self, data: NotificationCreateEventPayload) -> None:
+        self.dispatch('notification', Notification(data=data, state=self))
 
     def parse_message_create(self, data: MessageCreateEventPayload) -> None:
         channel_id = int(data['channel_id'])
@@ -223,6 +272,15 @@ class RPCConnectionState(BaseConnectionState):
         entitlement = Entitlement(data=data, state=self)
 
         self.dispatch('entitlement_delete', entitlement)
+
+    def parse_screenshare_state_update(self, data: ScreenshareStateUpdateEventPayload) -> None:
+        application = data.get('application')
+        if application is None:
+            application_name = None
+        else:
+            application_name = application.get('name')
+
+        self.dispatch('screenshare_state_update', data['active'], data.get('pid'), application_name)
 
     def parse_video_state_update(self, data: VideoStateUpdateEventPayload) -> None:
         self.dispatch('video_state_update', data['active'])
