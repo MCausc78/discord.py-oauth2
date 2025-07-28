@@ -29,10 +29,14 @@ from ..enums import Enum
 __all__ = (
     'CertifiedDeviceType',
     'DeepLinkLocation',
+    'LayoutMode',
+    'LogLevel',
     'Opcode',
     'OrientationLockState',
     'PromptBehavior',
     'ShortcutKeyComboType',
+    'ThermalState',
+    'VoiceConnectionState',
     'VoiceSettingsModeType',
 )
 
@@ -57,6 +61,12 @@ class DeepLinkLocation(Enum):
     shop = 'SHOP'
     features = 'FEATURES'
     activities = 'ACTIVITIES'
+
+
+class LayoutMode(Enum):
+    focused = 0
+    pip = 1
+    grid = 2
 
 
 class LogLevel(Enum):
@@ -91,6 +101,26 @@ class ShortcutKeyComboType(Enum):
     mouse_button = 1
     keyboard_modifier_key = 2
     gamepad_button = 3
+
+
+class ThermalState(Enum):
+    nominal = 0
+    fair = 1
+    serious = 2
+    critical = 3
+
+
+class VoiceConnectionState(Enum):
+    disconnected = 'DISCONNECTED'
+    awaiting_endpoint = 'AWAITING_ENDPOINT'
+    authenticating = 'AUTHENTICATING'
+    connecting = 'CONNECTING'
+    rtc_disconnected = 'RTC_DISCONNECTED'
+    rtc_connecting = 'RTC_CONNECTING'
+    rtc_connected = 'RTC_CONNECTED'
+    no_route = 'NO_ROUTE'
+    ice_checking = 'ICE_CHECKING'
+    dtls_conneccting = 'DTLS_CONNECTING'
 
 
 class VoiceSettingsModeType(Enum):

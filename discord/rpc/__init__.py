@@ -17,8 +17,11 @@ from .config import *
 from .enums import *
 from .errors import *
 from .guild import *
+from .member import *
 from .message import *
+from .notification import *
 from .settings import *
 from .subscriptions import *
 from .ui import *
+from .voice_connection_status import *
 from .voice_state import *

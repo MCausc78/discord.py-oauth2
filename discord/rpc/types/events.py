@@ -31,6 +31,7 @@ from ...types.entitlements import Entitlement
 from ...types.message import MessageActivity, MessageActivityType
 from ...types.snowflake import Snowflake
 from .channel import PartialChannel
+from .commands import ActivityParticipant
 from .guild import PartialGuild
 from .message import Message
 from .settings import VoiceSettings, VoiceInputMode
@@ -330,7 +331,7 @@ class ActivityInstanceParticipantsUpdateEventRequest(TypedDict):
 
 
 class ActivityInstanceParticipantsUpdateEvent(TypedDict):
-    participants: List[User]
+    participants: List[ActivityParticipant]
 
 
 class NotificationCreateEventRequest(TypedDict):
@@ -339,7 +340,7 @@ class NotificationCreateEventRequest(TypedDict):
 
 class NotificationCreateEvent(TypedDict):
     channel_id: Snowflake
-    message: Snowflake
+    message: Message
     icon_url: Optional[str]
     title: str
     body: str
