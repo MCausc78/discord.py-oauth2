@@ -26,12 +26,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..user import User
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-from ..state import BaseConnectionState
-from ..user import User
-from .types.commands import ActivityParticipant as ActivityParticipantPayload
+    from ..state import BaseConnectionState
+    from .types.commands import ActivityParticipant as ActivityParticipantPayload
 
 # fmt: off
 __all__ = (
