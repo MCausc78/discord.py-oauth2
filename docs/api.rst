@@ -5168,14 +5168,6 @@ Guild
 .. autoclass:: Guild()
     :members:
 
-GuildPreview
-~~~~~~~~~~~~
-
-.. attributetable:: GuildPreview
-
-.. autoclass:: GuildPreview
-    :members:
-
 ScheduledEvent
 ~~~~~~~~~~~~~~
 
@@ -5186,7 +5178,7 @@ ScheduledEvent
 
 
 Integration
-~~~~~~~~~~~~
+~~~~~~~~~~~
 
 .. attributetable:: Integration
 
