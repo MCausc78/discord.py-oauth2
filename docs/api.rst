@@ -11,7 +11,7 @@ The following section outlines the API of discord.py-oauth2.
     in an output independent way.  If the logging module is not configured,
     these logs will not be output anywhere.  See :ref:`logging_setup` for
     more information on how to set up and use the logging module with
-    discord.py.
+    discord.py-oauth2.
 
 Version Related Info
 ---------------------
@@ -253,7 +253,7 @@ App Commands
     :type command: Union[:class:`app_commands.Command`, :class:`app_commands.ContextMenu`]
 
 AutoMod
-~~~~~~~~
+~~~~~~~
 
 .. function:: on_automod_rule_create(rule)
 
@@ -1050,9 +1050,9 @@ Messages
 
     .. warning::
 
-        Your bot's own messages and private messages are sent through this
-        event. This can lead cases of 'recursion' depending on how your bot was
-        programmed. If you want the bot to not reply to itself, consider
+        Your client's own messages and private messages are sent through this
+        event. This can lead cases of 'recursion' depending on how your client was
+        programmed. If you want the client to not reply to itself, consider
         checking the user IDs. Note that :class:`~ext.commands.Bot` does not
         have this problem.
 
@@ -4430,7 +4430,6 @@ of :class:`enum.Enum`.
     .. attribute:: channel
 
         The underlying type of the ID is a channel or thread.
-
 
 .. class:: SKUType
 

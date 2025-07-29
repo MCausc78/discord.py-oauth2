@@ -38,7 +38,7 @@ from ..user import ClientUser
 from ..utils import _get_as_snowflake
 from .activities import ActivityParticipant
 from .channel import PartialChannel
-from .enums import LayoutMode, OrientationLockState, ThermalState
+from .enums import JoinIntent, LayoutMode, OrientationLockState, ThermalState
 from .guild import PartialGuild
 from .member import Member
 from .message import Message
@@ -214,10 +214,14 @@ class RPCConnectionState(BaseConnectionState):
         self.dispatch('speaking_stop', channel_id, user_id)
 
     def parse_game_join(self, data: GameJoinEventPayload) -> None:
-        self.dispatch('game_join', data['secret'])
+        intent = data.get('intent')
+
+        self.dispatch('game_join', data['secret'], None if intent is None else try_enum(JoinIntent, intent))
 
     def parse_activity_join(self, data: ActivityJoinEventPayload) -> None:
-        self.dispatch('activity_join', data['secret'])
+        intent = data.get('intent')
+
+        self.dispatch('activity_join', data['secret'], None if intent is None else try_enum(JoinIntent, intent))
 
     def parse_activity_join_request(self, data: ActivityJoinRequestEventPayload) -> None:
         self.dispatch('activity_invite', ActivityInvite.from_rpc(data, self))

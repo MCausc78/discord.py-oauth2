@@ -29,6 +29,7 @@ from ..enums import Enum
 __all__ = (
     'CertifiedDeviceType',
     'DeepLinkLocation',
+    'JoinIntent',
     'LayoutMode',
     'LogLevel',
     'Opcode',
@@ -61,6 +62,11 @@ class DeepLinkLocation(Enum):
     shop = 'SHOP'
     features = 'FEATURES'
     activities = 'ACTIVITIES'
+
+
+class JoinIntent(Enum):
+    play = 0
+    spectate = 1
 
 
 class LayoutMode(Enum):

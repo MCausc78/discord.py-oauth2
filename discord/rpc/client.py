@@ -258,6 +258,18 @@ _log = logging.getLogger(__name__)
 
 # Unsure where to place this
 class PreviewImage:
+    """Represents a image preview.
+
+    Attributes
+    ----------
+    height: :class:`int`
+        The height of the image.
+    url: :class:`str`
+        The URL to the image.
+    width: :class:`int`
+        The width of the image.
+    """
+
     __slots__ = (
         'height',
         'url',
@@ -278,6 +290,18 @@ class PreviewImage:
 
 
 class SharedLink:
+    """Represents a result of sharing link.
+
+    Attributes
+    ----------
+    success: :class:`bool`
+        Indicates if link was successfully shared.
+    did_copy_link: :class:`bool`
+        Indicates if the user copied link.
+    did_send_message: :class:`bool`
+        Indicates if the user sent message with a link.
+    """
+
     __slots__ = (
         'success',
         'did_copy_link',

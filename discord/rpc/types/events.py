@@ -243,6 +243,7 @@ class GameJoinEventRequest(TypedDict):
 
 class GameJoinEvent(TypedDict):
     secret: str
+    intent: NotRequired[Literal[0, 1]]  # 0 = PLAY, 1 = SPECTATE
 
 
 # GAME_SPECTATE (deprecated and appears to never fire based on client code)
@@ -254,6 +255,7 @@ class ActivityJoinEventRequest(TypedDict):
 
 class ActivityJoinEvent(TypedDict):
     secret: str
+    intent: NotRequired[Literal[0, 1]]  # 0 = PLAY, 1 = SPECTATE
 
 
 class ActivityJoinRequestEventRequest(TypedDict):
