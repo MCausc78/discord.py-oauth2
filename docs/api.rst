@@ -6117,7 +6117,7 @@ SlashCommandGroup
     :members:
 
 Exceptions
-------------
+----------
 
 The following exceptions are thrown by the library.
 
@@ -6152,7 +6152,7 @@ The following exceptions are thrown by the library.
 .. autoexception:: discord.opus.OpusNotLoaded
 
 Exception Hierarchy
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 .. exception_hierarchy::
 
@@ -6169,3 +6169,4 @@ Exception Hierarchy
                 - :exc:`NotFound`
                 - :exc:`DiscordServerError`
             - :exc:`RateLimited`
+            - :exc:`discord.rpc.RPCException`

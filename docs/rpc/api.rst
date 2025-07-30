@@ -39,6 +39,9 @@ overriding the specific events. For example: ::
     import discord.rpc
 
     class MyClient(discord.rpc.Client):
+        async def on_ready(self):
+            await self.add_subscription(discord.rpc.ChannelSubscription.message_create(98765432123456789))
+
         async def on_message(self, message):
             if message.author == self.user:
                 return
@@ -56,6 +59,11 @@ to handle it, which defaults to logging the traceback and ignoring the exception
     errors. In order to turn a function into a coroutine they must be ``async def``
     functions.
 
+.. note::
+
+    To listen to an event, you must subscribe to it using :meth:`Client.add_subscription`.
+    To unsubscribe from an event, use :meth:`Client.remove_subscription`.
+
 IPC
 ~~~
 
@@ -69,7 +77,7 @@ Current User
 
 .. function:: on_current_user_update(before, after)
 
-    Called when a :class:`ClientUser` updates their profile.
+    Called when a :class:`~discord.ClientUser` updates their profile.
 
     This is called when one or more of the following things change:
 
@@ -78,9 +86,9 @@ Current User
     - discriminator
 
     :param before: The updated user's old info.
-    :type before: Optional[:class:`ClientUser`]
+    :type before: Optional[:class:`discord.ClientUser`]
     :param after: The updated user's updated info.
-    :type after: :class:`ClientUser`
+    :type after: :class:`discord.ClientUser`
 
 .. function:: on_current_member_update(member)
 
@@ -126,11 +134,11 @@ Relationships
 
 .. function:: on_relationship_update(relationship)
 
-    Called when a :class:`Relationship` is updated, e.g. when you
+    Called when a :class:`discord.Relationship` is updated, e.g. when you
     block a friend or a friendship is accepted.
 
     :param relationship: The updated relationship.
-    :type relationship: :class:`Relationship`
+    :type relationship: :class:`discord.Relationship`
 
 Voice Channels
 ~~~~~~~~~~~~~~
@@ -847,7 +855,7 @@ CertifiedDevice
 
 .. attributetable:: CertifiedDevice
 
-.. autoclass:: CertifiedDevice()
+.. autoclass:: CertifiedDevice
     :members:
     :inherited-members:
 
@@ -856,7 +864,7 @@ PreviewImage
 
 .. attributetable:: PreviewImage
 
-.. autoclass:: PreviewImage()
+.. autoclass:: PreviewImage
     :members:
     :inherited-members:
 
@@ -865,7 +873,7 @@ AvailableDevice
 
 .. attributetable:: AvailableDevice
 
-.. autoclass:: AvailableDevice()
+.. autoclass:: AvailableDevice
     :members:
     :inherited-members:
 
@@ -874,7 +882,7 @@ VoiceIOSettings
 
 .. attributetable:: VoiceIOSettings
 
-.. autoclass:: VoiceIOSettings()
+.. autoclass:: VoiceIOSettings
     :members:
     :inherited-members:
 
@@ -883,7 +891,7 @@ ShortcutKeyCombo
 
 .. attributetable:: ShortcutKeyCombo
 
-.. autoclass:: ShortcutKeyCombo()
+.. autoclass:: ShortcutKeyCombo
     :members:
     :inherited-members:
 
@@ -892,7 +900,7 @@ PartialVoiceSettingsMode
 
 .. attributetable:: PartialVoiceSettingsMode
 
-.. autoclass:: PartialVoiceSettingsMode()
+.. autoclass:: PartialVoiceSettingsMode
     :members:
     :inherited-members:
 
@@ -901,7 +909,7 @@ VoiceInputMode
 
 .. attributetable:: VoiceInputMode
 
-.. autoclass:: VoiceInputMode()
+.. autoclass:: VoiceInputMode
     :members:
     :inherited-members:
 
@@ -910,7 +918,7 @@ EventSubscription
 
 .. attributetable:: EventSubscription
 
-.. autoclass:: EventSubscription()
+.. autoclass:: EventSubscription
     :members:
     :inherited-members:
 
@@ -919,7 +927,7 @@ GenericSubscription
 
 .. attributetable:: GenericSubscription
 
-.. autoclass:: GenericSubscription()
+.. autoclass:: GenericSubscription
     :members:
     :inherited-members:
 
@@ -928,7 +936,7 @@ ChannelSubscription
 
 .. attributetable:: ChannelSubscription
 
-.. autoclass:: ChannelSubscription()
+.. autoclass:: ChannelSubscription
     :members:
     :inherited-members:
 
@@ -937,7 +945,7 @@ GuildSubscription
 
 .. attributetable:: GuildSubscription
 
-.. autoclass:: GuildSubscription()
+.. autoclass:: GuildSubscription
     :members:
     :inherited-members:
 
@@ -946,7 +954,7 @@ SpeakingEventSubscription
 
 .. attributetable:: SpeakingEventSubscription
 
-.. autoclass:: SpeakingEventSubscription()
+.. autoclass:: SpeakingEventSubscription
     :members:
     :inherited-members:
 
@@ -955,7 +963,7 @@ Button
 
 .. attributetable:: Button
 
-.. autoclass:: Button()
+.. autoclass:: Button
     :members:
     :inherited-members:
 
@@ -964,6 +972,15 @@ Pan
 
 .. attributetable:: Pan
 
-.. autoclass:: Pan()
+.. autoclass:: Pan
     :members:
     :inherited-members:
+
+Exceptions
+----------
+
+The following exceptions are thrown by the library.
+
+.. autoexception:: RPCException
+    :members:
+

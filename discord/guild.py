@@ -201,7 +201,7 @@ class PartialGuild(Hashable):
 
     @property
     def icon(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the guild's icon asset, if available."""
+        """Optional[:class:`~discord.Asset`]: Returns the guild's icon asset, if available."""
         if self._icon is None:
             return None
         return Asset._from_guild_icon(self._state, self.id, self._icon)
@@ -317,10 +317,10 @@ class PartialGuild(Hashable):
             .. deprecated:: 3.0
 
                 Edit ``allowed_contexts`` instead.
-        allowed_contexts: Optional[:class:`AppCommandContext`]
+        allowed_contexts: Optional[:class:`~discord.AppCommandContext`]
             The contexts that this command should be allowed to be used in.
             Overrides the ``dm_permission`` parameter.
-        allowed_installs: Optional[:class:`AppInstallationType`]
+        allowed_installs: Optional[:class:`~discord.AppInstallationType`]
             The installation contexts that this command should be allowed to be installed in.
         type: :class:`AppCommandType`
             The type for the application command. Defaults to :attr:`~AppCommandType.chat_input`.
@@ -334,7 +334,7 @@ class PartialGuild(Hashable):
 
         Returns
         --------
-        Union[:class:`SlashCommand`, :class:`UserCommand`, :class:`MessageCommand`]
+        Union[:class:`~discord.SlashCommand`, :class:`~discord.UserCommand`, :class:`~discord.MessageCommand`]
             The application command created.
         """
 
@@ -425,7 +425,7 @@ class PartialGuild(Hashable):
 
         Returns
         --------
-        :class:`MessageCommand`
+        :class:`~discord.MessageCommand`
             The message command created.
         """
         return await self.create_command(
@@ -470,7 +470,7 @@ class PartialGuild(Hashable):
 
         Returns
         --------
-        :class:`SlashCommand`
+        :class:`~discord.SlashCommand`
             The slash command created.
         """
         return await self.create_command(
@@ -515,7 +515,7 @@ class PartialGuild(Hashable):
 
         Returns
         --------
-        :class:`UserCommand`
+        :class:`~discord.UserCommand`
             The user command created.
         """
         return await self.create_command(
@@ -551,7 +551,7 @@ class PartialGuild(Hashable):
 
         Returns
         -------
-        Union[:class:`SlashCommand`, :class:`UserCommand`, :class:`MessageCommand`, :class:`UnknownCommand`]
+        Union[:class:`~discord.SlashCommand`, :class:`~discord.UserCommand`, :class:`~discord.MessageCommand`, :class:`UnknownCommand`]
             The retrieved command.
         """
         state = self._state
@@ -577,7 +577,7 @@ class PartialGuild(Hashable):
 
         Returns
         -------
-        List[Union[:class:`SlashCommand`, :class:`UserCommand`, :class:`MessageCommand`, :class:`UnknownCommand`]]
+        List[Union[:class:`~discord.SlashCommand`, :class:`~discord.UserCommand`, :class:`~discord.MessageCommand`, :class:`~discord.UnknownCommand`]]
             The application's commands.
         """
         state = self._state
@@ -595,7 +595,7 @@ class PartialGuild(Hashable):
 
         Retrieve member version of yourself for this guild.
 
-        Similar to :meth:`Client.fetch_me` except returns :class:`Member`.
+        Similar to :meth:`Client.fetch_me` except returns :class:`~discord.Member`.
         This is essentially used to get the member version of yourself.
 
         Raises
@@ -607,7 +607,7 @@ class PartialGuild(Hashable):
 
         Returns
         -------
-        :class:`Member`
+        :class:`~discord.Member`
             The member version of yourself.
         """
         state = self._state
@@ -650,7 +650,7 @@ class PartialGuild(Hashable):
 
         Returns
         -------
-        :class:`Widget`
+        :class:`~discord.Widget`
             The guild's widget.
         """
         data = await self._state.http.get_widget(self.id)
@@ -673,7 +673,7 @@ class PartialGuild(Hashable):
 
         Parameters
         ----------
-        channel: Optional[:class:`abc.Snowflake`]
+        channel: Optional[:class:`~discord.abc.Snowflake`]
             Channel the client wants to join. You must explicitly pass ``None`` to disconnect.
         self_mute: :class:`bool`
             Indicates if the client should be self-muted.
@@ -710,10 +710,10 @@ class PartialGuild(Hashable):
 
         Returns
         -------
-        :class:`SlashCommand`
+        :class:`~discord.SlashCommand`
             The partial slash command.
 
-            .. warn::
+            .. warning::
 
                 Most of attributes will be fake, except for :attr:`~SlashCommand.id`,
                 :attr:`~SlashCommand.application_id`, and :attr:`~SlashCommand.guild_id`.
@@ -763,13 +763,13 @@ class PartialGuild(Hashable):
 
         Returns
         -------
-        :class:`UserCommand`
+        :class:`~discord.UserCommand`
             The partial user command.
 
-            .. warn::
+            .. warning::
 
-                Most of attributes will be fake, except for :attr:`~UserCommand.id`,
-                :attr:`~UserCommand.application_id`, and :attr:`~UserCommand.guild_id`.
+                Most of attributes will be fake, except for :attr:`~discord.UserCommand.id`,
+                :attr:`~discord.UserCommand.application_id`, and :attr:`~discord.UserCommand.guild_id`.
         """
         state = self._state
 
@@ -815,13 +815,13 @@ class PartialGuild(Hashable):
 
         Returns
         -------
-        :class:`MessageCommand`
+        :class:`~discord.MessageCommand`
             The partial message command.
 
-            .. warn::
+            .. warning::
 
-                Most of attributes will be fake, except for :attr:`~MessageCommand.id`,
-                :attr:`~MessageCommand.application_id`, and :attr:`~MessageCommand.guild_id`.
+                Most of attributes will be fake, except for :attr:`~discord.MessageCommand.id`,
+                :attr:`~discord.MessageCommand.application_id`, and :attr:`~discord.MessageCommand.guild_id`.
         """
         state = self._state
 

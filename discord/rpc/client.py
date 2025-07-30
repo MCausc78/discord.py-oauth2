@@ -333,6 +333,11 @@ class Client(Dispatcher):
     """Represents a RPC client.
 
     Note that to perform any operations with the Discord client you must call :meth:`start` first.
+
+    Attributes
+    ----------
+    pid: :class:`int`
+        The ID of the current process.
     """
 
     def __init__(
@@ -622,17 +627,16 @@ class Client(Dispatcher):
         guild: Optional[:class:`~discord.abc.Snowflake`]
             The guild to pre-fill the dropdown picker with.
 
-            Only applicable if requesting ``bot`` / ``applications.commands`` / ``webhook.incoming`` scope and ``install_type` is :attr:`~discord.InstallationType.guild`.
+            Only applicable if requesting ``bot`` / ``applications.commands`` / ``webhook.incoming`` scope and ``install_type`` is :attr:`~discord.InstallationType.guild`.
         channel: Optional[:class:`~discord.abc.Snowflake`]
             The channel to pre-fill the dropdown picker with.
 
             Only applicable if requesting ``webhook.incoming`` scope.
         prompt: Optional[:class:`PromptBehavior`]
-            The prompt behavior to use for the authorization flow (default consent)
-
+            The prompt behavior to use for the authorization flow. Defaults to :attr:`~PromptBehavior.consent`.
         disable_guild_select: Optional[:class:`bool`]
             Disallows the user from changing the guild dropdown.
-            Only applicable when requesting ``bot`` / ``applications.commands`` / ``webhook.incoming`` scope and ``install_type` is :attr:`~discord.InstallationType.guild`.
+            Only applicable when requesting ``bot`` / ``applications.commands`` / ``webhook.incoming`` scope and ``install_type`` is :attr:`~discord.InstallationType.guild`.
             Defaults to ``False``.
         install_type: Optional[:class:`InstallationType`]
             The installation context for the authorization.
@@ -702,8 +706,8 @@ class Client(Dispatcher):
         token: :class:`str`
             The authentication token.
 
-        Parameters
-        ----------
+        Raises
+        ------
         RPCException
             Authenticating failed.
 
@@ -726,8 +730,8 @@ class Client(Dispatcher):
         guild_id: :class:`int`
             The guild's ID to request.
 
-        Parameters
-        ----------
+        Raises
+        ------
         RPCException
             Retrieving the guild failed.
 
@@ -1978,7 +1982,7 @@ class Client(Dispatcher):
         payload: SetCertifiedDevicesRequestPayload = {'devices': [device.to_dict() for device in devices]}
         await self._transport.send_command('SET_CERTIFIED_DEVICES', payload)
 
-    async def get_image(
+    async def fetch_image(
         self,
         id: str,
         *,
@@ -2136,7 +2140,7 @@ class Client(Dispatcher):
         data: ValidateApplicationResponsePayload = await self._transport.send_command('VALIDATE_APPLICATION', payload)
         return data
 
-    async def get_entitlement_ticket(self) -> str:
+    async def fetch_entitlement_ticket(self) -> str:
         """|coro|
 
         Retrieve an entitlement ticket.
@@ -2155,7 +2159,7 @@ class Client(Dispatcher):
         data: GetEntitlementTicketResponsePayload = await self._transport.send_command('GET_ENTITLEMENT_TICKET', payload)
         return data['ticket']
 
-    async def get_application_ticket(self) -> str:
+    async def fetch_application_ticket(self) -> str:
         """|coro|
 
         Retrieve an application ticket.
@@ -2233,7 +2237,7 @@ class Client(Dispatcher):
 
         await self._transport.send_command('START_PREMIUM_PURCHASE', payload)
 
-    async def get_skus(self, *, embedded: bool = False) -> List[SKU]:
+    async def fetch_skus(self, *, embedded: bool = False) -> List[SKU]:
         """|coro|
 
         Retrieve the application's SKUs.
@@ -2261,7 +2265,7 @@ class Client(Dispatcher):
         data: GetSKUsResponsePayload = await self._transport.send_command('GET_SKUS', payload)
         return [SKU(data=d, state=state) for d in data]
 
-    async def get_entitlements(self, *, embedded: bool = False) -> List[Entitlement]:
+    async def fetch_entitlements(self, *, embedded: bool = False) -> List[Entitlement]:
         """|coro|
 
         Retrieve the entitlements you have associated with the current application.
@@ -2496,7 +2500,7 @@ class Client(Dispatcher):
 
         await self._transport.send_command('SET_ORIENTATION_LOCK_STATE', payload)
 
-    async def get_platform_behaviors(self) -> PlatformBehaviors:
+    async def fetch_platform_behaviors(self) -> PlatformBehaviors:
         """|coro|
 
         Retrieve behaviors for the current platform.
@@ -2639,7 +2643,7 @@ class Client(Dispatcher):
 
         Parameters
         ----------
-        provider: :class:`ConnectionType`
+        provider: :class:`discord.ConnectionType`
             The provider to retrieve access token for.
         connection_redirect: Optional[:class:`str`]
             The URL to redirect to.

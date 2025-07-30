@@ -65,7 +65,7 @@ class Member:
 
     @property
     def guild_avatar(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns an :class:`Asset` for the guild avatar
+        """Optional[:class:`~discord.Asset`]: Returns an :class:`~discord.Asset` for the guild avatar
         the member has. If unavailable, ``None`` is returned.
         """
         if self._avatar is None:
@@ -74,7 +74,7 @@ class Member:
 
     @property
     def guild_avatar_decoration(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns an :class:`Asset` for the avatar decoration the member has.
+        """Optional[:class:`~discord.`]: Returns an :class:`~discord.Asset` for the avatar decoration the member has.
 
         If the member has not set an avatar decoration, ``None`` is returned.
         """
@@ -94,7 +94,7 @@ class Member:
 
     @property
     def guild_banner(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns an :class:`Asset` for the guild banner
+        """Optional[:class:`~discord.Asset`]: Returns an :class:`~discord.Asset` for the guild banner
         the member has. If unavailable, ``None`` is returned.
         """
         if self._banner is None:

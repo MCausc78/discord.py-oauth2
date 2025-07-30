@@ -83,9 +83,9 @@ class DisplayNameStyle:
 
     Attributes
     ----------
-    font: :class:`DisplayNameFont`
+    font: :class:`discord.DisplayNameFont`
         The font for the display name.
-    effect: :class:`DisplayNameEffect`
+    effect: :class:`discord.DisplayNameEffect`
         The effect for the display name.
     raw_colors: List[:class:`int`]
         A list of colors encoded in hexdecimal format.
@@ -111,7 +111,7 @@ class DisplayNameStyle:
 
     @property
     def colors(self) -> List[Color]:
-        """List[:class:`Color`]: A list of colors.
+        """List[:class:`discord.Color`]: A list of colors.
 
         There is an alias for this named :attr:`colours`.
         """
@@ -119,7 +119,7 @@ class DisplayNameStyle:
 
     @property
     def colours(self) -> List[Color]:
-        """List[:class:`Colour`]: A list of colours.
+        """List[:class:`discord.Color`]: A list of colours.
 
         This is an alias of :attr:`colors`.
         """
@@ -365,17 +365,17 @@ class BaseUser(_UserTag):
 
     @property
     def voice(self) -> Optional[VoiceState]:
-        """Optional[:class:`VoiceState`]: Returns the user's current voice state."""
+        """Optional[:class:`discord.VoiceState`]: Returns the user's current voice state."""
         return self._state._voice_state_for(self.id)
 
     @property
     def public_flags(self) -> PublicUserFlags:
-        """:class:`PublicUserFlags`: The publicly available flags the user has."""
+        """:class:`discord.PublicUserFlags`: The publicly available flags the user has."""
         return PublicUserFlags._from_value(self._public_flags)
 
     @property
     def avatar(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns an :class:`Asset` for the avatar the user has.
+        """Optional[:class:`discord.Asset`]: Returns an :class:`Asset` for the avatar the user has.
 
         If the user has not uploaded a global avatar, ``None`` is returned.
         If you want the avatar that a user has displayed, consider :attr:`display_avatar`.
@@ -386,7 +386,7 @@ class BaseUser(_UserTag):
 
     @property
     def default_avatar(self) -> Asset:
-        """:class:`Asset`: Returns the default avatar for a given user."""
+        """:class:`discord.Asset`: Returns the default avatar for a given user."""
         if self.discriminator in ('0', '0000'):
             avatar_id = (self.id >> 22) % len(DefaultAvatar)
         else:
@@ -396,7 +396,7 @@ class BaseUser(_UserTag):
 
     @property
     def display_avatar(self) -> Asset:
-        """:class:`Asset`: Returns the user's display avatar.
+        """:class:`discord.Asset`: Returns the user's display avatar.
 
         For regular users this is just their default avatar or uploaded avatar.
 
@@ -406,7 +406,7 @@ class BaseUser(_UserTag):
 
     @property
     def avatar_decoration(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns an :class:`Asset` for the avatar decoration the user has.
+        """Optional[:class:`discord.Asset`]: Returns an :class:`Asset` for the avatar decoration the user has.
 
         If the user has not set an avatar decoration, ``None`` is returned.
 
@@ -430,13 +430,13 @@ class BaseUser(_UserTag):
 
     @property
     def banner(self) -> Optional[Asset]:
-        """Optional[:class:`Asset`]: Returns the user's banner asset, if available.
+        """Optional[:class:`discord.Asset`]: Returns the user's banner asset, if available.
 
         .. versionadded:: 2.0
 
 
         .. note::
-            This information is only available via :meth:`Client.fetch_user`.
+            This information is only available via :meth:`discord.Client.fetch_user`.
         """
         if self._banner is None:
             return None
@@ -444,7 +444,7 @@ class BaseUser(_UserTag):
 
     @property
     def accent_color(self) -> Optional[Color]:
-        """Optional[:class:`Color`]: Returns the user's accent color, if applicable.
+        """Optional[:class:`discord.Color`]: Returns the user's accent color, if applicable.
 
         A user's accent color is only shown if they do not have a banner.
         This will only be available if the user explicitly sets a color.
@@ -455,7 +455,7 @@ class BaseUser(_UserTag):
 
         .. note::
 
-            This information is only available via :meth:`Client.fetch_user`.
+            This information is only available via :meth:`discord.Client.fetch_user`.
         """
         if self._accent_color is None:
             return None
@@ -463,7 +463,7 @@ class BaseUser(_UserTag):
 
     @property
     def accent_colour(self) -> Optional[Color]:
-        """Optional[:class:`Color`]: Returns the user's accent colour, if applicable.
+        """Optional[:class:`discord.Color`]: Returns the user's accent colour, if applicable.
 
         A user's accent colour is only shown if they do not have a banner.
         This will only be available if the user explicitly sets a colour.
@@ -474,13 +474,13 @@ class BaseUser(_UserTag):
 
         .. note::
 
-            This information is only available via :meth:`Client.fetch_user`.
+            This information is only available via :meth:`discord.Client.fetch_user`.
         """
         return self.accent_color
 
     @property
     def color(self) -> Color:
-        """:class:`Color`: A property that returns a color denoting the rendered color
+        """:class:`discord.Color`: A property that returns a color denoting the rendered color
         for the user. This always returns :meth:`Color.default`.
 
         There is an alias for this named :attr:`colour`.
@@ -489,7 +489,7 @@ class BaseUser(_UserTag):
 
     @property
     def colour(self) -> Color:
-        """:class:`Colour`: A property that returns a colour denoting the rendered colour
+        """:class:`discord.Colour`: A property that returns a colour denoting the rendered colour
         for the user. This always returns :meth:`Colour.default`.
 
         This is an alias of :attr:`color`.
@@ -523,7 +523,7 @@ class BaseUser(_UserTag):
 
     @property
     def primary_guild(self) -> PrimaryGuild:
-        """:class:`PrimaryGuild`: Returns the user's primary guild."""
+        """:class:`discord.PrimaryGuild`: Returns the user's primary guild."""
         if self._primary_guild is None:
             return PrimaryGuild._default(self._state)
         return PrimaryGuild(data=self._primary_guild, state=self._state)
@@ -533,7 +533,7 @@ class BaseUser(_UserTag):
 
         Parameters
         ----------
-        message: :class:`Message`
+        message: :class:`discord.Message`
             The message to check if you're mentioned in.
 
         Returns
@@ -549,12 +549,12 @@ class BaseUser(_UserTag):
 
     @property
     def game_relationship(self) -> Optional[GameRelationship]:
-        """Optional[:class:`GameRelationship`]: Returns the :class:`GameRelationship` with this user if applicable, ``None`` otherwise."""
+        """Optional[:class:`~discord.GameRelationship`]: Returns the :class:`~discord.GameRelationship` with this user if applicable, ``None`` otherwise."""
         return self._state.get_game_relationship(self.id)
 
     @property
     def relationship(self) -> Optional[Relationship]:
-        """Optional[:class:`Relationship`]: Returns the :class:`Relationship` with this user if applicable, ``None`` otherwise."""
+        """Optional[:class:`~discord.Relationship`]: Returns the :class:`~discord.Relationship` with this user if applicable, ``None`` otherwise."""
         return self._state.get_relationship(self.id)
 
     def is_friend(self) -> bool:
@@ -625,7 +625,7 @@ class ClientUser(BaseUser):
         Specifies if the user is a system user (i.e. represents Discord officially).
 
         .. versionadded:: 1.3
-    display_name_style: Optional[:class:`DisplayNameStyle`]
+    display_name_style: Optional[:class:`~discord.DisplayNameStyle`]
         The style for the display name.
 
         .. versionadded:: 3.0
@@ -707,7 +707,7 @@ class ClientUser(BaseUser):
 
         Returns
         -------
-        :class:`ClientUser`
+        :class:`~discord.ClientUser`
             The newly edited client user.
         """
         payload: Dict[str, Any] = {}
@@ -767,7 +767,7 @@ class User(BaseUser, discord.abc.Messageable):
         Specifies if the user is a bot account.
     system: :class:`bool`
         Specifies if the user is a system user (i.e. represents Discord officially).
-    display_name_style: Optional[:class:`DisplayNameStyle`]
+    display_name_style: Optional[:class:`~discord.DisplayNameStyle`]
         The style for the display name.
 
         .. versionadded:: 3.0
@@ -785,7 +785,7 @@ class User(BaseUser, discord.abc.Messageable):
 
     @property
     def dm_channel(self) -> Optional[Union[DMChannel, EphemeralDMChannel]]:
-        """Optional[Union[:class:`DMChannel`, :class:`EphemeralDMChannel`]]: Returns the channel associated with this user if it exists.
+        """Optional[Union[:class:`~discord.DMChannel`, :class:`~discord.EphemeralDMChannel`]]: Returns the channel associated with this user if it exists.
 
         If this returns ``None``, you can create a DM channel by calling the
         :meth:`create_dm` coroutine function.
@@ -794,7 +794,7 @@ class User(BaseUser, discord.abc.Messageable):
 
     @property
     def mutual_groups(self) -> List[GroupChannel]:
-        """List[:class:`GroupChannel`]: The groups that the user shares with the client.
+        """List[:class:`~discord.GroupChannel`]: The groups that the user shares with the client.
 
         .. note::
 
@@ -808,7 +808,7 @@ class User(BaseUser, discord.abc.Messageable):
 
     @property
     def mutual_guilds(self) -> List[Guild]:
-        """List[:class:`Guild`]: The guilds that the user shares with the client.
+        """List[:class:`discord.Guild`]: The guilds that the user shares with the client.
 
         .. note::
 
@@ -822,14 +822,14 @@ class User(BaseUser, discord.abc.Messageable):
     async def create_dm(self) -> Union[DMChannel, EphemeralDMChannel]:
         """|coro|
 
-        Creates a :class:`DMChannel` with this user.
+        Creates a :class:`discord.DMChannel` with this user.
 
         This should be rarely called, as this is done transparently for most
         people.
 
         Returns
         -------
-        Union[:class:`.DMChannel`, :class:`.EphemeralDMChannel`]
+        Union[:class:`~discord.DMChannel`, :class:`~discord.EphemeralDMChannel`]
             The channel that was created.
         """
         found = self.dm_channel
