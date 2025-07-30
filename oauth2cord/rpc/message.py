@@ -74,10 +74,10 @@ class Message(Hashable):
     ----------
     id: :class:`int`
         The message ID.
-    type: :class:`MessageType`
+    type: :class:`~oauth2cord.MessageType`
         The type of message. In most cases this should not be checked, but it is helpful
         in cases where it might be a system message for :attr:`system_content`.
-    author: :class:`~oauth2cord.User`
+    author: Optional[:class:`~oauth2cord.User`]
         A :class:`~oauth2cord.User` that sent the message.
     blocked: :class:`bool`
         Whether the message author is blocked.
@@ -87,9 +87,9 @@ class Message(Hashable):
         The actual contents of the message.
     content_parsed: List[:class:`dict`]
         A list of message content components.
-    attachments: List[:class:`Attachment`]
+    attachments: List[:class:`~oauth2cord.Attachment`]
         A list of attachments given to a message.
-    embeds: List[:class:`Embed`]
+    embeds: List[:class:`~oauth2cord.Embed`]
         A list of embeds the message has.
     tts: :class:`bool`
         Specifies if the message was done with text-to-speech.

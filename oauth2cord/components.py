@@ -730,14 +730,14 @@ class Section(Component):
     components: List[:class:`TextDisplay`]
         The components on this section.
 
-        .. warn::
+        .. warning::
 
             The types of children components are subject to change (but not removed).
             Never assume this will contain only :class:`TextDisplay`\\'s.
     accessory: Union[:class:`Button`, :class:`Thumbnail`]
         The section accessory.
 
-        .. warn::
+        .. warning::
 
             The types of children components are subject to change (but not removed).
             Never assume this will be only :class:`Button` or :class:`Thumbnail`.

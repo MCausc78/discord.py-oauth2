@@ -59,11 +59,11 @@ class PartialGuild(_PartialGuild):
     """Represents a Discord guild.
 
     This inherits from :class:`oauth2cord.PartialGuild`,
-    and unlike :class:`oauth2cord.PartialGuild`, these are received over RPC and will have following attributes filled in:
+    and unlike the inherited class, these are received over RPC and will have following attributes filled in:
 
-    - :attr:`id`
-    - :attr:`name`
-    - :attr:`icon`
+    - :attr:`~PartialGuild.id`
+    - :attr:`~PartialGuild.name`
+    - :attr:`~PartialGuild.icon`
     """
 
     __slots__ = ()
