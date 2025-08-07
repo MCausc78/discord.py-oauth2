@@ -65,7 +65,12 @@ class TextInput(Item[V]):
     ------------
     label: :class:`str`
         The label to display above the text input.
-        Can only be up to 45 characters.
+        Can only be up to 100 characters.
+    description: Optional[:class:`str`]
+        The description to display below the text input.
+        Can only be up to 100 characters.
+
+        .. versionadded:: 2.6
     custom_id: :class:`str`
         The ID of the text input that gets received during an interaction.
         If not given then one is generated for you.
@@ -104,6 +109,7 @@ class TextInput(Item[V]):
         self,
         *,
         label: str,
+        description: Optional[str] = None,
         style: TextStyle = TextStyle.short,
         custom_id: str = MISSING,
         placeholder: Optional[str] = None,
@@ -122,6 +128,7 @@ class TextInput(Item[V]):
 
         self._underlying = TextInputComponent._raw_construct(
             label=label,
+            description=description,
             style=style,
             custom_id=custom_id,
             placeholder=placeholder,
@@ -233,6 +240,7 @@ class TextInput(Item[V]):
     def from_component(cls, component: TextInputComponent) -> Self:
         return cls(
             label=component.label,
+            description=component.description,
             style=component.style,
             custom_id=component.custom_id,
             placeholder=component.placeholder,

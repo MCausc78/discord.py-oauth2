@@ -104,6 +104,7 @@ class TextInput(TypedDict):
     custom_id: str
     style: TextStyle
     label: str
+    description: NotRequired[str]
     placeholder: NotRequired[str]
     value: NotRequired[str]
     required: NotRequired[bool]
@@ -116,6 +117,15 @@ class SelectMenu(SelectComponent):
     options: NotRequired[List[SelectOption]]
     channel_types: NotRequired[List[ChannelType]]
     default_values: NotRequired[List[SelectDefaultValues]]
+    description: NotRequired[str]
+    required: NotRequired[bool]
+
+
+class LabelComponent(TypedDict):
+    type: Literal[18]
+    label: str
+    description: NotRequired[str]
+    component: Union[StringSelectComponent, TextInput]
 
 
 ActionRowChildComponent = Union[ButtonComponent, SelectMenu, TextInput]

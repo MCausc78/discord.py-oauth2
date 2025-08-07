@@ -29,6 +29,7 @@ import logging
 import os
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, ClassVar, List
+from itertools import groupby
 
 from ..utils import MISSING, find
 from .._types import ClientT
@@ -137,6 +138,29 @@ class Modal(View):
 
         super().__init__(timeout=timeout)
 
+    def to_components(self) -> List[Dict[str, Any]]:
+        def key(item: Item) -> int:
+            return item._rendered_row or 0
+
+        children = sorted(self._children, key=key)
+        components: List[Dict[str, Any]] = []
+        for _, group in groupby(children, key=key):
+            children = [item.to_component_dict() for item in group]
+            if not children:
+                continue
+
+            child = children[0]
+            components.append(
+                {
+                    'type': 18,
+                    'label': child.pop('label', ''),
+                    'description': child.pop('description', None),
+                    'component': child,
+                }
+            )
+
+        return components
+
     async def on_submit(self, interaction: Interaction[ClientT], /) -> None:
         """|coro|
 
@@ -170,6 +194,8 @@ class Modal(View):
         for component in components:
             if component['type'] == 1:
                 self._refresh(interaction, component['components'])
+            elif component['type'] == 18:
+                self._refresh(interaction, [component['component']])
             else:
                 item = find(lambda i: i.custom_id == component['custom_id'], self._children)  # type: ignore
                 if item is None:

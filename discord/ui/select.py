@@ -238,6 +238,9 @@ class BaseSelect(Item[V]):
         options: List[SelectOption] = MISSING,
         channel_types: List[ChannelType] = MISSING,
         default_values: Sequence[SelectDefaultValue] = MISSING,
+        label: str = '',
+        description: Optional[str] = None,
+        required: bool = True,
     ) -> None:
         super().__init__()
         self._provided_custom_id = custom_id is not MISSING
@@ -255,6 +258,9 @@ class BaseSelect(Item[V]):
             channel_types=[] if channel_types is MISSING else channel_types,
             options=[] if options is MISSING else options,
             default_values=[] if default_values is MISSING else default_values,
+            label=label,
+            description=description,
+            required=required,
         )
 
         self.row = row
@@ -316,6 +322,42 @@ class BaseSelect(Item[V]):
     @disabled.setter
     def disabled(self, value: bool) -> None:
         self._underlying.disabled = bool(value)
+
+    @property
+    def label(self) -> str:
+        """:class:`str`: The description to display above the select menu. Only applicable in modals.
+
+        .. versionadded:: 2.6
+        """
+        return self._underlying.label
+
+    @label.setter
+    def label(self, value: str) -> None:
+        self._underlying.label = value
+
+    @property
+    def description(self) -> Optional[str]:
+        """Optional[:class:`str`]: The description to display below the select menu. Only applicable in modals.
+
+        .. versionadded:: 2.6
+        """
+        return self._underlying.description
+
+    @description.setter
+    def description(self, value: str) -> None:
+        self._underlying.description = value
+
+    @property
+    def required(self) -> bool:
+        """:class:`bool`: Whether the selection is required.
+
+        .. versionadded:: 2.6
+        """
+        return self._underlying.required
+
+    @required.setter
+    def required(self, value: bool) -> None:
+        self._underlying.required = bool(value)
 
     @property
     def width(self) -> int:
@@ -384,6 +426,18 @@ class Select(BaseSelect[V]):
         Can only contain up to 25 items.
     disabled: :class:`bool`
         Whether the select is disabled or not.
+    label: :class:`str`
+        The description to display above the select menu. Only applicable in modals.
+
+        .. versionadded:: 2.6
+    description: Optional[:class:`str`]
+        The description to display below the select menu. Only applicable in modals.
+
+        .. versionadded:: 2.6
+    required: :class:`bool`
+        Whether the selection is required.
+
+        .. versionadded:: 2.6
     row: Optional[:class:`int`]
         The relative row this select menu belongs to. A Discord component can only have 5
         rows. By default, items are arranged automatically into those 5 rows. If you'd
@@ -392,7 +446,12 @@ class Select(BaseSelect[V]):
         ordering. The row number must be between 0 and 4 (i.e. zero indexed).
     """
 
-    __component_attributes__ = BaseSelect.__component_attributes__ + ('options',)
+    __component_attributes__ = BaseSelect.__component_attributes__ + (
+        'options',
+        'label',
+        'description',
+        'required',
+    )
 
     def __init__(
         self,
@@ -403,6 +462,9 @@ class Select(BaseSelect[V]):
         max_values: int = 1,
         options: List[SelectOption] = MISSING,
         disabled: bool = False,
+        label: str = '',
+        description: Optional[str] = None,
+        required: bool = True,
         row: Optional[int] = None,
     ) -> None:
         super().__init__(
@@ -413,6 +475,9 @@ class Select(BaseSelect[V]):
             max_values=max_values,
             disabled=disabled,
             options=options,
+            label=label,
+            description=description,
+            required=required,
             row=row,
         )
 

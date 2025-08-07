@@ -202,7 +202,12 @@ class ModalSubmitTextInputInteractionData(TypedDict):
     value: str
 
 
-ModalSubmitComponentItemInteractionData = ModalSubmitTextInputInteractionData
+class ModalSubmitLabelInteractionData(TypedDict):
+    type: Literal[18]
+    component: ModalSubmitComponentItemInteractionData
+
+
+ModalSubmitComponentItemInteractionData = Union[ModalSubmitTextInputInteractionData, ModalSubmitLabelInteractionData]
 
 
 class ModalSubmitActionRowInteractionData(TypedDict):

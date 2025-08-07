@@ -268,6 +268,18 @@ class SelectMenu(Component):
         Whether the select is disabled or not.
     channel_types: List[:class:`.ChannelType`]
         A list of channel types that are allowed to be chosen in this select menu.
+    label: :class:`str`
+        The description to display above the select menu.
+
+        .. versionadded:: 2.6
+    description: Optional[:class:`str`]
+        The description to display below the select menu.
+
+        .. versionadded:: 2.6
+    required: :class:`bool`
+        Whether the selection is required.
+
+        .. versionadded:: 2.6
     """
 
     __slots__: Tuple[str, ...] = (
@@ -280,6 +292,9 @@ class SelectMenu(Component):
         'disabled',
         'channel_types',
         'default_values',
+        'label',
+        'description',
+        'required',
     )
 
     __repr_info__: ClassVar[Tuple[str, ...]] = __slots__
@@ -296,6 +311,9 @@ class SelectMenu(Component):
         self.default_values: List[SelectDefaultValue] = [
             SelectDefaultValue.from_dict(d) for d in data.get('default_values', [])
         ]
+        self.label: str = ''
+        self.description: Optional[str] = None
+        self.required: bool = data.get('required', True)
 
     def to_dict(self) -> SelectMenuPayload:
         payload: SelectMenuPayload = {
@@ -304,7 +322,12 @@ class SelectMenu(Component):
             'min_values': self.min_values,
             'max_values': self.max_values,
             'disabled': self.disabled,
+            'required': self.required,
         }
+        if self.label:
+            payload['label'] = self.label  # type: ignore # this will be moved
+        if self.description:
+            payload['description'] = self.description
         if self.placeholder:
             payload['placeholder'] = self.placeholder
         if self.options:
@@ -456,11 +479,15 @@ class TextInput(Component):
     .. versionadded:: 2.0
 
     Attributes
-    ------------
+    ----------
     custom_id: Optional[:class:`str`]
         The ID of the text input that gets received during an interaction.
     label: :class:`str`
         The label to display above the text input.
+    description: Optional[:class:`str`]
+        The description to display below the text input.
+
+        .. versionadded:: 2.6
     style: :class:`TextStyle`
         The style of the text input.
     placeholder: Optional[:class:`str`]
@@ -478,6 +505,7 @@ class TextInput(Component):
     __slots__: Tuple[str, ...] = (
         'style',
         'label',
+        'description',
         'custom_id',
         'placeholder',
         'value',
@@ -491,6 +519,7 @@ class TextInput(Component):
     def __init__(self, data: TextInputPayload, /) -> None:
         self.style: TextStyle = try_enum(TextStyle, data['style'])
         self.label: str = data['label']
+        self.description: Optional[str] = data.get('description')
         self.custom_id: str = data['custom_id']
         self.placeholder: Optional[str] = data.get('placeholder')
         self.value: Optional[str] = data.get('value')
@@ -511,6 +540,9 @@ class TextInput(Component):
             'custom_id': self.custom_id,
             'required': self.required,
         }
+
+        if self.description:
+            payload['description'] = self.description
 
         if self.placeholder:
             payload['placeholder'] = self.placeholder
