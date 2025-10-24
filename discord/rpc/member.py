@@ -40,6 +40,7 @@ __all__ = (
 )
 # fmt: on
 
+
 class Member:
     __slots__ = (
         '_state',

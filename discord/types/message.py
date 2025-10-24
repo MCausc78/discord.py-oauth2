@@ -259,6 +259,7 @@ class AllowedMentions(TypedDict):
     users: SnowflakeList
     replied_user: bool
 
+
 # GET /partner-sdk/users/@me/channels returns a list of UserMessageSummary
 class UserMessageSummary(TypedDict):
     user_id: Snowflake

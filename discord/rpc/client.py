@@ -2745,36 +2745,38 @@ class Client(Dispatcher):
         ----------
         quest_id: :class:`int`
             The quest's ID to retrieve enrollment status for.
-        
+
         Raises
         ------
         RPCException
             Retrieving the quest enrollment status failed.
-        
+
         Returns
         -------
         :class:`QuestEnrollmentStatus`
             The enrollment status for quest.
         """
         payload: GetQuestEnrollmentStatusRequestPayload = {'quest_id': str(quest_id)}
-        data: GetQuestEnrollmentStatusResponsePayload = await self._transport.send_command('GET_QUEST_ENROLLMENT_STATUS', payload)
+        data: GetQuestEnrollmentStatusResponsePayload = await self._transport.send_command(
+            'GET_QUEST_ENROLLMENT_STATUS', payload
+        )
         return QuestEnrollmentStatus(data)
 
     async def start_quest_timer(self, quest_id: int) -> bool:
         """|coro|
-        
+
         Starts the timer for a quest.
 
         Parameters
         ----------
         quest_id: :class:`int`
             The quest's ID to start timer for.
-        
+
         Raises
         ------
         RPCException
             Starting the quest timer failed.
-        
+
         Returns
         -------
         :class:`bool`

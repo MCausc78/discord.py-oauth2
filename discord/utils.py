@@ -1704,6 +1704,7 @@ def _parse_localizations(source: Any, key: str) -> Tuple[str, Dict[Locale, str]]
     else:
         return source[key], {try_enum(Locale, k): v for k, v in localizations.items()}
 
+
 @overload
 def walk_components(
     components: Sequence[Component],
@@ -1711,6 +1712,7 @@ def walk_components(
     type: None,
 ) -> Generator[Component]:
     ...
+
 
 @overload
 def walk_components(
@@ -1720,6 +1722,7 @@ def walk_components(
 ) -> Generator[C]:
     ...
 
+
 def walk_components(
     components: Sequence[Component],
     *,
@@ -1728,10 +1731,10 @@ def walk_components(
     """Walks over all components.
 
     This is especially useful when you want to find a button in a message that utilizes v2 components.
-    
+
     Examples
     --------
-    
+
     Find a button and print it's label and style:
 
     .. code-block:: python3

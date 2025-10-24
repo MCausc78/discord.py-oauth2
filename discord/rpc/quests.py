@@ -40,9 +40,10 @@ __all__ = (
 )
 # fmt: on
 
+
 class QuestEnrollmentStatus:
     """Represents enrollment status for a quest.
-    
+
     Attributes
     ----------
     quest_id: :class:`int`
@@ -74,6 +75,6 @@ class QuestEnrollmentStatus:
         if isinstance(other, self.__class__):
             return other.quest_id == self.quest_id
         return NotImplemented
-    
+
     def __hash__(self) -> int:
         return self.quest_id >> 22

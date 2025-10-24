@@ -261,6 +261,7 @@ class SpeakingEventSubscription(EventSubscription):
     def stop(cls, channel_id: int, user_id: int) -> Self:
         return cls('STOP', channel_id=channel_id, user_id=user_id)
 
+
 class QuestSubscription(EventSubscription):
     __slots__ = (
         'type',

@@ -596,7 +596,7 @@ class DiscordWebSocket:
             _log.warning('Unknown OP code %s.', op)
             return
 
-        # msg also has optional 'local_tests_ack_id' field. I am unsure what it does exist for, though. 
+        # msg also has optional 'local_tests_ack_id' field. I am unsure what it does exist for, though.
         # Here's relevant pseudo code for it:
         # local_tests_ack_id = msg.get('local_tests_ack_id')
         # if type(local_tests_ack_id) is int: # equivalent to isInt
@@ -608,7 +608,7 @@ class DiscordWebSocket:
 
             # # SDK replaces discord.gg with gaming-sdk.com, do same here
             # self.gateway = yarl.URL(data['resume_gateway_url'].replace('discord.gg', 'gaming-sdk.com'))
-            
+
             # This used to replace discord.gg with `gaming-sdk.com`. However as of 14.08.2025, it seems to cause problems:
             # aiohttp.client_exceptions.WSServerHandshakeError: 525, message='Invalid response status', url='wss://gateway-us-east1-d.gaming-sdk.com/?v=9&encoding=json'
             self.gateway = yarl.URL(data['resume_gateway_url'])

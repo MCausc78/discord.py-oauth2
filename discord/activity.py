@@ -1019,7 +1019,7 @@ class Game(BaseActivity):
             self._flags = flags.value
         else:
             self._flags = flags
-        
+
         try:
             self.button_labels: List[str] = extra['buttons']
         except KeyError:
@@ -2151,18 +2151,18 @@ class ActivityInvite:
                 raise TypeError('Please set session ID manually')
 
             activities = []
-            
+
             game_relationship = author.game_relationship
             if game_relationship:
                 activities.extend(game_relationship.activities)
-                
+
             relationship = author.relationship
             if relationship:
                 activities.extend(relationship.activities)
-            
+
             if not activities:
                 raise TypeError('User does not have any activities')
-            
+
             a = find(
                 lambda a, /: (
                     isinstance(a, Game) and a.application_id == application.id and a.party == activity['party_id']

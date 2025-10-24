@@ -2484,11 +2484,11 @@ class Message(PartialMessage, Hashable):
                 activities = list(self.author.activities)
             else:
                 activities = []
-            
+
             relationship = self.author.relationship
             if relationship:
                 activities.extend(relationship.activities)
-            
+
             game_relationship = self.author.game_relationship
             if game_relationship:
                 activities.extend(game_relationship.activities)
@@ -2561,9 +2561,10 @@ class LobbyMessage(Message):
 
         return self._state.get_lobby(self.lobby_id)
 
+
 class UserMessageSummary(Hashable):
     """Represents a conversion summary with an user.
-    
+
     .. versionadded:: 3.0
 
     .. container:: operations
@@ -2598,5 +2599,3 @@ class UserMessageSummary(Hashable):
         self._state: BaseConnectionState = state
         self.id: int = int(data['user_id'])
         self.last_message_id: int = int(data['last_message_id'])
-
-    
