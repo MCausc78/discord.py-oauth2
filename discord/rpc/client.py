@@ -57,6 +57,7 @@ from .channel import PartialChannel, GuildChannel
 from .config import EmbeddedActivityConfig
 from .enums import DeepLinkLocation, LogLevel, Opcode, OrientationLockState, PromptBehavior
 from .guild import PartialGuild, Guild
+from .quests import QuestEnrollmentStatus
 from .settings import (
     UserVoiceSettings,
     VoiceIOSettings,
@@ -235,6 +236,10 @@ if TYPE_CHECKING:
         # NavigateToConnectionsResponse as NavigateToConnectionsResponsePayload,
         InviteUserEmbeddedRequest as InviteUserEmbeddedRequestPayload,
         # InviteUserEmbeddedResponse as InviteUserEmbeddedResponsePayload,
+        GetQuestEnrollmentStatusRequest as GetQuestEnrollmentStatusRequestPayload,
+        GetQuestEnrollmentStatusResponse as GetQuestEnrollmentStatusResponsePayload,
+        QuestStartTimerRequest as QuestStartTimerRequestPayload,
+        QuestStartTimerResponse as QuestStartTimerResponsePayload,
     )
     from .types.http import Response as ResponsePayload
     from .ui import Button
@@ -2730,3 +2735,51 @@ class Client(Dispatcher):
             payload['content'] = content
 
         await self._transport.send_command('INVITE_USER_EMBEDDED', payload)
+
+    async def fetch_quest_enrollment_status(self, quest_id: int) -> QuestEnrollmentStatus:
+        """|coro|
+
+        Retrieves enrollment status for a quest.
+
+        Parameters
+        ----------
+        quest_id: :class:`int`
+            The quest's ID to retrieve enrollment status for.
+        
+        Raises
+        ------
+        RPCException
+            Retrieving the quest enrollment status failed.
+        
+        Returns
+        -------
+        :class:`QuestEnrollmentStatus`
+            The enrollment status for quest.
+        """
+        payload: GetQuestEnrollmentStatusRequestPayload = {'quest_id': str(quest_id)}
+        data: GetQuestEnrollmentStatusResponsePayload = await self._transport.send_command('GET_QUEST_ENROLLMENT_STATUS', payload)
+        return QuestEnrollmentStatus(data)
+
+    async def start_quest_timer(self, quest_id: int) -> bool:
+        """|coro|
+        
+        Starts the timer for a quest.
+
+        Parameters
+        ----------
+        quest_id: :class:`int`
+            The quest's ID to start timer for.
+        
+        Raises
+        ------
+        RPCException
+            Starting the quest timer failed.
+        
+        Returns
+        -------
+        :class:`bool`
+            Whether the timer was successfully started.
+        """
+        payload: QuestStartTimerRequestPayload = {'quest_id': str(quest_id)}
+        data: QuestStartTimerResponsePayload = await self._transport.send_command('QUEST_START_TIMER', payload)
+        return data['success']

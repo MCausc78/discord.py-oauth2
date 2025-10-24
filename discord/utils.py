@@ -52,6 +52,7 @@ from typing import (
     Coroutine,
     Dict,
     ForwardRef,
+    Generator,
     Generic,
     Iterable,
     Iterator,
@@ -174,6 +175,7 @@ __all__ = (
     '_ReactiveSequenceProxy',
     '_ReactiveMappingProxy',
     '_parse_localizations',
+    'walk_components',
 )
 
 DISCORD_EPOCH = 1420070400000
@@ -219,6 +221,7 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self, TypeGuard
 
     from .abc import Snowflake
+    from .components import Component
     from .enums import Locale
     from .invite import Invite
     from .permissions import Permissions
@@ -240,6 +243,7 @@ else:
     cached_property = _cached_property
     _SnowflakeListBase = array.array
 
+C = TypeVar('C', bound='Component')
 K = TypeVar('K')
 T = TypeVar('T')
 T_co = TypeVar('T_co', covariant=True)
@@ -1699,3 +1703,68 @@ def _parse_localizations(source: Any, key: str) -> Tuple[str, Dict[Locale, str]]
         return inner, {}
     else:
         return source[key], {try_enum(Locale, k): v for k, v in localizations.items()}
+
+@overload
+def walk_components(
+    components: Sequence[Component],
+    *,
+    type: None,
+) -> Generator[Component]:
+    ...
+
+@overload
+def walk_components(
+    components: Sequence[Component],
+    *,
+    type: C,
+) -> Generator[C]:
+    ...
+
+def walk_components(
+    components: Sequence[Component],
+    *,
+    type: Optional[C] = None,
+) -> Union[Generator[C, None, None], Generator[Component], None, None]:
+    """Walks over all components.
+
+    This is especially useful when you want to find a button in a message that utilizes v2 components.
+    
+    Examples
+    --------
+    
+    Find a button and print it's label and style:
+
+    .. code-block:: python3
+
+        button = discord.utils.get(
+            discord.utils.walk_components(message.components, type=discord.Button),
+            custom_id='clickme',
+        )
+        print(button.style.name.capitalize(), button.label)
+
+    Parameters
+    ----------
+    components: List[:class:`~discord.Component`]
+        The components to walk over.
+    type: Type[:class:`~discord.Component`]
+        The type to yield.
+
+    Yields
+    ------
+    :class:`~discord.Component`
+        The component.
+    """
+    from .components import ActionRow, Section, Container
+
+    for component in components:
+        if type is None or isinstance(component, type):  # type: ignore
+            yield component
+
+        if isinstance(component, ActionRow):
+            yield from walk_components(component.children, type=type)
+        elif isinstance(component, Section):
+            if type is None or isinstance(component, type):  # type: ignore
+                yield component.accessory
+            yield from walk_components(component.components, type=type)
+        elif isinstance(component, Container):
+            yield from walk_components(component.children, type=type)

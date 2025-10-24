@@ -111,6 +111,7 @@ if TYPE_CHECKING:
         CallMessage as CallMessagePayload,
         PurchaseNotificationResponse as PurchaseNotificationResponsePayload,
         GuildProductPurchase as GuildProductPurchasePayload,
+        UserMessageSummary as UserMessageSummaryPayload,
     )
     from .types.user import User as UserPayload
     from .user import User
@@ -2480,22 +2481,27 @@ class Message(PartialMessage, Hashable):
 
         if session_id is None:
             if isinstance(self.author, Member):
-                activities = self.author.activities
+                activities = list(self.author.activities)
             else:
-                r = self.author.relationship
-                if r is None:
-                    raise TypeError('Cannot get user activities')
-                activities = r.activities
+                activities = []
+            
+            relationship = self.author.relationship
+            if relationship:
+                activities.extend(relationship.activities)
+            
+            game_relationship = self.author.game_relationship
+            if game_relationship:
+                activities.extend(game_relationship.activities)
 
-            a = find(
+            a: Game = find(
                 lambda a, /: (
                     isinstance(a, Game) and a.application_id == application_id and a.party == activity['party_id']
                 ),
                 activities,
-            )
+            )  # type: ignore
             if a is None:
-                raise TypeError('Invite is invalid')
-            assert isinstance(a, Game), 'Invite is not game invite'
+                raise TypeError('Could not find activity associated with the invite')
+
             session_id = a.session_id or ''
 
         data = await self._state.http.get_activity_secret(
@@ -2554,3 +2560,43 @@ class LobbyMessage(Message):
         """Optional[:class:`Lobby`]: The lobby that the message was sent from, or ``None`` if lobby is not in cache."""
 
         return self._state.get_lobby(self.lobby_id)
+
+class UserMessageSummary(Hashable):
+    """Represents a conversion summary with an user.
+    
+    .. versionadded:: 3.0
+
+    .. container:: operations
+
+        .. describe:: x == y
+
+            Checks if two summaries are equal.
+
+        .. describe:: x != y
+
+            Checks if two summaries are not equal.
+
+        .. describe:: hash(x)
+
+            Returns the summary's hash.
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The other user's ID the conversation summary is for.
+    last_message_id: :class:`int`
+        The ID of the last message that was sent in conversation summary.
+    """
+
+    __slots__ = (
+        '_state',
+        'id',
+        'last_message_id',
+    )
+
+    def __init__(self, *, data: UserMessageSummaryPayload, state: BaseConnectionState) -> None:
+        self._state: BaseConnectionState = state
+        self.id: int = int(data['user_id'])
+        self.last_message_id: int = int(data['last_message_id'])
+
+    

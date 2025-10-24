@@ -1025,6 +1025,14 @@ class HTTPClient:
         else:
             return self.request(r, json=params.payload)
 
+    def get_user_messages(self, user_id: Snowflake, *, limit: Optional[int] = None) -> Response[List[message.Message]]:
+        params = {}
+
+        if limit is not None:
+            params['limit'] = limit
+
+        return self.request(Route('GET', '/users/{user_id}/messages', user_id=user_id), params=params)
+
     def send_message(
         self,
         channel_id: Snowflake,

@@ -35,6 +35,7 @@ __all__ = (
     'ChannelSubscription',
     'GuildSubscription',
     'SpeakingEventSubscription',
+    'QuestSubscription',
 )
 
 
@@ -56,7 +57,11 @@ class EventSubscription:
 class GenericSubscription(EventSubscription):
     """Represents a subscription for a generic event (event that does not require arguments)."""
 
-    __slots__ = ('type',)
+    # fmt: off
+    __slots__ = (
+        'type',
+    )
+    # fmt: on
 
     def __init__(self, type: str) -> None:
         self.type: str = type
@@ -156,7 +161,12 @@ class GenericSubscription(EventSubscription):
 class ChannelSubscription(EventSubscription):
     """Represents a subscription for a channel event (event that happens in a specific channel)."""
 
-    __slots__ = ('type', 'channel_id')
+    # fmt: off
+    __slots__ = (
+        'type',
+        'channel_id',
+    )
+    # fmt: on
 
     def __init__(self, type: str, *, channel_id: int) -> None:
         self.type: str = type
@@ -196,7 +206,12 @@ class ChannelSubscription(EventSubscription):
 class GuildSubscription(EventSubscription):
     """Represents a subscription for a guild event (event that happens in a specific guild)."""
 
-    __slots__ = ('type', 'guild_id')
+    # fmt: off
+    __slots__ = (
+        'type',
+        'guild_id',
+    )
+    # fmt: on
 
     def __init__(self, type: str, *, guild_id: int) -> None:
         self.type: str = type
@@ -245,3 +260,28 @@ class SpeakingEventSubscription(EventSubscription):
     @classmethod
     def stop(cls, channel_id: int, user_id: int) -> Self:
         return cls('STOP', channel_id=channel_id, user_id=user_id)
+
+class QuestSubscription(EventSubscription):
+    __slots__ = (
+        'type',
+        'quest_id',
+    )
+
+    def __init__(
+        self,
+        quest_id: int,
+        *,
+        type: Literal['QUEST_ENROLLMENT_STATUS_UPDATE'],
+    ) -> None:
+        self.type = type
+        self.quest_id: int = quest_id
+
+    def get_type(self) -> str:
+        return self.type
+
+    def get_data(self) -> Dict[str, Any]:
+        return {'quest_id': str(self.quest_id)}
+
+    @classmethod
+    def enrollment_status_update(cls, quest_id: int) -> Self:
+        return cls(quest_id=quest_id, type='QUEST_ENROLLMENT_STATUS_UPDATE')

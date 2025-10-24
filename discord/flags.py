@@ -1453,6 +1453,12 @@ class Intents(BaseFlags):
         self.user_presences = True
         self.lobbies = True
         self.lobby_delete = True
+        # This is enabled by default in SDK since v1.5.
+        # However with this intent we get only Guild.name and Guild.id in following places so far:
+        # - READY->guilds[i]
+        # - GUILD_UPDATE
+        # But I am betting it's going to be removed and replaced with a capability instead.
+        # self.guild_names_only = True
         return self
 
     @flag_value
@@ -2213,6 +2219,25 @@ class Intents(BaseFlags):
         - :func:`on_lobby_remove`
         """
         return 1 << 28
+
+    @flag_value
+    def guild_names_only(self) -> int:
+        """:class:`bool`: Whether to include only :attr:`Guild.name` and :attr:`Guild.id`.
+        
+        This affects the following events:
+        
+        - :func:`on_guild_join`
+        - :func:`on_guild_update`
+        - :func:`on_guild_remove`
+        
+        This also corresponds to the following attributes and classes in terms of cache:
+
+        - :attr:`Client.guilds`
+        - :meth:`Client.get_guild`
+
+        It is highly advisable to leave this intent enabled for your client to properly function.
+        """
+        return 1 << 29
 
 
 @fill_with_flags()

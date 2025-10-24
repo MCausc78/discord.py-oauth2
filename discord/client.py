@@ -704,19 +704,6 @@ class Client(Dispatcher):
         _log.debug('Syncing presence to %s %s', status, new_settings.custom_activity)
         await self.change_presence(status=status, activities=activities, edit_settings=False, update_presence=True)
 
-        # Discord doesn't dispatch SESSIONS_REPLACE in OAuth2 contexts, so we
-        # have to manually update our session data :(
-        # Necessary because if you do (without this workaround):
-        # - First, the user should have set status: online
-        # - Second, in client, set status to dnd
-        # - Third, in client, set status to online
-        # As a result, client_status for Presence of that user will be set to `{<desktop or mobile or web>: 'online', embedded: 'dnd'}`
-        # Which results in undefined behavior (embedded is library session status)
-        current_session = self._connection.get_current_session()
-        if current_session:
-            current_session.activities = tuple(activities)
-            current_session.status = status
-
     # Hooks
 
     async def _call_before_identify_hook(self, *, initial: bool = False) -> None:
@@ -944,9 +931,9 @@ class Client(Dispatcher):
 
                 # If we get connection reset by peer then try to RESUME
                 if isinstance(exc, OSError) and exc.errno in (54, 10054):
+                    gateway = self.ws.gateway
                     ws_params.update(
                         sequence=self.ws.sequence,
-                        gateway=self.ws.gateway,
                         initial=False,
                         resume=True,
                         session=self.ws.session_id,
@@ -967,12 +954,13 @@ class Client(Dispatcher):
                 retry = backoff.delay()
                 _log.exception("Attempting a reconnect in %.2fs", retry)
                 await asyncio.sleep(retry)
-                # Always try to RESUME the connection
-                # If the connection is not RESUME-able then the gateway will invalidate the session.
+
+                # Always try to RESUME the connection.
+                # If the connection is not RESUME-able then the Gateway will invalidate the session.
                 # This is apparently what the official Discord client does.
+                gateway = self.ws.gateway
                 ws_params.update(
                     sequence=self.ws.sequence,
-                    gateway=self.ws.gateway,
                     resume=True,
                     session=self.ws.session_id,
                 )

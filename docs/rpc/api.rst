@@ -71,6 +71,9 @@ IPC
 
     Called when the client is done preparing the data received from Discord.
 
+.. function:: on_authorize_request()
+    
+    Called when the client wants to authorize.
 
 Current User
 ~~~~~~~~~~~~
@@ -284,7 +287,7 @@ Messages
         programmed. If you want the client to not reply to itself, consider
         checking the user IDs.
 
-    :param message: The current message.
+    :param message: The message received.
     :type message: :class:`Message`
 
 .. function:: on_message_edit(message)
@@ -370,7 +373,17 @@ Video
     :param active: Indicates if the video is still active.
     :type active: :class:`bool`
 
-.. _discord-api-enums:
+Quests
+~~~~~~
+
+.. function:: on_quest_enrollment_status_update(status)
+    
+    Called whenever quest enrollment status changes.
+
+    :param status: The current status of quest enrollment.
+    :type status: :class:`QuestEnrollmentStatus`
+
+.. _discord-rpc-enums:
 
 Enumerations
 ------------
@@ -693,7 +706,6 @@ ActivityParticipant
     :members:
     :inherited-members:
 
-
 PartialChannel
 ~~~~~~~~~~~~~~
 
@@ -702,7 +714,6 @@ PartialChannel
 .. autoclass:: PartialChannel()
     :members:
     :inherited-members:
-
 
 GuildChannel
 ~~~~~~~~~~~~
@@ -782,6 +793,15 @@ Notification
 .. attributetable:: Notification
 
 .. autoclass:: Notification()
+    :members:
+    :inherited-members:
+
+QuestEnrollmentStatus
+~~~~~~~~~~~~~~~~~~~~~
+
+.. attributetable:: QuestEnrollmentStatus
+
+.. autoclass:: QuestEnrollmentStatus()
     :members:
     :inherited-members:
 

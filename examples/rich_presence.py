@@ -42,6 +42,7 @@ async def using_http(token: str):
         name="Hackplug",
         details="Rich presence with discord.py-oauth2 (Headless session)",
         application_id=application_id,
+        platform=discord.ActivityPlatform.desktop,
     )
     await client.create_headless_session(activities=[activity])
 

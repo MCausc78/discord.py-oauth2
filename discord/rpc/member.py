@@ -34,8 +34,11 @@ if TYPE_CHECKING:
     from .types.events import CurrentGuildMemberUpdateEvent as MemberPayload
     from .types.user import AvatarDecorationData as AvatarDecorationDataPayload
 
-__all__ = ('Member',)
-
+# fmt: off
+__all__ = (
+    'Member',
+)
+# fmt: on
 
 class Member:
     __slots__ = (
