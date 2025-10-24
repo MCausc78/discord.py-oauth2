@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 __all__ = (
     'Enum',
     'ActivityActionType',
+    'ActivityPartyPrivacy',
     'ActivityPlatform',
     'ActivityType',
     'AppCommandHandler',

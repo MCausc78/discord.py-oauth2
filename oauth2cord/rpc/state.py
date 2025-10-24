@@ -43,6 +43,7 @@ from .guild import PartialGuild
 from .member import Member
 from .message import Message
 from .notification import Notification
+from .quests import QuestEnrollmentStatus
 from .settings import VoiceSettings
 from .voice_connection_status import VoiceConnectionStatus
 from .voice_state import VoiceState
@@ -83,6 +84,8 @@ if TYPE_CHECKING:
         EntitlementDeleteEvent as EntitlementDeleteEventPayload,
         ScreenshareStateUpdateEvent as ScreenshareStateUpdateEventPayload,
         VideoStateUpdateEvent as VideoStateUpdateEventPayload,
+        AuthorizeRequestEvent as AuthorizeRequestEventPayload,
+        QuestEnrollmentStatusUpdateEvent as QuestEnrollmentStatusUpdateEventPayload,
     )
 
 _log = logging.getLogger(__name__)
@@ -288,6 +291,12 @@ class RPCConnectionState(BaseConnectionState):
 
     def parse_video_state_update(self, data: VideoStateUpdateEventPayload) -> None:
         self.dispatch('video_state_update', data['active'])
+
+    def parse_authorize_request(self, data: AuthorizeRequestEventPayload) -> None:
+        self.dispatch('authorize_request')
+
+    def parse_quest_enrollment_status_update(self, data: QuestEnrollmentStatusUpdateEventPayload) -> None:
+        self.dispatch('quest_enrollment_status_update', QuestEnrollmentStatus(data))
 
     # Overrides
     def get_rpc_guild(self, guild_id: Optional[int]) -> Optional[Guild]:

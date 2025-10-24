@@ -818,3 +818,21 @@ class InviteUserEmbeddedRequest(TypedDict):
 
 
 InviteUserEmbeddedResponse = None
+
+
+class GetQuestEnrollmentStatusRequest(TypedDict):
+    quest_id: Snowflake
+
+
+class GetQuestEnrollmentStatusResponse(TypedDict):
+    quest_id: Snowflake
+    is_enrolled: bool
+    enrolled_at: Optional[str]
+
+
+class QuestStartTimerRequest(TypedDict):
+    quest_id: Snowflake
+
+
+class QuestStartTimerResponse(TypedDict):
+    success: bool

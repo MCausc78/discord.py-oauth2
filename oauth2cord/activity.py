@@ -611,7 +611,14 @@ class Activity(BaseActivity):
         self.state: Optional[str] = kwargs.get('state')
         self.state_url: Optional[str] = kwargs.get('state_url')
         self.sync_id: Optional[str] = kwargs.get('sync_id')
-        self._flags: int = kwargs.get('flags', 0)
+
+        flags = kwargs.get('flags')
+        if flags is None:
+            self._flags: int = 0
+        elif isinstance(flags, ActivityFlags):
+            self._flags = flags.value
+        else:
+            self._flags = flags
 
         try:
             self.button_labels: List[str] = kwargs['buttons']
@@ -773,9 +780,6 @@ class Activity(BaseActivity):
                 for label, url in zip(self.button_labels, self.metadata.get('button_urls', ()))
             ]
 
-        # if self.instance:
-        #     payload['instance'] = self.instance
-
         if self._supported_platforms is not None:
             payload['supported_platforms'] = ActivityPlatforms._from_value(self._supported_platforms).to_string_array()  # type: ignore
 
@@ -793,6 +797,13 @@ class Activity(BaseActivity):
             return datetime.fromtimestamp(timestamp, tz=timezone.utc)
         return None
 
+    @start.setter
+    def start(self, value: Optional[datetime]) -> None:
+        if value:
+            self.start_timestamp = int(value.timestamp() * 1000)
+        else:
+            self.start_timestamp = 0
+
     @property
     def end(self) -> Optional[datetime]:
         """Optional[:class:`~datetime.datetime`]: When the user will stop doing this activity in UTC, if applicable."""
@@ -800,6 +811,13 @@ class Activity(BaseActivity):
             timestamp = self.end_timestamp
             return datetime.fromtimestamp(timestamp, tz=timezone.utc)
         return None
+
+    @end.setter
+    def end(self, value: Optional[datetime]) -> None:
+        if value:
+            self.end_timestamp = int(value.timestamp() * 1000)
+        else:
+            self.end_timestamp = 0
 
     @property
     def large_image_url(self) -> Optional[str]:
@@ -880,6 +898,12 @@ class Game(BaseActivity):
         The game's name.
     session_id: Optional[:class:`str`]
         The ID of the Gateway session the activity is attached to.
+    start_timestamp: Optional[:class:`int`]
+        Corresponds to when the user started doing the
+        activity in milliseconds since Unix epoch.
+    end_timestamp: Optional[:class:`int`]:
+        Corresponds to when the user will finish doing the
+        activity in milliseconds since Unix epoch.
     platform: Optional[:class:`ActivityPlatform`]
         Where the user is playing from (ie. PS5, Xbox).
 
@@ -987,7 +1011,14 @@ class Game(BaseActivity):
         self.details_url: Optional[str] = extra.get('details_url')
         self.state: Optional[str] = extra.get('state')
         self.state_url: Optional[str] = extra.get('state_url')
-        self._flags: int = extra.get('flags', 0)
+
+        flags = extra.get('flags')
+        if flags is None:
+            self._flags: int = 0
+        elif isinstance(flags, ActivityFlags):
+            self._flags = flags.value
+        else:
+            self._flags = flags
 
         try:
             self.button_labels: List[str] = extra['buttons']
@@ -1014,6 +1045,10 @@ class Game(BaseActivity):
         """:class:`ActivityFlags`: The activity's flags."""
         return ActivityFlags._from_value(self._flags)
 
+    @flags.setter
+    def flags(self, value: ActivityFlags) -> None:
+        self._flags = value.value
+
     @property
     def type(self) -> ActivityType:
         """:class:`ActivityType`: Returns the game's type. This is for compatibility with :class:`Activity`.
@@ -1029,12 +1064,26 @@ class Game(BaseActivity):
             return datetime.fromtimestamp(self.start_timestamp / 1000, tz=timezone.utc)
         return None
 
+    @start.setter
+    def start(self, value: Optional[datetime]) -> None:
+        if value:
+            self.start_timestamp = int(value.timestamp() * 1000)
+        else:
+            self.start_timestamp = 0
+
     @property
     def end(self) -> Optional[datetime]:
         """Optional[:class:`~datetime.datetime`]: When the user will stop playing this game in UTC, if applicable."""
         if self.end_timestamp:
             return datetime.fromtimestamp(self.end_timestamp / 1000, tz=timezone.utc)
         return None
+
+    @end.setter
+    def end(self, value: Optional[datetime]) -> None:
+        if value:
+            self.end_timestamp = int(value.timestamp() * 1000)
+        else:
+            self.end_timestamp = 0
 
     def __str__(self) -> str:
         return _status_field(self) or ''
@@ -1154,7 +1203,6 @@ class Game(BaseActivity):
 
     def to_rpc_dict(self) -> RPCActivityPayload:
         payload: RPCActivityPayload = {}
-        flags = self.flags
 
         if self.state is not None:
             payload['state'] = self.state
@@ -2070,7 +2118,7 @@ class ActivityInvite:
         self.activity = data['activity']
         return self
 
-    async def accept(self, *, session_id: Optional[str] = MISSING) -> str:
+    async def accept(self, *, session_id: Optional[str] = None) -> str:
         """|coro|
 
         Accepts an activity invite.
@@ -2096,16 +2144,24 @@ class ActivityInvite:
         if not application:
             raise TypeError('Application is unavailable for some reason')
 
-        author_id = 0
-        if session_id is None:
-            if self.author is None:
+        author = self.author
+        author_id = author.id if author else 0
+        if not session_id:
+            if not author:
                 raise TypeError('Please set session ID manually')
-            author_id = self.author.id
 
-            r = self.author.relationship
-            if r is None:
-                raise TypeError('Cannot get user activities')
-            activities = r.activities
+            activities = []
+
+            game_relationship = author.game_relationship
+            if game_relationship:
+                activities.extend(game_relationship.activities)
+
+            relationship = author.relationship
+            if relationship:
+                activities.extend(relationship.activities)
+
+            if not activities:
+                raise TypeError('User does not have any activities')
 
             a = find(
                 lambda a, /: (
@@ -2114,9 +2170,9 @@ class ActivityInvite:
                 activities,
             )
             if a is None:
-                raise TypeError('Invite is invalid')
+                raise TypeError('Could not find activity associated with the invite')
 
-            assert isinstance(a, Game), 'Invite is not game invite'
+            assert isinstance(a, Game)
             session_id = a.session_id or ''
 
         data = await self._state.http.get_activity_secret(
@@ -2124,8 +2180,8 @@ class ActivityInvite:
             session_id,
             application.id,
             ActivityActionType.join.value,
-            channel_id=self.channel_id or 0,
-            message_id=self.message_id or 0,
+            channel_id=self.channel_id or None,
+            message_id=self.message_id or None,
         )
         return data['secret']
 

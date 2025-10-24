@@ -426,3 +426,21 @@ class VideoStateUpdateEventRequest(TypedDict):
 
 class VideoStateUpdateEvent(TypedDict):
     active: bool
+
+
+class AuthorizeRequestEventRequest(TypedDict):
+    pass
+
+
+class AuthorizeRequestEvent(TypedDict):
+    pass
+
+
+class QuestEnrollmentStatusUpdateEventRequest(TypedDict):
+    quest_id: Snowflake
+
+
+class QuestEnrollmentStatusUpdateEvent(TypedDict):
+    quest_id: Snowflake
+    is_enrolled: bool
+    enrolled_at: Optional[str]

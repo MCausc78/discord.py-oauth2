@@ -211,14 +211,14 @@ class Message(PartialMessage):
     author: User
     content: str
     timestamp: str
-    edited_timestamp: Optional[str]
-    tts: bool
-    mention_everyone: bool
-    mentions: List[UserWithMember]
-    mention_roles: SnowflakeList
-    attachments: List[Attachment]
-    embeds: List[Embed]
-    pinned: bool
+    edited_timestamp: NotRequired[Optional[str]]
+    tts: NotRequired[bool]
+    mention_everyone: NotRequired[bool]
+    mentions: NotRequired[List[UserWithMember]]
+    mention_roles: NotRequired[SnowflakeList]
+    attachments: NotRequired[List[Attachment]]
+    embeds: NotRequired[List[Embed]]
+    pinned: NotRequired[bool]
     poll: NotRequired[Poll]
     type: MessageType
     member: NotRequired[Member]
@@ -241,7 +241,6 @@ class Message(PartialMessage):
     thread: NotRequired[Thread]
     call: NotRequired[CallMessage]
     purchase_notification: NotRequired[PurchaseNotificationResponse]
-
     disclosure_type: NotRequired[Literal[0, 1, 2, 3]]
     metadata: NotRequired[Dict[str, str]]
     recipient_id: NotRequired[Snowflake]
@@ -259,3 +258,9 @@ class AllowedMentions(TypedDict):
     roles: SnowflakeList
     users: SnowflakeList
     replied_user: bool
+
+
+# GET /partner-sdk/users/@me/channels returns a list of UserMessageSummary
+class UserMessageSummary(TypedDict):
+    user_id: Snowflake
+    last_message_id: Snowflake
